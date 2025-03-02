@@ -1,4 +1,4 @@
-# Project Athena (Cloud-based IoT Platform) - Graduation Thesis HUST 20242
+# Athena IoT Platform - Graduation Thesis HUST 20242
 
 ## 1. Abstract
 
