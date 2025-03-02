@@ -1,0 +1,73 @@
+package postgres_test
+
+import (
+	"context"
+	"fmt"
+	"testing"
+
+	"github.com/hantdev/athena/errors"
+	"github.com/hantdev/athena/users"
+	"github.com/hantdev/athena/users/postgres"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestUserSave(t *testing.T) {
+	email := "user-save@example.com"
+
+	cases := []struct {
+		desc string
+		user users.User
+		err  error
+	}{
+		{
+			desc: "new user",
+			user: users.User{
+				Email:    email,
+				Password: "pass",
+			},
+			err: nil,
+		},
+		{
+			desc: "duplicate user",
+			user: users.User{
+				Email:    email,
+				Password: "pass",
+			},
+			err: users.ErrConflict,
+		},
+	}
+
+	dbMiddleware := postgres.NewDatabase(db)
+	repo := postgres.New(dbMiddleware)
+
+	for _, tc := range cases {
+		err := repo.Save(context.Background(), tc.user)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+	}
+}
+
+func TestSingleUserRetrieval(t *testing.T) {
+	email := "user-retrieval@example.com"
+
+	dbMiddleware := postgres.NewDatabase(db)
+	repo := postgres.New(dbMiddleware)
+	err := repo.Save(context.Background(), users.User{
+		Email:    email,
+		Password: "pass",
+	})
+	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
+
+	cases := map[string]struct {
+		email string
+		err   error
+	}{
+		"existing user":     {email, nil},
+		"non-existing user": {"unknown@example.com", users.ErrNotFound},
+	}
+
+	for desc, tc := range cases {
+		_, err := repo.RetrieveByID(context.Background(), tc.email)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
+	}
+}
