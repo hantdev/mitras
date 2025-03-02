@@ -1,8 +1,8 @@
 package mocks
 
 import (
-	"github.com/hantdev/viot/errors"
-	"github.com/hantdev/viot/users"
+	"github.com/hantdev/athena/users"
+	"github.com/hantdev/athena/errors"
 )
 
 type emailerMock struct {

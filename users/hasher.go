@@ -1,6 +1,6 @@
 package users
 
-import "github.com/hantdev/viot/errors"
+import "github.com/hantdev/athena/errors"
 
 // Hasher specifies an API for generating hashes of plain-text strings.
 type Hasher interface {

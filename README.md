@@ -1,4 +1,4 @@
-# vIoT - Cloud-based IoT Platform - Graduation Thesis HUST 20242
+# Project Athena (Cloud-based IoT Platform) - Graduation Thesis HUST 20242
 
 ## 1. Abstract
 

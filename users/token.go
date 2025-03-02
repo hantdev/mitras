@@ -1,6 +1,6 @@
 package users
 
-import "github.com/hantdev/viot/errors"
+import "github.com/hantdev/athena/errors"
 
 // Tokenizer specifies an API for password reset token manipulation.
 type Tokenizer interface {

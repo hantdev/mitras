@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hantdev/viot/errors"
+	"github.com/hantdev/athena/errors"
 )
 
 var (

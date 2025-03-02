@@ -1,6 +1,6 @@
 package users
 
-import "github.com/hantdev/viot/errors"
+import "github.com/hantdev/athena/errors"
 
 // IdentityProvider specifies an API for identity management via security tokens. 
 // It is used to generate temporary keys (access tokens) for the user and extract

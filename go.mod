@@ -1,4 +1,4 @@
-module github.com/hantdev/viot
+module github.com/hantdev/athena
 
 go 1.23.5
 
