@@ -59,12 +59,12 @@ func Contains(ce Error, e error) bool {
 }
 
 // Wrap returns an Error that wraps the given error with the given message.
-func Wrap(wraper Error, err Error) Error {
-	if wraper == nil || err == nil {
+func Wrap(wrapper Error, err error) Error {
+	if wrapper == nil || err == nil {
 		return nil
 	}
 	return &customError{
-		msg: wraper.Msg(),
+		msg: wrapper.Msg(),
 		err: cast(err),
 	}
 }
