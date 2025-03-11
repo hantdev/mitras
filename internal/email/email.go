@@ -2,91 +2,104 @@ package email
 
 import (
 	"bytes"
-	"fmt"
-	"html/template"
-	"net/smtp"
+	"net/mail"
+	"strconv"
+	"strings"
+	"text/template"
 
-	"github.com/hantdev/athena/errors"
-	"github.com/hantdev/athena/logger"
+	"github.com/hantdev/athena/pkg/errors"
+	"gopkg.in/gomail.v2"
 )
 
 var (
-	// ErrMissingEmailTemplate missing email template file
+	// errMissingEmailTemplate missing email template file.
 	errMissingEmailTemplate = errors.New("Missing e-mail template file")
 	errParseTemplate        = errors.New("Parse e-mail template failed")
 	errExecTemplate         = errors.New("Execute e-mail template failed")
 	errSendMail             = errors.New("Sending e-mail failed")
 )
 
-type emailTemplate struct {
+type email struct {
 	To      []string
 	From    string
 	Subject string
 	Header  string
+	User    string
 	Content string
+	Host    string
 	Footer  string
 }
 
 // Config email agent configuration.
 type Config struct {
-	Driver      string
-	Host        string
-	Port        string
-	Username    string
-	Password    string
-	FromAddress string
-	FromName    string
-	Template    string
+	Host        string `env:"SMQ_EMAIL_HOST"         envDefault:"localhost"`
+	Port        string `env:"SMQ_EMAIL_PORT"         envDefault:"25"`
+	Username    string `env:"SMQ_EMAIL_USERNAME"     envDefault:"root"`
+	Password    string `env:"SMQ_EMAIL_PASSWORD"     envDefault:""`
+	FromAddress string `env:"SMQ_EMAIL_FROM_ADDRESS" envDefault:""`
+	FromName    string `env:"SMQ_EMAIL_FROM_NAME"    envDefault:""`
+	Template    string `env:"SMQ_EMAIL_TEMPLATE"     envDefault:"email.tmpl"`
 }
 
-// Agent for mailing
+// Agent for mailing.
 type Agent struct {
 	conf *Config
-	auth smtp.Auth
-	addr string
-	log  logger.Logger
 	tmpl *template.Template
+	dial *gomail.Dialer
 }
 
-// New creates new email agent
-func New(c *Config) (*Agent, errors.Error) {
+// New creates new email agent.
+func New(c *Config) (*Agent, error) {
 	a := &Agent{}
 	a.conf = c
-	a.auth = smtp.PlainAuth("", c.Username, c.Password, c.Host)
-	a.addr = fmt.Sprintf("%s:%s", c.Host, c.Port)
+	port, err := strconv.Atoi(c.Port)
+	if err != nil {
+		return a, err
+	}
+	d := gomail.NewDialer(c.Host, port, c.Username, c.Password)
+	a.dial = d
 
 	tmpl, err := template.ParseFiles(c.Template)
 	if err != nil {
-		return nil, errors.Wrap(errParseTemplate, err)
+		return a, errors.Wrap(errParseTemplate, err)
 	}
 	a.tmpl = tmpl
 	return a, nil
 }
 
-// Send sends e-mail
-func (a *Agent) Send(To []string, From, Subject, Header, Content, Footer string) errors.Error {
+// Send sends e-mail.
+func (a *Agent) Send(to []string, from, subject, header, user, content, footer string) error {
 	if a.tmpl == nil {
 		return errMissingEmailTemplate
 	}
 
-	email := new(bytes.Buffer)
-	tmpl := emailTemplate{
-		To:      To,
-		From:    From,
-		Subject: Subject,
-		Header:  Header,
-		Content: Content,
-		Footer:  Footer,
+	buff := new(bytes.Buffer)
+	e := email{
+		To:      to,
+		From:    from,
+		Subject: subject,
+		Header:  header,
+		User:    user,
+		Content: content,
+		Host:    strings.Split(content, "?")[0],
+		Footer:  footer,
 	}
-	if From == "" {
-		tmpl.From = a.conf.FromName
+	if from == "" {
+		from := mail.Address{Name: a.conf.FromName, Address: a.conf.FromAddress}
+		e.From = from.String()
 	}
 
-	if err := a.tmpl.Execute(email, tmpl); err != nil {
+	if err := a.tmpl.Execute(buff, e); err != nil {
 		return errors.Wrap(errExecTemplate, err)
 	}
 
-	if err := smtp.SendMail(a.addr, a.auth, a.conf.FromAddress, To, email.Bytes()); err != nil {
+	m := gomail.NewMessage()
+	m.SetHeader("From", e.From)
+	m.SetHeader("To", to...)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", buff.String())
+
+	if err := a.dial.DialAndSend(m); err != nil {
 		return errors.Wrap(errSendMail, err)
 	}
 

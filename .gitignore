@@ -23,3 +23,21 @@ go.work.sum
 
 # env file
 .env
+
+# build dirs
+build
+
+# tools
+tools/e2e/e2e
+tools/mqtt-bench/mqtt-bench
+tools/provision/provision
+tools/provision/mgconn.toml
+
+# coverage files
+coverage
+
+# Schemathesis
+.hypothesis
+
+# Ignore Vault data directory as it contains runtime-generated data
+docker/addons/vault/data/
