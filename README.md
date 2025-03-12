@@ -1,4 +1,12 @@
-# Athena IoT Platform - Graduation Thesis HUST 20242
+<div align="center">
+
+  # Athena
+  
+  **Planetary event-driven infrastructure**
+
+</div>
+
+Athena is a distributed, highly scalable, and secure cloud platform for messaging and event-driven architecture (EDA). It is a planetarily distributed, highly scalable, and secure platform that serves as a robust foundation for building advanced real-time and reactive systems.
 
 ## 1. Abstract
 

@@ -1,0 +1,29 @@
+name: Run all Unit Tests before merging
+on:
+  pull_request:
+  push:
+    branches:
+      - "*"
+    tags:
+      - "*"
+
+jobs:
+  build:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+      
+      - name: Get dependencies
+        run: go mod tidy
+
+      - name: Run Unit Tests
+        run: go test ./... -v
