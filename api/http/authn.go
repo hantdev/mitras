@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	apiutil "github.com/hantdev/athena/api/http/util"
 )
 
 type sessionKeyType string

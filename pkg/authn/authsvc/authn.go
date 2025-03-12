@@ -4,8 +4,12 @@ import (
 	"context"
 	"strings"
 
+	grpcAuthV1 "github.com/hantdev/athena/api/grpc/auth/v1"
+	"github.com/hantdev/athena/auth/api/grpc/auth"
 	"github.com/hantdev/athena/pkg/authn"
 	"github.com/hantdev/athena/pkg/errors"
+	"github.com/hantdev/athena/pkg/grpcclient"
+	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const patPrefix = "pat_"
