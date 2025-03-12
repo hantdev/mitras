@@ -7,7 +7,7 @@ import "common/v1/common.proto";
 option go_package = "github.com/hantdev/athena/api/grpc/clients/v1";
 
 // ClientsService is a service that provides clients
-// authorization functionalities for Athena services.
+// authorization functionalities for SuperMQ services.
 service ClientsService {
   // Authorize checks if the client is authorized to perform
   rpc Authenticate(AuthnReq)
