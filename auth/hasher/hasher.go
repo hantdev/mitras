@@ -1,11 +1,10 @@
 package hasher
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/hantdev/athena/auth"
 	"github.com/hantdev/athena/pkg/errors"
@@ -73,7 +72,6 @@ func (bh *bcryptHasher) Compare(plain, hashed string) error {
 }
 
 func generateSalt(length int) ([]byte, error) {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
 	salt := make([]byte, length)
 	_, err := rand.Read(salt)
 	if err != nil {
