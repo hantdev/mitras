@@ -1,2 +1,2 @@
-// Package tools contains tools for SuperMQ.
+// Package tools contains tools for Athena
 package tools

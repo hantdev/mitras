@@ -46,7 +46,7 @@ DEFAULT_DOCKER_COMPOSE_COMMAND  := up
 GRPC_MTLS_CERT_FILES_EXISTS = 0
 
 # Version of mockery tool to use for generating mocks
-MOCKERY_VERSION=v2.43.2
+MOCKERY_VERSION=v2.53.2
 
 # Directories for generated protocol buffer code
 PKG_PROTO_GEN_OUT_DIR=api/grpc
@@ -158,7 +158,7 @@ endif
 # Install compiled binaries to GOBIN directory
 install:
 	for file in $(BUILD_DIR)/*; do \
-		cp $$file $(GOBIN)/supermq-`basename $$file`; \
+		cp $$file $(GOBIN)/athena-`basename $$file`; \
 	done
 
 # Generate mock objects for testing

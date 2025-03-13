@@ -4,7 +4,7 @@ package auth.v1;
 option go_package = "github.com/hantdev/athena/api/grpc/auth/v1";
 
 // AuthService is a service that provides authentication 
-// and authorization functionalities for SuperMQ services.
+// and authorization functionalities for Athena services.
 service AuthService {
   rpc Authorize(AuthZReq) returns (AuthZRes) {}
   rpc AuthorizePAT(AuthZPatReq) returns (AuthZRes) {}
