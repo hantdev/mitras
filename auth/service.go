@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hantdev/athena"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 const (
@@ -47,7 +47,7 @@ var (
 // Authz represents a authorization service. It exposes
 // functionalities through `auth` to perform authorization.
 //
-//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet
+//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet --note "Soict IoT Central Authz interface"
 type Authz interface {
 	// Authorize checks authorization of the given `subject`. Basically,
 	// Authorize verifies that Is `subject` allowed to `relation` on
@@ -84,7 +84,7 @@ type Authn interface {
 // Token is a string value of the actual Key and is used to authenticate
 // an Auth service request.
 
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Soict IoT Central Service interface"
 type Service interface {
 	Authn
 	Authz
@@ -98,7 +98,7 @@ type service struct {
 	pats               PATSRepository
 	cache              Cache
 	hasher             Hasher
-	idProvider         athena.IDProvider
+	idProvider         mitras.IDProvider
 	evaluator          policies.Evaluator
 	policysvc          policies.Service
 	tokenizer          Tokenizer
@@ -109,7 +109,7 @@ type service struct {
 }
 
 // New instantiates the auth service implementation.
-func New(keys KeyRepository, pats PATSRepository, cache Cache, hasher Hasher, idp athena.IDProvider, tokenizer Tokenizer, policyEvaluator policies.Evaluator, policyService policies.Service, loginDuration, refreshDuration, invitationDuration time.Duration, callback CallBack) Service {
+func New(keys KeyRepository, pats PATSRepository, cache Cache, hasher Hasher, idp mitras.IDProvider, tokenizer Tokenizer, policyEvaluator policies.Evaluator, policyService policies.Service, loginDuration, refreshDuration, invitationDuration time.Duration, callback CallBack) Service {
 	return &service{
 		tokenizer:          tokenizer,
 		keys:               keys,
@@ -254,7 +254,7 @@ func (svc service) checkDomain(ctx context.Context, subjectType, subject, domain
 }
 
 func (svc service) PolicyValidation(pr policies.Policy) error {
-	if pr.ObjectType == policies.PlatformType && pr.Object != policies.AthenaObject {
+	if pr.ObjectType == policies.PlatformType && pr.Object != policies.MitrasObject {
 		return errPlatform
 	}
 	return nil
@@ -356,7 +356,7 @@ func (svc service) checkUserDomain(ctx context.Context, key Key) (subject string
 			Subject:     key.User,
 			SubjectType: policies.UserType,
 			Permission:  policies.AdminPermission,
-			Object:      policies.AthenaObject,
+			Object:      policies.MitrasObject,
 			ObjectType:  policies.PlatformType,
 		}); err == nil {
 			return key.User, nil

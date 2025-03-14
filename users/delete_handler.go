@@ -11,9 +11,9 @@ import (
 	"log/slog"
 	"time"
 
-	grpcDomainsV1 "github.com/hantdev/athena/api/grpc/domains/v1"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 const defLimit = uint64(100)

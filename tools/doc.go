@@ -1,2 +1,2 @@
-// Package tools contains tools for Athena
+// Package tools contains tools for Mitras
 package tools

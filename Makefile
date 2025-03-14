@@ -1,5 +1,5 @@
-# Define the Docker image name prefix for all Athena services
-ATHENA_DOCKER_IMAGE_NAME_PREFIX ?= athena
+# Define the Docker image name prefix for all Mitras services
+MITRAS_DOCKER_IMAGE_NAME_PREFIX ?= mitras
 
 # Output directory for compiled binaries
 BUILD_DIR ?= build
@@ -54,26 +54,26 @@ INTERNAL_PROTO_DIR=internal/proto
 INTERNAL_PROTO_FILES := $(shell find $(INTERNAL_PROTO_DIR) -name "*.proto" | sed 's|$(INTERNAL_PROTO_DIR)/||')
 
 # Set message broker type (defaults to nats if not specified)
-ifneq ($(ATHENA_MESSAGE_BROKER_TYPE),)
-    ATHENA_MESSAGE_BROKER_TYPE := $(ATHENA_MESSAGE_BROKER_TYPE)
+ifneq ($(MITRAS_MESSAGE_BROKER_TYPE),)
+    MITRAS_MESSAGE_BROKER_TYPE := $(MITRAS_MESSAGE_BROKER_TYPE)
 else
-    ATHENA_MESSAGE_BROKER_TYPE=nats
+    MITRAS_MESSAGE_BROKER_TYPE=nats
 endif
 
 # Set event store type (defaults to nats if not specified)
-ifneq ($(ATHENA_ES_TYPE),)
-    ATHENA_ES_TYPE := $(ATHENA_ES_TYPE)
+ifneq ($(MITRAS_ES_TYPE),)
+    MITRAS_ES_TYPE := $(MITRAS_ES_TYPE)
 else
-    ATHENA_ES_TYPE=nats
+    MITRAS_ES_TYPE=nats
 endif
 
 # Function to compile a service with proper build flags and tags
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) \
-	go build -tags $(ATHENA_MESSAGE_BROKER_TYPE) --tags $(ATHENA_ES_TYPE) -ldflags "-s -w \
-	-X 'github.com/hantdev/athena.BuildTime=$(TIME)' \
-	-X 'github.com/hantdev/athena.Version=$(VERSION)' \
-	-X 'github.com/hantdev/athena.Commit=$(COMMIT)'" \
+	go build -tags $(MITRAS_MESSAGE_BROKER_TYPE) --tags $(MITRAS_ES_TYPE) -ldflags "-s -w \
+	-X 'github.com/hantdev/mitras.BuildTime=$(TIME)' \
+	-X 'github.com/hantdev/mitras.Version=$(VERSION)' \
+	-X 'github.com/hantdev/mitras.Commit=$(COMMIT)'" \
 	-o ${BUILD_DIR}/$(1) cmd/$(1)/main.go
 endef
 
@@ -89,7 +89,7 @@ define make_docker
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg TIME=$(TIME) \
-		--tag=$(ATHENA_DOCKER_IMAGE_NAME_PREFIX)/$(svc) \
+		--tag=$(MITRAS_DOCKER_IMAGE_NAME_PREFIX)/$(svc) \
 		-f docker/Dockerfile .
 endef
 
@@ -100,7 +100,7 @@ define make_docker_dev
 	docker build \
 		--no-cache \
 		--build-arg SVC=$(svc) \
-		--tag=$(ATHENA_DOCKER_IMAGE_NAME_PREFIX)/$(svc) \
+		--tag=$(MITRAS_DOCKER_IMAGE_NAME_PREFIX)/$(svc) \
 		-f docker/Dockerfile.dev ./build
 endef
 
@@ -152,13 +152,13 @@ cleandocker:
 # Conditionally remove unused volumes if pv is specified
 ifdef pv
 	# Remove unused volumes
-	docker volume ls -f name=$(ATHENA_DOCKER_IMAGE_NAME_PREFIX) -f dangling=true -q | xargs -r docker volume rm
+	docker volume ls -f name=$(MITRAS_DOCKER_IMAGE_NAME_PREFIX) -f dangling=true -q | xargs -r docker volume rm
 endif
 
 # Install compiled binaries to GOBIN directory
 install:
 	for file in $(BUILD_DIR)/*; do \
-		cp $$file $(GOBIN)/athena-`basename $$file`; \
+		cp $$file $(GOBIN)/mitras-`basename $$file`; \
 	done
 
 # Generate mock objects for testing
@@ -254,7 +254,7 @@ dockers_dev: $(DOCKERS_DEV)
 # Function to push Docker images with a specific tag
 define docker_push
 	for svc in $(SERVICES); do \
-		docker push $(ATHENA_DOCKER_IMAGE_NAME_PREFIX)/$$svc:$(1); \
+		docker push $(MITRAS_DOCKER_IMAGE_NAME_PREFIX)/$$svc:$(1); \
 	done
 endef
 
@@ -272,7 +272,7 @@ release:
 	git checkout $(version)
 	$(MAKE) dockers
 	for svc in $(SERVICES); do \
-		docker tag $(ATHENA_DOCKER_IMAGE_NAME_PREFIX)/$$svc $(ATHENA_DOCKER_IMAGE_NAME_PREFIX)/$$svc:$(version); \
+		docker tag $(MITRAS_DOCKER_IMAGE_NAME_PREFIX)/$$svc $(MITRAS_DOCKER_IMAGE_NAME_PREFIX)/$$svc:$(version); \
 	done
 	$(call docker_push,$(version))
 
@@ -324,7 +324,7 @@ run: check_certs
 run_addons: check_certs
 	$(foreach SVC,$(RUN_ADDON_ARGS),$(if $(filter $(SVC),$(ADDON_SERVICES) $(EXTERNAL_SERVICES)),,$(error Invalid Service $(SVC))))
 	@for SVC in $(RUN_ADDON_ARGS); do \
-		ATHENA_ADDONS_CERTS_PATH_PREFIX="../."  docker compose -f docker/addons/$$SVC/docker-compose.yml -p $(DOCKER_PROJECT) --env-file ./docker/.env $(DOCKER_COMPOSE_COMMAND) $(args) & \
+		MITRAS_ADDONS_CERTS_PATH_PREFIX="../."  docker compose -f docker/addons/$$SVC/docker-compose.yml -p $(DOCKER_PROJECT) --env-file ./docker/.env $(DOCKER_COMPOSE_COMMAND) $(args) & \
 	done
 
 # Run the system in live development mode

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 )
 
 // Status represents User status.

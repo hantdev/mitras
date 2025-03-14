@@ -1,2 +1,2 @@
-// Package errors contains Athena errors definitions.
+// Package errors contains Mitras errors definitions.
 package errors

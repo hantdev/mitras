@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"testing"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
-	atnlog "github.com/hantdev/athena/logger"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	atnlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/stretchr/testify/assert"
 )
 

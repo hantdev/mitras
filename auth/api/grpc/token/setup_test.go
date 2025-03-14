@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hantdev/athena/auth/mocks"
+	"github.com/hantdev/mitras/auth/mocks"
 )
 
 var svc *mocks.Service

@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 var (
-	// errInvalidIssuer is returned when the issuer is not athena.auth.
+	// errInvalidIssuer is returned when the issuer is not mitras.auth.
 	errInvalidIssuer = errors.New("invalid token issuer value")
 	// errInvalidType is returned when there is no type field.
 	errInvalidType = errors.New("invalid token type")
@@ -29,7 +29,7 @@ var (
 )
 
 const (
-	issuerName             = "athena.auth"
+	issuerName             = "mitras.auth"
 	tokenType              = "type"
 	userField              = "user"
 	oauthProviderField     = "oauth_provider"

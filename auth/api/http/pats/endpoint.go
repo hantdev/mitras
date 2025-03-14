@@ -3,7 +3,7 @@ package pats
 import (
 	"context"
 
-	"github.com/hantdev/athena/auth"
+	"github.com/hantdev/mitras/auth"
 	"github.com/go-kit/kit/endpoint"
 )
 

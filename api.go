@@ -1,4 +1,4 @@
-package athena
+package mitras
 
 // Response contains HTTP response specific methods.
 type Response interface {

@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 	"time"
-	// "github.com/hantdev/athena/pkg/messaging"
+	// "github.com/hantdev/mitras/pkg/messaging"
 )
 
 const (
@@ -21,7 +21,7 @@ type Event interface {
 
 // Publisher specifies events publishing API.
 //
-//go:generate mockery --name Publisher --output=./mocks --filename publisher.go --quiet
+//go:generate mockery --name Publisher --output=./mocks --filename publisher.go --quiet --note "Mitras IoT Central Publisher interface"
 type Publisher interface {
 	// Publish publishes event to stream.
 	Publish(ctx context.Context, event Event) error
@@ -47,7 +47,7 @@ type SubscriberConfig struct {
 
 // Subscriber specifies event subscription API.
 //
-//go:generate mockery --name Subscriber --output=./mocks --filename subscriber.go --quiet
+//go:generate mockery --name Subscriber --output=./mocks --filename subscriber.go --quiet --note "Mitras IoT Central Subscriber interface"
 type Subscriber interface {
 	// Subscribe subscribes to the event stream and consumes events.
 	Subscribe(ctx context.Context, cfg SubscriberConfig) error

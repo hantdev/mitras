@@ -8,7 +8,7 @@ package v1
 
 import (
 	context "context"
-	v1 "github.com/hantdev/athena/api/grpc/common/v1"
+	v1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -34,7 +34,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // ClientsService is a service that provides clients
-// authorization functionalities for Athena services.
+// authorization functionalities for mitras services.
 type ClientsServiceClient interface {
 	// Authorize checks if the client is authorized to perform
 	Authenticate(ctx context.Context, in *AuthnReq, opts ...grpc.CallOption) (*AuthnRes, error)
@@ -129,7 +129,7 @@ func (c *clientsServiceClient) UnsetParentGroupFromClient(ctx context.Context, i
 // for forward compatibility.
 //
 // ClientsService is a service that provides clients
-// authorization functionalities for Athena services.
+// authorization functionalities for mitras services.
 type ClientsServiceServer interface {
 	// Authorize checks if the client is authorized to perform
 	Authenticate(context.Context, *AuthnReq) (*AuthnRes, error)

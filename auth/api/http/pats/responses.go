@@ -3,20 +3,20 @@ package pats
 import (
 	"net/http"
 
-	"github.com/hantdev/athena"
-	"github.com/hantdev/athena/auth"
+	"github.com/hantdev/mitras"
+	"github.com/hantdev/mitras/auth"
 )
 
 var (
-	_ athena.Response = (*createPatRes)(nil)
-	_ athena.Response = (*retrievePatRes)(nil)
-	_ athena.Response = (*updatePatNameRes)(nil)
-	_ athena.Response = (*updatePatDescriptionRes)(nil)
-	_ athena.Response = (*deletePatRes)(nil)
-	_ athena.Response = (*resetPatSecretRes)(nil)
-	_ athena.Response = (*revokePatSecretRes)(nil)
-	_ athena.Response = (*scopeRes)(nil)
-	_ athena.Response = (*clearAllRes)(nil)
+	_ mitras.Response = (*createPatRes)(nil)
+	_ mitras.Response = (*retrievePatRes)(nil)
+	_ mitras.Response = (*updatePatNameRes)(nil)
+	_ mitras.Response = (*updatePatDescriptionRes)(nil)
+	_ mitras.Response = (*deletePatRes)(nil)
+	_ mitras.Response = (*resetPatSecretRes)(nil)
+	_ mitras.Response = (*revokePatSecretRes)(nil)
+	_ mitras.Response = (*scopeRes)(nil)
+	_ mitras.Response = (*clearAllRes)(nil)
 )
 
 type createPatRes struct {

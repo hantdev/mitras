@@ -8,10 +8,10 @@ import (
 
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
-	"github.com/hantdev/athena/pkg/errors"
-	repoerr "github.com/hantdev/athena/pkg/errors/repository"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras/pkg/errors"
+	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 	gstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -315,7 +315,7 @@ func (ps *policyService) ListPermissions(ctx context.Context, pr policies.Policy
 }
 
 func (ps *policyService) policyValidation(pr policies.Policy) error {
-	if pr.ObjectType == policies.PlatformType && pr.Object != policies.AthenaObject {
+	if pr.ObjectType == policies.PlatformType && pr.Object != policies.MitrasObject {
 		return errPlatform
 	}
 
@@ -406,7 +406,7 @@ func (ps *policyService) userGroupPreConditions(ctx context.Context, pr policies
 		Subject:     pr.Subject,
 		SubjectType: pr.SubjectType,
 		Permission:  policies.AdminPermission,
-		Object:      policies.AthenaObject,
+		Object:      policies.MitrasObject,
 		ObjectType:  policies.PlatformType,
 	}); err == nil {
 		isSuperAdmin = true
@@ -481,7 +481,7 @@ func (ps *policyService) userClientPreConditions(ctx context.Context, pr policie
 		Subject:     pr.Subject,
 		SubjectType: pr.SubjectType,
 		Permission:  policies.AdminPermission,
-		Object:      policies.AthenaObject,
+		Object:      policies.MitrasObject,
 		ObjectType:  policies.PlatformType,
 	}); err == nil {
 		isSuperAdmin = true
@@ -546,7 +546,7 @@ func (ps *policyService) userDomainPreConditions(ctx context.Context, pr policie
 		Subject:     pr.Subject,
 		SubjectType: pr.SubjectType,
 		Permission:  policies.AdminPermission,
-		Object:      policies.AthenaObject,
+		Object:      policies.MitrasObject,
 		ObjectType:  policies.PlatformType,
 	}); err == nil {
 		return preconds, fmt.Errorf("use already exists in domain")

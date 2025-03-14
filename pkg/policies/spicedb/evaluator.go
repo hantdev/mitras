@@ -6,9 +6,9 @@ import (
 
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 type policyEvaluator struct {

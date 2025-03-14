@@ -19,7 +19,7 @@ type Error interface {
 
 var _ Error = (*customError)(nil)
 
-// customError represents a Athena error.
+// customError represents a Mitras error.
 type customError struct {
 	msg string
 	err Error

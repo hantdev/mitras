@@ -3,19 +3,19 @@ package uuid
 
 import (
 	"github.com/gofrs/uuid/v5"
-	"github.com/hantdev/athena"
-	"github.com/hantdev/athena/pkg/errors"
+	"github.com/hantdev/mitras"
+	"github.com/hantdev/mitras/pkg/errors"
 )
 
 // ErrGeneratingID indicates error in generating UUID.
 var ErrGeneratingID = errors.New("failed to generate uuid")
 
-var _ athena.IDProvider = (*uuidProvider)(nil)
+var _ mitras.IDProvider = (*uuidProvider)(nil)
 
 type uuidProvider struct{}
 
 // New instantiates a UUID provider.
-func New() athena.IDProvider {
+func New() mitras.IDProvider {
 	return &uuidProvider{}
 }
 

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hantdev/athena/auth"
+	"github.com/hantdev/mitras/auth"
 	"github.com/stretchr/testify/assert"
 )
 

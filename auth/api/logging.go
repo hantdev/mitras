@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 var _ auth.Service = (*loggingMiddleware)(nil)

@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Message represents a message emitted by the Athena adapters layer.
+// Message represents a message emitted by the Mitras adapters layer.
 type Message struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

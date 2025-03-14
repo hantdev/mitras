@@ -5,10 +5,10 @@ import (
 	"net/mail"
 	"time"
 
-	grpcTokenV1 "github.com/hantdev/athena/api/grpc/token/v1"
-	"github.com/hantdev/athena/pkg/authn"
-	"github.com/hantdev/athena/pkg/errors"
-	"github.com/hantdev/athena/pkg/postgres"
+	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
+	"github.com/hantdev/mitras/pkg/authn"
+	"github.com/hantdev/mitras/pkg/errors"
+	"github.com/hantdev/mitras/pkg/postgres"
 )
 
 type User struct {
@@ -53,7 +53,7 @@ type UserRepository struct {
 	DB postgres.Database
 }
 
-//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Soict IoT Central User Repository"
 type Repository interface {
 	// RetrieveByID retrieves user by their unique ID.
 	RetrieveByID(ctx context.Context, id string) (User, error)
@@ -133,7 +133,7 @@ type Page struct {
 // Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
 //
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Soict IoT Central User Service"
 type Service interface {
 	// Register creates new user. In case of the failed registration, a
 	// non-nil error value is returned.

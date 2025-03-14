@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package token.v1;
-option go_package = "github.com/hantdev/athena/api/grpc/token/v1";
+option go_package = "github.com/hantdev/mitras/api/grpc/token/v1";
 
 service TokenService {
   rpc Issue(IssueReq) returns (Token) {}

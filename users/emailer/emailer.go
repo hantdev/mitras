@@ -3,8 +3,8 @@ package emailer
 import (
 	"fmt"
 
-	"github.com/hantdev/athena/internal/email"
-	"github.com/hantdev/athena/users"
+	"github.com/hantdev/mitras/internal/email"
+	"github.com/hantdev/mitras/users"
 )
 
 var _ users.Emailer = (*emailer)(nil)

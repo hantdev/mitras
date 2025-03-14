@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"github.com/hantdev/athena/pkg/errors"
-	repoerr "github.com/hantdev/athena/pkg/errors/repository"
+	"github.com/hantdev/mitras/pkg/errors"
+	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

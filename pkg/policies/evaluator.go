@@ -52,9 +52,9 @@ const (
 	CreatePermission     = "create"
 )
 
-const AthenaObject = "athena"
+const MitrasObject = "mitras"
 
-//go:generate mockery --name Evaluator --output=./mocks --filename evaluator.go --quiet
+//go:generate mockery --name Evaluator --output=./mocks --filename evaluator.go --quiet --note "Mitras IoT Central Policy Evaluator"
 type Evaluator interface {
 	// CheckPolicy checks if the subject has a relation on the object.
 	// It returns a non-nil error if the subject has no relation on

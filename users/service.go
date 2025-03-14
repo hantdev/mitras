@@ -5,15 +5,15 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/hantdev/athena"
-	grpcTokenV1 "github.com/hantdev/athena/api/grpc/token/v1"
-	apiutil "github.com/hantdev/athena/api/http/util"
-	athenauth "github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/authn"
-	"github.com/hantdev/athena/pkg/errors"
-	repoerr "github.com/hantdev/athena/pkg/errors/repository"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras"
+	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	mitrasuth "github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/authn"
+	"github.com/hantdev/mitras/pkg/errors"
+	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 var (
@@ -25,14 +25,14 @@ var (
 type service struct {
 	token      grpcTokenV1.TokenServiceClient
 	users      Repository
-	idProvider athena.IDProvider
+	idProvider mitras.IDProvider
 	policies   policies.Service
 	hasher     Hasher
 	email      Emailer
 }
 
 // NewService returns a new Users service implementation.
-func NewService(token grpcTokenV1.TokenServiceClient, urepo Repository, policyService policies.Service, emailer Emailer, hasher Hasher, idp athena.IDProvider) Service {
+func NewService(token grpcTokenV1.TokenServiceClient, urepo Repository, policyService policies.Service, emailer Emailer, hasher Hasher, idp mitras.IDProvider) Service {
 	return service{
 		token:      token,
 		users:      urepo,
@@ -107,7 +107,7 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (*gr
 		return &grpcTokenV1.Token{}, errors.Wrap(svcerr.ErrLogin, err)
 	}
 
-	token, err := svc.token.Issue(ctx, &grpcTokenV1.IssueReq{UserId: dbUser.ID, Type: uint32(athenauth.AccessKey)})
+	token, err := svc.token.Issue(ctx, &grpcTokenV1.IssueReq{UserId: dbUser.ID, Type: uint32(mitrasuth.AccessKey)})
 	if err != nil {
 		return &grpcTokenV1.Token{}, errors.Wrap(errIssueToken, err)
 	}
@@ -288,7 +288,7 @@ func (svc service) GenerateResetToken(ctx context.Context, email, host string) e
 	}
 	issueReq := &grpcTokenV1.IssueReq{
 		UserId: user.ID,
-		Type:   uint32(athenauth.RecoveryKey),
+		Type:   uint32(mitrasuth.RecoveryKey),
 	}
 	token, err := svc.token.Issue(ctx, issueReq)
 	if err != nil {
@@ -510,7 +510,7 @@ func (svc service) addUserPolicy(ctx context.Context, userID string, role Role) 
 		Subject:     userID,
 		Relation:    policies.MemberRelation,
 		ObjectType:  policies.PlatformType,
-		Object:      policies.AthenaObject,
+		Object:      policies.MitrasObject,
 	})
 
 	if role == AdminRole {
@@ -519,7 +519,7 @@ func (svc service) addUserPolicy(ctx context.Context, userID string, role Role) 
 			Subject:     userID,
 			Relation:    policies.AdministratorRelation,
 			ObjectType:  policies.PlatformType,
-			Object:      policies.AthenaObject,
+			Object:      policies.MitrasObject,
 		})
 	}
 	err := svc.policies.AddPolicies(ctx, policyList)
@@ -538,7 +538,7 @@ func (svc service) addUserPolicyRollback(ctx context.Context, userID string, rol
 		Subject:     userID,
 		Relation:    policies.MemberRelation,
 		ObjectType:  policies.PlatformType,
-		Object:      policies.AthenaObject,
+		Object:      policies.MitrasObject,
 	})
 
 	if role == AdminRole {
@@ -547,7 +547,7 @@ func (svc service) addUserPolicyRollback(ctx context.Context, userID string, rol
 			Subject:     userID,
 			Relation:    policies.AdministratorRelation,
 			ObjectType:  policies.PlatformType,
-			Object:      policies.AthenaObject,
+			Object:      policies.MitrasObject,
 		})
 	}
 	err := svc.policies.DeletePolicies(ctx, policyList)
@@ -566,7 +566,7 @@ func (svc service) updateUserPolicy(ctx context.Context, userID string, role Rol
 			Subject:     userID,
 			Relation:    policies.AdministratorRelation,
 			ObjectType:  policies.PlatformType,
-			Object:      policies.AthenaObject,
+			Object:      policies.MitrasObject,
 		})
 		if err != nil {
 			return errors.Wrap(svcerr.ErrAddPolicies, err)
@@ -581,7 +581,7 @@ func (svc service) updateUserPolicy(ctx context.Context, userID string, role Rol
 			Subject:     userID,
 			Relation:    policies.AdministratorRelation,
 			ObjectType:  policies.PlatformType,
-			Object:      policies.AthenaObject,
+			Object:      policies.MitrasObject,
 		})
 		if err != nil {
 			return errors.Wrap(svcerr.ErrDeletePolicies, err)

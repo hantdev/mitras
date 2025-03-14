@@ -3,9 +3,9 @@ package auth
 import (
 	"context"
 
-	grpcAuthV1 "github.com/hantdev/athena/api/grpc/auth/v1"
-	"github.com/hantdev/athena/auth"
-	grpcapi "github.com/hantdev/athena/auth/api/grpc"
+	grpcAuthV1 "github.com/hantdev/mitras/api/grpc/auth/v1"
+	"github.com/hantdev/mitras/auth"
+	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 )
 

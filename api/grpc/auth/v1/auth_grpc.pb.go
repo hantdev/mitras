@@ -30,7 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // AuthService is a service that provides authentication
-// and authorization functionalities for Athena services.
+// and authorization functionalities for Mitras services.
 type AuthServiceClient interface {
 	Authorize(ctx context.Context, in *AuthZReq, opts ...grpc.CallOption) (*AuthZRes, error)
 	AuthorizePAT(ctx context.Context, in *AuthZPatReq, opts ...grpc.CallOption) (*AuthZRes, error)
@@ -91,7 +91,7 @@ func (c *authServiceClient) AuthenticatePAT(ctx context.Context, in *AuthNReq, o
 // for forward compatibility
 //
 // AuthService is a service that provides authentication
-// and authorization functionalities for Athena services.
+// and authorization functionalities for Mitras services.
 type AuthServiceServer interface {
 	Authorize(context.Context, *AuthZReq) (*AuthZRes, error)
 	AuthorizePAT(context.Context, *AuthZPatReq) (*AuthZRes, error)

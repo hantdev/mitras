@@ -1,6 +1,6 @@
 package util
 
-import "github.com/hantdev/athena/pkg/errors"
+import "github.com/hantdev/mitras/pkg/errors"
 
 // Errors defined in this file are used by the LoggingErrorEncoder decorator
 // to distinguish and log API request validation errors and avoid that service

@@ -4,42 +4,42 @@ filename: "{{.InterfaceName}}.go"
 outpkg: "mocks"
 boilerplate-file: "./tools/config/boilerplate.txt"
 packages:
-  github.com/hantdev/athena/api/grpc/clients/v1:
+  github.com/hantdev/mitras/api/grpc/clients/v1:
     interfaces:
       ClientsServiceClient:
         config:
           dir: "./clients/mocks"
           mockname: "ClientsServiceClient"
           filename: "clients_client.go"
-  github.com/hantdev/athena/api/grpc/domains/v1:
+  github.com/hantdev/mitras/api/grpc/domains/v1:
     interfaces:
       DomainsServiceClient:
         config:
           dir: "./domains/mocks"
           mockname: "DomainsServiceClient"
           filename: "domains_client.go"
-  github.com/hantdev/athena/api/grpc/token/v1:
+  github.com/hantdev/mitras/api/grpc/token/v1:
     interfaces:
       TokenServiceClient:
         config:
           dir: "./auth/mocks"
           mockname: "TokenServiceClient"
           filename: "token_client.go"
-  github.com/hantdev/athena/api/grpc/channels/v1:
+  github.com/hantdev/mitras/api/grpc/channels/v1:
     interfaces:
       ChannelsServiceClient:
         config:
           dir: "./channels/mocks"
           mockname: "ChannelsServiceClient"
           filename: "channels_client.go"
-  github.com/hantdev/athena/api/grpc/groups/v1:
+  github.com/hantdev/mitras/api/grpc/groups/v1:
     interfaces:
       GroupsServiceClient:
         config:
           dir: "./groups/mocks"
           mockname: "GroupsServiceClient"
           filename: "groups_client.go"
-  github.com/hantdev/athena/pkg/sdk:
+  github.com/hantdev/mitras/pkg/sdk:
     interfaces:
       SDK:
         config:
@@ -47,7 +47,7 @@ packages:
           mockname: "SDK"
           filename: "sdk.go"
 
-  github.com/hantdev/athena/certs/pki/amcerts:
+  github.com/hantdev/mitras/certs/pki/amcerts:
     interfaces:
       Agent:
         config:

@@ -3,9 +3,9 @@ package events
 import (
 	"time"
 
-	"github.com/hantdev/athena/pkg/authn"
-	"github.com/hantdev/athena/pkg/events"
-	"github.com/hantdev/athena/users"
+	"github.com/hantdev/mitras/pkg/authn"
+	"github.com/hantdev/mitras/pkg/events"
+	"github.com/hantdev/mitras/users"
 )
 
 const (

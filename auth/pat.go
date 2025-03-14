@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
-	"github.com/hantdev/athena/pkg/errors"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/errors"
 )
 
 const AnyIDs = "*"
@@ -343,7 +343,7 @@ func (pat *PAT) String() string {
 }
 
 // PATS specifies function which are required for Personal access Token implementation.
-//go:generate mockery --name PATS --output=./mocks --filename pats.go --quiet
+//go:generate mockery --name PATS --output=./mocks --filename pats.go --quiet --note "Soict IoT Central PATS interface"
 
 type PATS interface {
 	// Create function creates new PAT for given valid inputs.
@@ -394,7 +394,7 @@ type PATS interface {
 
 // PATSRepository specifies PATS persistence API.
 //
-//go:generate mockery --name PATSRepository --output=./mocks --filename patsrepo.go --quiet
+//go:generate mockery --name PATSRepository --output=./mocks --filename patsrepo.go --quiet --note "Soict IoT Central PATSRepository interface"
 type PATSRepository interface {
 	// Save persists the PAT
 	Save(ctx context.Context, pat PAT) (err error)
@@ -441,7 +441,7 @@ type PATSRepository interface {
 	RemoveAllScope(ctx context.Context, patID string) error
 }
 
-//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet
+//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet --note "Soict IoT Central Cache interface"
 type Cache interface {
 	Save(ctx context.Context, userID string, scopes []Scope) error
 

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hantdev/athena/auth"
-	authjwt "github.com/hantdev/athena/auth/jwt"
-	"github.com/hantdev/athena/internal/testsutil"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	"github.com/hantdev/mitras/auth"
+	authjwt "github.com/hantdev/mitras/auth/jwt"
+	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ const (
 	tokenType   = "type"
 	userField   = "user"
 	domainField = "domain"
-	issuerName  = "athena.auth"
+	issuerName  = "mitras.auth"
 	secret      = "test"
 )
 
@@ -262,7 +262,7 @@ func key() auth.Key {
 	return auth.Key{
 		ID:        "66af4a67-3823-438a-abd7-efdb613eaef6",
 		Type:      auth.AccessKey,
-		Issuer:    "athena.auth",
+		Issuer:    "mitras.auth",
 		Subject:   "66af4a67-3823-438a-abd7-efdb613eaef6",
 		IssuedAt:  time.Now().UTC().Add(-10 * time.Second).Round(time.Second),
 		ExpiresAt: exp,

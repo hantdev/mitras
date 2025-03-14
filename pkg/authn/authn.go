@@ -31,9 +31,9 @@ type Session struct {
 	SuperAdmin   bool
 }
 
-// Authn is Athena authentication library.
+// Authn is Mitras authentication library.
 //
-//go:generate mockery --name Authentication --output=./mocks --filename authn.go --quiet --note "Copyright (c) Athena"
+//go:generate mockery --name Authentication --output=./mocks --filename authn.go --quiet --note "Mitras IoT Central Authentication interface"
 type Authentication interface {
 	Authenticate(ctx context.Context, token string) (Session, error)
 }

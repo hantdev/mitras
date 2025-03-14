@@ -4,7 +4,7 @@ cd docker
 if [ ! -f ssl/certs/ca.key ] || [ ! -f ssl/certs/ca.crt ]; then
     echo "Generating new CA certificates..."
     openssl genrsa -out ssl/certs/ca.key 4096
-    openssl req -new -x509 -days 365 -key ssl/certs/ca.key -out ssl/certs/ca.crt -subj "/C=VN/ST=Hanoi/L=Hanoi/O=Athena/OU=Athena/CN=Athena Root CA"
+    openssl req -new -x509 -days 365 -key ssl/certs/ca.key -out ssl/certs/ca.crt -subj "/C=VN/ST=Hanoi/L=Hanoi/O=Mitras/OU=Mitras/CN=Mitras Root CA"
 else
     echo "Using existing CA certificates..."
 fi
@@ -19,7 +19,7 @@ generate_cert() {
     openssl req -new \
         -key "ssl/certs/${name}-grpc-${type}.key" \
         -out "ssl/certs/${name}-grpc-${type}.csr" \
-        -subj "/C=VN/ST=Hanoi/L=Hanoi/O=Athena/OU=Athena/CN=${cn}"
+        -subj "/C=VN/ST=Hanoi/L=Hanoi/O=Mitras/OU=Mitras/CN=${cn}"
 
     cat > "ssl/certs/${name}-grpc-${type}.ext" << EOF
 authorityKeyIdentifier=keyid,issuer
@@ -45,17 +45,17 @@ EOF
 }
 
 # Generate server certificates
-generate_cert "auth" "server" "auth.athena.local"
-generate_cert "groups" "server" "groups.athena.local"
-generate_cert "channels" "server" "channels.athena.local"
-generate_cert "clients" "server" "clients.athena.local"
+generate_cert "auth" "server" "auth.mitras.local"
+generate_cert "groups" "server" "groups.mitras.local"
+generate_cert "channels" "server" "channels.mitras.local"
+generate_cert "clients" "server" "clients.mitras.local"
 
 # Generate client certificates
-generate_cert "auth" "client" "auth-client.athena.local"
-generate_cert "domains" "client" "domains-client.athena.local"
-generate_cert "groups" "client" "groups-client.athena.local"
-generate_cert "channels" "client" "channels-client.athena.local"
-generate_cert "clients" "client" "clients-client.athena.local"
+generate_cert "auth" "client" "auth-client.mitras.local"
+generate_cert "domains" "client" "domains-client.mitras.local"
+generate_cert "groups" "client" "groups-client.mitras.local"
+generate_cert "channels" "client" "channels-client.mitras.local"
+generate_cert "clients" "client" "clients-client.mitras.local"
 
 cd ssl/certs
 chmod 644 *.crt

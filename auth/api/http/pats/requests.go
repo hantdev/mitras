@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
 )
 
 type createPatReq struct {

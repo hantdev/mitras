@@ -7,16 +7,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hantdev/athena"
-	apiutil "github.com/hantdev/athena/api/http/util"
+	"github.com/hantdev/mitras"
+	apiutil "github.com/hantdev/mitras/api/http/util"
 
-	// "github.com/hantdev/athena/certs"
-	// "github.com/hantdev/athena/clients"
-	// "github.com/hantdev/athena/groups"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	// "github.com/hantdev/mitras/certs"
+	// "github.com/hantdev/mitras/clients"
+	// "github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 
-	// "github.com/hantdev/athena/users"
+	// "github.com/hantdev/mitras/users"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -119,7 +119,7 @@ func ValidateName(id string) error {
 
 // EncodeResponse encodes successful response.
 func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	if ar, ok := response.(athena.Response); ok {
+	if ar, ok := response.(mitras.Response); ok {
 		for k, v := range ar.Headers() {
 			w.Header().Set(k, v)
 		}

@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	api "github.com/hantdev/athena/api/http"
-	apiutil "github.com/hantdev/athena/api/http/util"
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
+	api "github.com/hantdev/mitras/api/http"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 )

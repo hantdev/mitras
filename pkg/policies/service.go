@@ -63,7 +63,7 @@ type Permissions []string
 // PolicyService facilitates the communication to authorization
 // services and implements Authz functionalities for spicedb
 //
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Soict IoT Central Policy Service"
 type Service interface {
 	// AddPolicy creates a policy for the given subject, so that, after
 	// AddPolicy, `subject` has a `relation` on `object`. Returns a non-nil

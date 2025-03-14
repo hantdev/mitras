@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/auth/jwt"
-	"github.com/hantdev/athena/auth/mocks"
-	"github.com/hantdev/athena/internal/testsutil"
-	"github.com/hantdev/athena/pkg/errors"
-	repoerr "github.com/hantdev/athena/pkg/errors/repository"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
-	policymocks "github.com/hantdev/athena/pkg/policies/mocks"
-	"github.com/hantdev/athena/pkg/uuid"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/auth/jwt"
+	"github.com/hantdev/mitras/auth/mocks"
+	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/errors"
+	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
+	policymocks "github.com/hantdev/mitras/pkg/policies/mocks"
+	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -147,7 +147,7 @@ func TestIssue(t *testing.T) {
 			},
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -168,7 +168,7 @@ func TestIssue(t *testing.T) {
 			},
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -190,7 +190,7 @@ func TestIssue(t *testing.T) {
 			token: accessToken,
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -213,7 +213,7 @@ func TestIssue(t *testing.T) {
 			token: accessToken,
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -242,7 +242,7 @@ func TestIssue(t *testing.T) {
 			token: accessToken,
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -271,7 +271,7 @@ func TestIssue(t *testing.T) {
 			token: accessToken,
 			checkPolicyRequest: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -382,7 +382,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{},
@@ -401,7 +401,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkPlatformAdminErr: nil,
@@ -420,7 +420,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{
@@ -454,7 +454,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{
@@ -480,7 +480,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{},
@@ -498,7 +498,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{},
@@ -513,7 +513,7 @@ func TestIssue(t *testing.T) {
 			checkPlatformAdminReq: policies.Policy{
 				Subject:     email,
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -532,7 +532,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkPlatformAdminErr: nil,
@@ -551,7 +551,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{
@@ -585,7 +585,7 @@ func TestIssue(t *testing.T) {
 				Subject:     userID,
 				SubjectType: policies.UserType,
 				Permission:  policies.AdminPermission,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 			},
 			checkDomainMemberReq: policies.Policy{
@@ -901,7 +901,7 @@ func TestAuthorize(t *testing.T) {
 				Subject:     accessToken,
 				SubjectType: policies.UserType,
 				SubjectKind: policies.TokenKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -909,7 +909,7 @@ func TestAuthorize(t *testing.T) {
 				Subject:     id,
 				SubjectType: policies.UserType,
 				SubjectKind: policies.TokenKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -986,7 +986,7 @@ func TestAuthorize(t *testing.T) {
 				Subject:     expSecret.AccessToken,
 				SubjectType: policies.UserType,
 				SubjectKind: policies.TokenKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -1026,13 +1026,13 @@ func TestAuthorize(t *testing.T) {
 				Subject:     emptySubject.AccessToken,
 				SubjectType: policies.UserType,
 				SubjectKind: policies.TokenKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.DomainType,
 				Permission:  policies.AdminPermission,
 			},
 			checkPolicyReq: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformKind,
 				Permission:  policies.AdminPermission,
 			},
@@ -1057,7 +1057,7 @@ func TestAuthorize(t *testing.T) {
 			},
 			checkPolicyReq: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -1075,14 +1075,14 @@ func TestAuthorize(t *testing.T) {
 			policyReq: policies.Policy{
 				SubjectType: policies.UserType,
 				SubjectKind: policies.UsersKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
 			checkPolicyReq: policies.Policy{
 				SubjectType: policies.UserType,
 				SubjectKind: policies.UsersKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -1101,13 +1101,13 @@ func TestAuthorize(t *testing.T) {
 				Subject:     emptySubject.AccessToken,
 				SubjectType: policies.UserType,
 				SubjectKind: policies.TokenKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.DomainType,
 				Permission:  policies.AdminPermission,
 			},
 			checkPolicyReq: policies.Policy{
 				SubjectType: policies.UserType,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
@@ -1125,14 +1125,14 @@ func TestAuthorize(t *testing.T) {
 			policyReq: policies.Policy{
 				SubjectType: policies.UserType,
 				SubjectKind: policies.UsersKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},
 			checkPolicyReq: policies.Policy{
 				SubjectType: policies.UserType,
 				SubjectKind: policies.UsersKind,
-				Object:      policies.AthenaObject,
+				Object:      policies.MitrasObject,
 				ObjectType:  policies.PlatformType,
 				Permission:  policies.AdminPermission,
 			},

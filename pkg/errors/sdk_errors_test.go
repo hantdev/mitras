@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/hantdev/athena/pkg/errors"
+	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -11,15 +11,15 @@ set -o pipefail
 # Define source and target database connection details
 SRC_DB_HOST="localhost"
 SRC_DB_PORT="6003"
-SRC_DB_USER="athena"
-SRC_DB_PASSWORD="athena"
+SRC_DB_USER="mitras"
+SRC_DB_PASSWORD="mitras"
 SRC_DB_NAME="domains"
 TABLENAME_PREFIX=domains
 
 DEST_DB_HOST="localhost"
 DEST_DB_PORT="6005"
-DEST_DB_USER="athena"
-DEST_DB_PASSWORD="athena"
+DEST_DB_USER="mitras"
+DEST_DB_PASSWORD="mitras"
 DEST_DB_NAME="channels"
 
 # List of tables to copy

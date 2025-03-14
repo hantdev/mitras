@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hantdev/athena/pkg/uuid"
+	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/require"
 )
 

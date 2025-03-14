@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/hantdev/athena"
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/auth/api/http/keys"
-	"github.com/hantdev/athena/auth/api/http/pats"
+	"github.com/hantdev/mitras"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/auth/api/http/keys"
+	"github.com/hantdev/mitras/auth/api/http/pats"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -19,7 +19,7 @@ func MakeHandler(svc auth.Service, logger *slog.Logger, instanceID string) http.
 	mux = keys.MakeHandler(svc, mux, logger)
 	mux = pats.MakeHandler(svc, mux, logger)
 
-	mux.Get("/health", athena.Health("auth", instanceID))
+	mux.Get("/health", mitras.Health("auth", instanceID))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return mux

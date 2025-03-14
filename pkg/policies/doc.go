@@ -1,2 +1,2 @@
-// Package policies contains Athena policy definitions.
+// Package policies contains Mitras policy definitions.
 package policies

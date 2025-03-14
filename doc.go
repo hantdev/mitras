@@ -1,3 +1,3 @@
-// Package athena acts as an umbrella package containing multiple different
+// Package mitras acts as an umbrella package containing multiple different
 // microservices and defines all shared domain concepts.
-package athena
+package mitras

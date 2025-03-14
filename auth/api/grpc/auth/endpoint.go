@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/policies"
 	"github.com/go-kit/kit/endpoint"
 )
 

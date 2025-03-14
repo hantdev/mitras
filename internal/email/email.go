@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hantdev/athena/pkg/errors"
+	"github.com/hantdev/mitras/pkg/errors"
 	"gopkg.in/gomail.v2"
 )
 
@@ -32,13 +32,13 @@ type email struct {
 
 // Config email agent configuration.
 type Config struct {
-	Host        string `env:"ATHENA_EMAIL_HOST"         envDefault:"localhost"`
-	Port        string `env:"ATHENA_EMAIL_PORT"         envDefault:"25"`
-	Username    string `env:"ATHENA_EMAIL_USERNAME"     envDefault:"root"`
-	Password    string `env:"ATHENA_EMAIL_PASSWORD"     envDefault:""`
-	FromAddress string `env:"ATHENA_EMAIL_FROM_ADDRESS" envDefault:""`
-	FromName    string `env:"ATHENA_EMAIL_FROM_NAME"    envDefault:""`
-	Template    string `env:"ATHENA_EMAIL_TEMPLATE"     envDefault:"email.tmpl"`
+	Host        string `env:"MITRAS_EMAIL_HOST"         envDefault:"localhost"`
+	Port        string `env:"MITRAS_EMAIL_PORT"         envDefault:"25"`
+	Username    string `env:"MITRAS_EMAIL_USERNAME"     envDefault:"root"`
+	Password    string `env:"MITRAS_EMAIL_PASSWORD"     envDefault:""`
+	FromAddress string `env:"MITRAS_EMAIL_FROM_ADDRESS" envDefault:""`
+	FromName    string `env:"MITRAS_EMAIL_FROM_NAME"    envDefault:""`
+	Template    string `env:"MITRAS_EMAIL_TEMPLATE"     envDefault:"email.tmpl"`
 }
 
 // Agent for mailing.

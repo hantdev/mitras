@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hantdev/athena"
-	"github.com/hantdev/athena/auth"
+	"github.com/hantdev/mitras"
+	"github.com/hantdev/mitras/auth"
 )
 
 var (
-	_ athena.Response = (*issueKeyRes)(nil)
-	_ athena.Response = (*revokeKeyRes)(nil)
+	_ mitras.Response = (*issueKeyRes)(nil)
+	_ mitras.Response = (*revokeKeyRes)(nil)
 )
 
 type issueKeyRes struct {

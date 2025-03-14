@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
-	repoerr "github.com/hantdev/athena/pkg/errors/repository"
-	"github.com/hantdev/athena/pkg/postgres"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
+	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
+	"github.com/hantdev/mitras/pkg/postgres"
 )
 
 var (

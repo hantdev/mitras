@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
 	"golang.org/x/crypto/scrypt"
 )
 

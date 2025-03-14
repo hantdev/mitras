@@ -1,4 +1,4 @@
-package athena
+package mitras
 
 // IDProvider specifies an API for generating unique identifiers.
 type IDProvider interface {

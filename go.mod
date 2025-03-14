@@ -1,4 +1,4 @@
-module github.com/hantdev/athena
+module github.com/hantdev/mitras
 
 go 1.23.5
 

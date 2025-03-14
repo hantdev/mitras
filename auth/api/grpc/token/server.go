@@ -3,9 +3,9 @@ package token
 import (
 	"context"
 
-	grpcTokenV1 "github.com/hantdev/athena/api/grpc/token/v1"
-	"github.com/hantdev/athena/auth"
-	grpcapi "github.com/hantdev/athena/auth/api/grpc"
+	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
+	"github.com/hantdev/mitras/auth"
+	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 )
 

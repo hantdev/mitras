@@ -1,5 +1,5 @@
 ###
-# Runs all Athena microservices (must be previously built and installed).
+# Runs all Mitras microservices (must be previously built and installed).
 #
 # Expects that PostgreSQL and needed messaging DB are alredy running.
 # Additionally, MQTT microservice demands that Redis is up and running.
@@ -8,9 +8,9 @@
 
 BUILD_DIR=../build
 
-# Kill all athena-* stuff
+# Kill all mitras-* stuff
 function cleanup {
-    pkill athena
+    pkill mitras
     pkill nats
 }
 
@@ -34,32 +34,32 @@ done
 ###
 # Users
 ###
-ATHENA_USERS_LOG_LEVEL=info ATHENA_USERS_HTTP_PORT=9002 ATHENA_USERS_GRPC_PORT=7001 ATHENA_USERS_ADMIN_EMAIL=admin@athena.com ATHENA_USERS_ADMIN_PASSWORD=12345678 ATHENA_USERS_ADMIN_USERNAME=admin ATHENA_EMAIL_TEMPLATE=../docker/templates/users.tmpl $BUILD_DIR/athena-users &
+MITRAS_USERS_LOG_LEVEL=info MITRAS_USERS_HTTP_PORT=9002 MITRAS_USERS_GRPC_PORT=7001 MITRAS_USERS_ADMIN_EMAIL=admin@mitras.com MITRAS_USERS_ADMIN_PASSWORD=12345678 MITRAS_USERS_ADMIN_USERNAME=admin MITRAS_EMAIL_TEMPLATE=../docker/templates/users.tmpl $BUILD_DIR/mitras-users &
 
 ###
 # Clients
 ###
-ATHENA_CLIENTS_LOG_LEVEL=info ATHENA_CLIENTS_HTTP_PORT=9000 ATHENA_CLIENTS_GRPC_PORT=7000 ATHENA_CLIENTS_AUTH_HTTP_PORT=9002 $BUILD_DIR/athena-clients &
+MITRAS_CLIENTS_LOG_LEVEL=info MITRAS_CLIENTS_HTTP_PORT=9000 MITRAS_CLIENTS_GRPC_PORT=7000 MITRAS_CLIENTS_AUTH_HTTP_PORT=9002 $BUILD_DIR/mitras-clients &
 
 ###
 # HTTP
 ###
-ATHENA_HTTP_ADAPTER_LOG_LEVEL=info ATHENA_HTTP_ADAPTER_PORT=8008 ATHENA_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/athena-http &
+MITRAS_HTTP_ADAPTER_LOG_LEVEL=info MITRAS_HTTP_ADAPTER_PORT=8008 MITRAS_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/mitras-http &
 
 ###
 # WS
 ###
-ATHENA_WS_ADAPTER_LOG_LEVEL=info ATHENA_WS_ADAPTER_HTTP_PORT=8190 ATHENA_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/athena-ws &
+MITRAS_WS_ADAPTER_LOG_LEVEL=info MITRAS_WS_ADAPTER_HTTP_PORT=8190 MITRAS_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/mitras-ws &
 
 ###
 # MQTT
 ###
-ATHENA_MQTT_ADAPTER_LOG_LEVEL=info ATHENA_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/athena-mqtt &
+MITRAS_MQTT_ADAPTER_LOG_LEVEL=info MITRAS_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/mitras-mqtt &
 
 ###
 # CoAP
 ###
-ATHENA_COAP_ADAPTER_LOG_LEVEL=info ATHENA_COAP_ADAPTER_PORT=5683 ATHENA_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/athena-coap &
+MITRAS_COAP_ADAPTER_LOG_LEVEL=info MITRAS_COAP_ADAPTER_PORT=5683 MITRAS_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/mitras-coap &
 
 trap cleanup EXIT
 

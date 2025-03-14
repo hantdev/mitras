@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/hantdev/athena/auth"
+	"github.com/hantdev/mitras/auth"
 )
 
 func issueEndpoint(svc auth.Service) endpoint.Endpoint {

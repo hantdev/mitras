@@ -1,4 +1,4 @@
-package athena
+package mitras
 
 // File topics.go contains all NATS subjects that are shared between services.
 

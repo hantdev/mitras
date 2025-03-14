@@ -3,8 +3,8 @@ package keys
 import (
 	"testing"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
-	"github.com/hantdev/athena/auth"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/auth"
 	"github.com/stretchr/testify/assert"
 )
 

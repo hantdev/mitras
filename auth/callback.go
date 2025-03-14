@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
-	"github.com/hantdev/athena/pkg/policies"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/policies"
 )
 
 type callback struct {
@@ -21,7 +21,7 @@ type callback struct {
 
 // CallBack send auth request to an external service.
 //
-//go:generate mockery --name CallBack --output=./mocks --filename callback.go --quiet
+//go:generate mockery --name CallBack --output=./mocks --filename callback.go --quiet --note "Soict IoT Central Callback interface"
 type CallBack interface {
 	Authorize(ctx context.Context, pr policies.Policy) error
 }

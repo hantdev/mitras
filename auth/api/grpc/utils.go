@@ -3,10 +3,10 @@ package grpc
 import (
 	"fmt"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
-	"github.com/hantdev/athena/auth"
-	"github.com/hantdev/athena/pkg/errors"
-	svcerr "github.com/hantdev/athena/pkg/errors/service"
+	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/errors"
+	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

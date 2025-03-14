@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	apiutil "github.com/hantdev/athena/api/http/util"
+	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/stretchr/testify/assert"
 )
 
