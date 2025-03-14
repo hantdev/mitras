@@ -16,7 +16,7 @@ import (
 	httpapi "github.com/hantdev/athena/auth/api/http"
 	"github.com/hantdev/athena/auth/jwt"
 	"github.com/hantdev/athena/auth/mocks"
-	smqlog "github.com/hantdev/athena/logger"
+	atnlog "github.com/hantdev/athena/logger"
 	svcerr "github.com/hantdev/athena/pkg/errors/service"
 	policymocks "github.com/hantdev/athena/pkg/policies/mocks"
 	"github.com/hantdev/athena/pkg/uuid"
@@ -79,7 +79,7 @@ func newService() (auth.Service, *mocks.KeyRepository) {
 }
 
 func newServer(svc auth.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(svc, smqlog.NewMock(), "")
+	mux := httpapi.MakeHandler(svc, atnlog.NewMock(), "")
 	return httptest.NewServer(mux)
 }
 
