@@ -6,7 +6,7 @@ import (
 
 	apiutil "github.com/hantdev/athena/api/http/util"
 	"github.com/hantdev/athena/auth"
-	smqauthn "github.com/hantdev/athena/pkg/authn"
+	atnauthn "github.com/hantdev/athena/pkg/authn"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -14,7 +14,7 @@ type sessionKeyType string
 
 const SessionKey = sessionKeyType("session")
 
-func AuthenticateMiddleware(authn smqauthn.Authentication, domainCheck bool) func(http.Handler) http.Handler {
+func AuthenticateMiddleware(authn atnauthn.Authentication, domainCheck bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := apiutil.ExtractBearerToken(r)

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	apiutil "github.com/hantdev/athena/api/http/util"
-	smqlog "github.com/hantdev/athena/logger"
+	atnlog "github.com/hantdev/athena/logger"
 	"github.com/hantdev/athena/pkg/errors"
 	svcerr "github.com/hantdev/athena/pkg/errors/service"
 	"github.com/stretchr/testify/assert"
@@ -352,7 +352,7 @@ func TestLoggingErrorEncoder(t *testing.T) {
 				encCalled = true
 			}
 
-			errorEncoder := apiutil.LoggingErrorEncoder(smqlog.NewMock(), encFunc)
+			errorEncoder := apiutil.LoggingErrorEncoder(atnlog.NewMock(), encFunc)
 			errorEncoder(context.Background(), c.err, httptest.NewRecorder())
 
 			assert.True(t, encCalled)
