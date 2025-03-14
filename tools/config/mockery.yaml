@@ -1,56 +1,62 @@
 issue-845-fix: True
-with-expecter: true
+with-expecter: True
+disable-version-string: True
+resolve-type-alias: False
 filename: "{{.InterfaceName}}.go"
 outpkg: "mocks"
 boilerplate-file: "./tools/config/boilerplate.txt"
+recursive: true
+inpackage: false
+
 packages:
-  github.com/hantdev/mitras/api/grpc/clients/v1:
+  github.com/hantdev/mitras:
+    config:
+      all: false
+      recursive: true
+      inpackage: false
+      testonly: true
+      with-expecter: true
+      keeptree: true
     interfaces:
       ClientsServiceClient:
         config:
           dir: "./clients/mocks"
           mockname: "ClientsServiceClient"
           filename: "clients_client.go"
-  github.com/hantdev/mitras/api/grpc/domains/v1:
-    interfaces:
+          package: "github.com/hantdev/mitras/api/grpc/clients/v1"
       DomainsServiceClient:
         config:
           dir: "./domains/mocks"
           mockname: "DomainsServiceClient"
           filename: "domains_client.go"
-  github.com/hantdev/mitras/api/grpc/token/v1:
-    interfaces:
+          package: "github.com/hantdev/mitras/api/grpc/domains/v1"
       TokenServiceClient:
         config:
           dir: "./auth/mocks"
           mockname: "TokenServiceClient"
           filename: "token_client.go"
-  github.com/hantdev/mitras/api/grpc/channels/v1:
-    interfaces:
+          package: "github.com/hantdev/mitras/api/grpc/token/v1"
       ChannelsServiceClient:
         config:
           dir: "./channels/mocks"
           mockname: "ChannelsServiceClient"
           filename: "channels_client.go"
-  github.com/hantdev/mitras/api/grpc/groups/v1:
-    interfaces:
+          package: "github.com/hantdev/mitras/api/grpc/channels/v1"
       GroupsServiceClient:
         config:
           dir: "./groups/mocks"
           mockname: "GroupsServiceClient"
           filename: "groups_client.go"
-  github.com/hantdev/mitras/pkg/sdk:
-    interfaces:
+          package: "github.com/hantdev/mitras/api/grpc/groups/v1"
       SDK:
         config:
           dir: "./pkg/sdk/mocks"
           mockname: "SDK"
           filename: "sdk.go"
-
-  github.com/hantdev/mitras/certs/pki/amcerts:
-    interfaces:
+          package: "github.com/hantdev/mitras/pkg/sdk"
       Agent:
         config:
           dir: "./certs/mocks"
           mockname: "Agent"
           filename: "pki.go"
+          package: "github.com/hantdev/mitras/certs/pki/amcerts"
