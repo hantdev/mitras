@@ -118,7 +118,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV }}
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/*.out
           codecov_yml_path: tools/config/codecov.yml
           verbose: true
