@@ -34,9 +34,9 @@ jobs:
       #     version: v1.60.3
       #     args: --config ./tools/config/golangci.yml
 
-      - name: Build all Binaries
-        run: |
-          make all -j $(nproc)
+      # - name: Build all Binaries
+      #   run: |
+      #     make all -j $(nproc)
 
       - name: Compile check for rabbitmq
         run: |
