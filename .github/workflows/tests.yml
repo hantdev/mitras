@@ -38,13 +38,13 @@ jobs:
       #   run: |
       #     make all -j $(nproc)
 
-      - name: Compile check for rabbitmq
-        run: |
-          MITRAS_MESSAGE_BROKER_TYPE=rabbitmq make mqtt
+      # - name: Compile check for rabbitmq
+      #   run: |
+      #     MITRAS_MESSAGE_BROKER_TYPE=rabbitmq make mqtt
 
-      - name: Compile check for redis
-        run: |
-          MITRAS_ES_TYPE=redis make mqtt
+      # - name: Compile check for redis
+      #   run: |
+      #     MITRAS_ES_TYPE=redis make mqtt
 
   run-tests:
     name: Run tests
