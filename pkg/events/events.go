@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 	"time"
-	// "github.com/hantdev/mitras/pkg/messaging"
+	"github.com/hantdev/mitras/pkg/messaging"
 )
 
 const (
@@ -42,7 +42,7 @@ type SubscriberConfig struct {
 	Stream   string
 	Handler  EventHandler
 	Ordered  bool
-	// DeliveryPolicy messaging.DeliveryPolicy
+	DeliveryPolicy messaging.DeliveryPolicy
 }
 
 // Subscriber specifies event subscription API.
