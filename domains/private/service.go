@@ -10,7 +10,7 @@ import (
 
 const defLimit = 100
 
-//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service Interface"
+//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service is a service for domains."
 type Service interface {
 	RetrieveEntity(ctx context.Context, id string) (domains.Domain, error)
 	DeleteUserFromDomains(ctx context.Context, id string) error
