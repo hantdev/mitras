@@ -3,6 +3,7 @@ package grpcclient
 import (
 	"context"
 
+	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	tokengrpc "github.com/hantdev/mitras/auth/api/grpc/token"
 	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
@@ -29,4 +30,18 @@ func SetupTokenClient(ctx context.Context, cfg Config) (grpcTokenV1.TokenService
 	}
 
 	return tokengrpc.NewTokenClient(client.Connection(), cfg.Timeout), client, nil
+}
+
+// SetupDomiansClient loads domains gRPC configuration and creates a new domains gRPC client.
+//
+// For example:
+//
+// domainsClient, domainsHandler, err := grpcclient.SetupDomainsClient(ctx, grpcclient.Config{}).
+func SetupDomainsClient(ctx context.Context, cfg Config) (grpcDomainsV1.DomainsServiceClient, Handler, error) {
+	client, err := NewHandler(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return domainsgrpc.NewDomainsClient(client.Connection(), cfg.Timeout), client, nil
 }
