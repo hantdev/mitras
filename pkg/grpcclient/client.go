@@ -6,6 +6,7 @@ import (
 	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	tokengrpc "github.com/hantdev/mitras/auth/api/grpc/token"
+	domainsgrpc "github.com/hantdev/mitras/domains/api/grpc"
 	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
 )
 
