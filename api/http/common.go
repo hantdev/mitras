@@ -12,7 +12,7 @@ import (
 
 	// "github.com/hantdev/mitras/certs"
 	// "github.com/hantdev/mitras/clients"
-	// "github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 
@@ -78,7 +78,7 @@ const (
 	DefStatus     = "enabled"
 	// DefClientStatus = clients.Enabled
 	// DefUserStatus   = users.Enabled
-	// DefGroupStatus  = groups.Enabled
+	DefGroupStatus = groups.Enabled
 
 	// ContentType represents JSON content type.
 	ContentType = "application/json"
