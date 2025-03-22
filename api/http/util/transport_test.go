@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	atnlog "github.com/hantdev/mitras/logger"
+	mitraslog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/stretchr/testify/assert"
@@ -352,7 +352,7 @@ func TestLoggingErrorEncoder(t *testing.T) {
 				encCalled = true
 			}
 
-			errorEncoder := apiutil.LoggingErrorEncoder(atnlog.NewMock(), encFunc)
+			errorEncoder := apiutil.LoggingErrorEncoder(mitraslog.NewMock(), encFunc)
 			errorEncoder(context.Background(), c.err, httptest.NewRecorder())
 
 			assert.True(t, encCalled)
