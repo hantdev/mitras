@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras/pkg/errors"
+	kithttp "github.com/go-kit/kit/transport/http"
 )
 
 // LoggingErrorEncoder is a go-kit error encoder logging decorator.

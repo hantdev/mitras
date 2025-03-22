@@ -3,10 +3,16 @@ package grpcclient
 import (
 	"context"
 
+	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	tokengrpc "github.com/hantdev/mitras/auth/api/grpc/token"
+	channelsgrpc "github.com/hantdev/mitras/channels/api/grpc"
+	clientsauth "github.com/hantdev/mitras/clients/api/grpc"
 	domainsgrpc "github.com/hantdev/mitras/domains/api/grpc"
+	groupsgrpc "github.com/hantdev/mitras/groups/api/grpc"
 	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -45,4 +51,46 @@ func SetupDomainsClient(ctx context.Context, cfg Config) (grpcDomainsV1.DomainsS
 	}
 
 	return domainsgrpc.NewDomainsClient(client.Connection(), cfg.Timeout), client, nil
+}
+
+// SetupClientsClient loads clients gRPC configuration and creates new clients gRPC client.
+//
+// For example:
+//
+// clientClient, clientHandler, err := grpcclient.SetupClients(ctx, grpcclient.Config{}).
+func SetupClientsClient(ctx context.Context, cfg Config) (grpcClientsV1.ClientsServiceClient, Handler, error) {
+	client, err := NewHandler(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return clientsauth.NewClient(client.Connection(), cfg.Timeout), client, nil
+}
+
+// SetupChannelsClient loads channels gRPC configuration and creates new channels gRPC client.
+//
+// For example:
+//
+// channelClient, channelHandler, err := grpcclient.SetupChannelsClient(ctx, grpcclient.Config{}).
+func SetupChannelsClient(ctx context.Context, cfg Config) (grpcChannelsV1.ChannelsServiceClient, Handler, error) {
+	client, err := NewHandler(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return channelsgrpc.NewClient(client.Connection(), cfg.Timeout), client, nil
+}
+
+// SetupGroupsClient loads groups gRPC configuration and creates new groups gRPC client.
+//
+// For example:
+//
+// groupClient, groupHandler, err := grpcclient.SetupGroupsClient(ctx, grpcclient.Config{}).
+func SetupGroupsClient(ctx context.Context, cfg Config) (grpcGroupsV1.GroupsServiceClient, Handler, error) {
+	client, err := NewHandler(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return groupsgrpc.NewClient(client.Connection(), cfg.Timeout), client, nil
 }

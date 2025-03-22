@@ -9,14 +9,12 @@ import (
 
 	"github.com/hantdev/mitras"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-
 	// "github.com/hantdev/mitras/certs"
-	// "github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-
-	// "github.com/hantdev/mitras/users"
+	"github.com/hantdev/mitras/users"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -67,18 +65,18 @@ const (
 	FirstNameKey = "first_name"
 	LastNameKey  = "last_name"
 
-	DefTotal      = uint64(100)
-	DefOffset     = 0
-	DefOrder      = "updated_at"
-	DefDir        = "asc"
-	DefLimit      = 10
-	DefLevel      = 0
-	DefStartLevel = 1
-	DefEndLevel   = 0
-	DefStatus     = "enabled"
-	// DefClientStatus = clients.Enabled
-	// DefUserStatus   = users.Enabled
-	DefGroupStatus = groups.Enabled
+	DefTotal        = uint64(100)
+	DefOffset       = 0
+	DefOrder        = "updated_at"
+	DefDir          = "asc"
+	DefLimit        = 10
+	DefLevel        = 0
+	DefStartLevel   = 1
+	DefEndLevel     = 0
+	DefStatus       = "enabled"
+	DefClientStatus = clients.Enabled
+	DefUserStatus   = users.Enabled
+	DefGroupStatus  = groups.Enabled
 
 	// ContentType represents JSON content type.
 	ContentType = "application/json"

@@ -128,7 +128,7 @@ func TestCreateDomain(t *testing.T) {
 			err:         nil,
 		},
 		{
-			desc: "register a new domain with empty token",
+			desc: "register  a new domain with empty token",
 			domain: domains.Domain{
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
@@ -141,7 +141,7 @@ func TestCreateDomain(t *testing.T) {
 			err:         apiutil.ErrBearerToken,
 		},
 		{
-			desc: "register a new domain with invalid token",
+			desc: "register  a new domain with invalid token",
 			domain: domains.Domain{
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
@@ -155,7 +155,7 @@ func TestCreateDomain(t *testing.T) {
 			err:         svcerr.ErrAuthentication,
 		},
 		{
-			desc: "register a new domain with an empty name",
+			desc: "register  a new domain with an empty name",
 			domain: domains.Domain{
 				Name:     "",
 				Metadata: domains.Metadata{"role": "domain"},
@@ -181,7 +181,7 @@ func TestCreateDomain(t *testing.T) {
 			err:         apiutil.ErrMissingAlias,
 		},
 		{
-			desc: "register a new domain with invalid content type",
+			desc: "register a  new domain with invalid content type",
 			domain: domains.Domain{
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
@@ -194,7 +194,7 @@ func TestCreateDomain(t *testing.T) {
 			err:         apiutil.ErrUnsupportedContentType,
 		},
 		{
-			desc: "register a new domain that cant be marshalled",
+			desc: "register a  new domain that cant be marshalled",
 			domain: domains.Domain{
 				Name: "test",
 				Metadata: map[string]interface{}{
@@ -289,20 +289,20 @@ func TestListDomains(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:   "list domains with empty token",
+			desc:   "list domains  with empty token",
 			token:  "",
 			status: http.StatusUnauthorized,
 			err:    apiutil.ErrBearerToken,
 		},
 		{
-			desc:     "list domains with invalid token",
+			desc:     "list domains  with invalid token",
 			token:    inValidToken,
 			status:   http.StatusUnauthorized,
 			authnErr: svcerr.ErrAuthentication,
 			err:      svcerr.ErrAuthentication,
 		},
 		{
-			desc:  "list domains with offset",
+			desc:  "list domains  with offset",
 			token: validToken,
 			query: "offset=1",
 			page: domains.Page{
@@ -319,14 +319,14 @@ func TestListDomains(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:   "list domains with invalid offset",
+			desc:   "list domains  with invalid offset",
 			token:  validToken,
 			query:  "offset=invalid",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:  "list domains with limit",
+			desc:  "list domains  with limit",
 			token: validToken,
 			query: "limit=1",
 			page: domains.Page{
@@ -343,14 +343,14 @@ func TestListDomains(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:   "list domains with invalid limit",
+			desc:   "list domains  with invalid limit",
 			token:  validToken,
 			query:  "limit=invalid",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:  "list domains with name",
+			desc:  "list domains  with name",
 			token: validToken,
 			listDomainsResp: domains.DomainsPage{
 				Total:   1,
@@ -407,7 +407,7 @@ func TestListDomains(t *testing.T) {
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate status",
+			desc:   "list domains  with duplicate status",
 			token:  validToken,
 			query:  "status=enabled&status=disabled",
 			status: http.StatusBadRequest,
@@ -432,21 +432,21 @@ func TestListDomains(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:   "list domains with empty tags",
+			desc:   "list domains  with empty tags",
 			token:  validToken,
 			query:  "tag= ",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate tags",
+			desc:   "list domains  with duplicate tags",
 			token:  validToken,
 			query:  "tag=tag1&tag=tag2",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:  "list domains with metadata",
+			desc:  "list domains  with metadata",
 			token: validToken,
 			query: "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
 			page: domains.Page{
@@ -466,21 +466,21 @@ func TestListDomains(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:   "list domains with invalid metadata",
+			desc:   "list domains  with invalid metadata",
 			token:  validToken,
 			query:  "metadata=invalid",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate metadata",
+			desc:   "list domains  with duplicate metadata",
 			token:  validToken,
 			query:  "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:  "list domains with role name",
+			desc:  "list domains  with role name",
 			token: validToken,
 			query: "role_name=view",
 			page: domains.Page{
@@ -498,21 +498,21 @@ func TestListDomains(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc:   "list domains with invalid role name",
+			desc:   "list domains  with invalid role name",
 			token:  validToken,
 			query:  "role_name= ",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate role name",
+			desc:   "list domains  with duplicate role name",
 			token:  validToken,
 			query:  "role_name=view&role_name=view",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:  "list domains with order",
+			desc:  "list domains  with order",
 			token: validToken,
 			page: domains.Page{
 				Offset: api.DefOffset,
@@ -528,21 +528,21 @@ func TestListDomains(t *testing.T) {
 			status: http.StatusOK,
 		},
 		{
-			desc:   "list domains with invalid order",
+			desc:   "list domains  with invalid order",
 			token:  validToken,
 			query:  "order= ",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate order",
+			desc:   "list domains  with duplicate order",
 			token:  validToken,
 			query:  "order=name&order=name",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:  "list domains with dir",
+			desc:  "list domains  with dir",
 			token: validToken,
 			page: domains.Page{
 				Offset: api.DefOffset,
@@ -558,14 +558,14 @@ func TestListDomains(t *testing.T) {
 			status: http.StatusOK,
 		},
 		{
-			desc:   "list domains with invalid dir",
+			desc:   "list domains  with invalid dir",
 			token:  validToken,
 			query:  "dir= ",
 			status: http.StatusBadRequest,
 			err:    apiutil.ErrValidation,
 		},
 		{
-			desc:   "list domains with duplicate dir",
+			desc:   "list domains  with duplicate dir",
 			token:  validToken,
 			query:  "dir=asc&dir=asc",
 			status: http.StatusBadRequest,

@@ -104,19 +104,21 @@ type DomainReq struct {
 }
 
 type Domain struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Metadata  Metadata  `json:"metadata,omitempty"`
-	Tags      []string  `json:"tags,omitempty"`
-	Alias     string    `json:"alias,omitempty"`
-	Status    Status    `json:"status"`
-	RoleID    string    `json:"role_id,omitempty"`
-	RoleName  string    `json:"role_name,omitempty"`
-	Actions   []string  `json:"actions,omitempty"`
-	CreatedBy string    `json:"created_by,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedBy string    `json:"updated_by,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	ID        string                    `json:"id"`
+	Name      string                    `json:"name"`
+	Metadata  Metadata                  `json:"metadata,omitempty"`
+	Tags      []string                  `json:"tags,omitempty"`
+	Alias     string                    `json:"alias,omitempty"`
+	Status    Status                    `json:"status"`
+	RoleID    string                    `json:"role_id,omitempty"`
+	RoleName  string                    `json:"role_name,omitempty"`
+	Actions   []string                  `json:"actions,omitempty"`
+	CreatedBy string                    `json:"created_by,omitempty"`
+	CreatedAt time.Time                 `json:"created_at"`
+	UpdatedBy string                    `json:"updated_by,omitempty"`
+	UpdatedAt time.Time                 `json:"updated_at,omitempty"`
+	MemberID  string                    `json:"member_id,omitempty"`
+	Roles     []roles.MemberRoleActions `json:"roles,omitempty"`
 }
 
 type Page struct {
@@ -160,13 +162,13 @@ func (page DomainsPage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Service is an application service for managing domains."
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	// CreateDomain creates a new domain.
 	CreateDomain(ctx context.Context, sesssion authn.Session, d Domain) (Domain, []roles.RoleProvision, error)
 
 	// RetrieveDomain retrieves a domain specified by the provided ID.
-	RetrieveDomain(ctx context.Context, sesssion authn.Session, id string) (Domain, error)
+	RetrieveDomain(ctx context.Context, sesssion authn.Session, id string, withRoles bool) (Domain, error)
 
 	// UpdateDomain updates the domain specified by the provided ID.
 	UpdateDomain(ctx context.Context, sesssion authn.Session, id string, d DomainReq) (Domain, error)
@@ -225,16 +227,16 @@ type Service interface {
 
 // Repository specifies Domain persistence API.
 //
-//go:generate mockery --name Repository --output=./mocks --filename repository.go  --quiet --note "Repository is an interface for managing domains persistence."
+//go:generate mockery --name Repository --output=./mocks --filename repository.go  --quiet
 type Repository interface {
 	// SaveDomain creates db insert transaction for the given domain.
 	SaveDomain(ctx context.Context, d Domain) (Domain, error)
 
+	// RetrieveDomainByIDWithRoles retrieves a domain by its unique ID along with member roles.
+	RetrieveDomainByIDWithRoles(ctx context.Context, id string, memberID string) (Domain, error)
+
 	// RetrieveDomainByID retrieves a domain by its unique ID.
 	RetrieveDomainByID(ctx context.Context, id string) (Domain, error)
-
-	// RetrieveDomainByUserAndID retrieves a domain by its unique ID and user ID.
-	RetrieveDomainByUserAndID(ctx context.Context, userID, id string) (Domain, error)
 
 	// RetrieveAllDomainsByIDs retrieves for given Domain IDs.
 	RetrieveAllDomainsByIDs(ctx context.Context, pm Page) (DomainsPage, error)
@@ -271,7 +273,7 @@ type Repository interface {
 
 // Cache contains domains caching interface.
 //
-//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet --note "Cache is an interface for managing domains cache."
+//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet
 type Cache interface {
 	// Save stores pair domain status and  domain id.
 	Save(ctx context.Context, domainID string, status Status) error
