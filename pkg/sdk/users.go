@@ -20,7 +20,7 @@ const (
 	PasswordResetEndpoint = "password"
 )
 
-// User represents supermq user its credentials.
+// User represents mitras user its credentials.
 type User struct {
 	ID             string      `json:"id"`
 	FirstName      string      `json:"first_name,omitempty"`
