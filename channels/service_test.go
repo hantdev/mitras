@@ -16,7 +16,7 @@ import (
 	gpmocks "github.com/hantdev/mitras/groups/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/authn"
-	smqauthn "github.com/hantdev/mitras/pkg/authn"
+	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
@@ -501,7 +501,7 @@ func TestListChannels(t *testing.T) {
 	cases := []struct {
 		desc                string
 		userKind            string
-		session             smqauthn.Session
+		session             mitrasauthn.Session
 		page                channels.Page
 		retrieveAllResponse channels.ChannelsPage
 		response            channels.ChannelsPage
@@ -515,7 +515,7 @@ func TestListChannels(t *testing.T) {
 		{
 			desc:     "list all channels successfully as non admin",
 			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: channels.Page{
 				Offset: 0,
@@ -542,7 +542,7 @@ func TestListChannels(t *testing.T) {
 		{
 			desc:     "list all channels as non admin with failed to retrieve all",
 			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: channels.Page{
 				Offset: 0,
@@ -556,7 +556,7 @@ func TestListChannels(t *testing.T) {
 		{
 			desc:     "list all channels as non admin with failed super admin",
 			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: channels.Page{
 				Offset: 0,
@@ -593,7 +593,7 @@ func TestListChannels(t *testing.T) {
 	cases2 := []struct {
 		desc                string
 		userKind            string
-		session             smqauthn.Session
+		session             mitrasauthn.Session
 		page                channels.Page
 		retrieveAllResponse channels.ChannelsPage
 		response            channels.ChannelsPage
@@ -608,7 +608,7 @@ func TestListChannels(t *testing.T) {
 			desc:     "list all clients as admin successfully",
 			userKind: "admin",
 			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: channels.Page{
 				Offset: 0,
 				Limit:  100,
@@ -636,7 +636,7 @@ func TestListChannels(t *testing.T) {
 			desc:     "list all clients as admin with failed to retrieve all",
 			userKind: "admin",
 			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: channels.Page{
 				Offset: 0,
 				Limit:  100,
@@ -650,7 +650,7 @@ func TestListChannels(t *testing.T) {
 			desc:     "list all clients as admin with failed to list clients",
 			userKind: "admin",
 			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: channels.Page{
 				Offset: 0,
 				Limit:  100,

@@ -12,7 +12,7 @@ import (
 // Metadata represents arbitrary JSON.
 type Metadata map[string]interface{}
 
-// Channel represents a SuperMQ "communication topic". This topic
+// Channel represents a Mitras "communication topic". This topic
 // contains the clients that can exchange messages between each other.
 type Channel struct {
 	ID          string    `json:"id"`

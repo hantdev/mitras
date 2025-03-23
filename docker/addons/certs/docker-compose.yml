@@ -1,0 +1,121 @@
+# This docker-compose file contains optional certs services. Since it's optional, this file is
+# dependent of docker-compose file from <project_root>/docker. In order to run this services, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/certs/docker-compose.yml up
+# from project root.
+
+networks:
+  mitras-base-net:
+
+volumes:
+  mitras-certs-db-volume:
+
+
+services:
+  certs:
+    image: mitras/certs:${MITRAS_RELEASE_TAG}
+    container_name: mitras-certs
+    depends_on:
+      - am-certs
+    restart: on-failure
+    networks:
+      - mitras-base-net
+    ports:
+      - ${MITRAS_CERTS_HTTP_PORT}:${MITRAS_CERTS_HTTP_PORT}
+    environment:
+      MITRAS_CERTS_LOG_LEVEL: ${MITRAS_CERTS_LOG_LEVEL}
+      MITRAS_CERTS_SIGN_CA_PATH: ${MITRAS_CERTS_SIGN_CA_PATH}
+      MITRAS_CERTS_SIGN_CA_KEY_PATH: ${MITRAS_CERTS_SIGN_CA_KEY_PATH}
+      MITRAS_CERTS_VAULT_HOST: ${MITRAS_CERTS_VAULT_HOST}
+      MITRAS_CERTS_VAULT_NAMESPACE: ${MITRAS_CERTS_VAULT_NAMESPACE}
+      MITRAS_CERTS_VAULT_APPROLE_ROLEID: ${MITRAS_CERTS_VAULT_APPROLE_ROLEID}
+      MITRAS_CERTS_VAULT_APPROLE_SECRET: ${MITRAS_CERTS_VAULT_APPROLE_SECRET}
+      MITRAS_CERTS_VAULT_CLIENTS_CERTS_PKI_PATH: ${MITRAS_CERTS_VAULT_CLIENTS_CERTS_PKI_PATH}
+      MITRAS_CERTS_VAULT_CLIENTS_CERTS_PKI_ROLE_NAME: ${MITRAS_CERTS_VAULT_CLIENTS_CERTS_PKI_ROLE_NAME}
+      MITRAS_CERTS_HTTP_HOST: ${MITRAS_CERTS_HTTP_HOST}
+      MITRAS_CERTS_HTTP_PORT: ${MITRAS_CERTS_HTTP_PORT}
+      MITRAS_CERTS_HTTP_SERVER_CERT: ${MITRAS_CERTS_HTTP_SERVER_CERT}
+      MITRAS_CERTS_HTTP_SERVER_KEY: ${MITRAS_CERTS_HTTP_SERVER_KEY}
+      MITRAS_CERTS_DB_HOST: ${MITRAS_CERTS_DB_HOST}
+      MITRAS_CERTS_DB_PORT: ${MITRAS_CERTS_DB_PORT}
+      MITRAS_CERTS_DB_PASS: ${MITRAS_CERTS_DB_PASS}
+      MITRAS_CERTS_DB_USER: ${MITRAS_CERTS_DB_USER}
+      MITRAS_CERTS_DB_NAME: ${MITRAS_CERTS_DB_NAME}
+      MITRAS_CERTS_DB_SSL_MODE: ${MITRAS_CERTS_DB_SSL_MODE}
+      MITRAS_CERTS_DB_SSL_CERT: ${MITRAS_CERTS_DB_SSL_CERT}
+      MITRAS_CERTS_DB_SSL_KEY: ${MITRAS_CERTS_DB_SSL_KEY}
+      MITRAS_CERTS_DB_SSL_ROOT_CERT: ${MITRAS_CERTS_DB_SSL_ROOT_CERT}
+      MITRAS_CERTS_SDK_HOST: ${MITRAS_CERTS_SDK_HOST}
+      MITRAS_CERTS_SDK_CERTS_URL: ${MITRAS_CERTS_SDK_CERTS_URL}
+      MITRAS_CERTS_SDK_TLS_VERIFICATION: ${MITRAS_CERTS_SDK_TLS_VERIFICATION}
+      MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
+      MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
+      MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
+      MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
+      MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
+      MITRAS_CLIENTS_URL: ${MITRAS_CLIENTS_URL}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_CERTS_INSTANCE_ID: ${MITRAS_CERTS_INSTANCE_ID}
+    volumes:
+      - ../../ssl/certs/ca.key:/etc/ssl/certs/ca.key
+      - ../../ssl/certs/ca.crt:/etc/ssl/certs/ca.crt
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_CERT:-./ssl/certs/dummy/client_cert}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_KEY:-./ssl/certs/dummy/client_key}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:-./ssl/certs/dummy/server_ca}
+        target: /auth-grpc-server-ca${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true
+
+  am-certs-db:
+    image: postgres:16.2-alpine
+    container_name: mitras-am-certs-db
+    restart: on-failure
+    networks:
+      - mitras-base-net
+    command: postgres -c "max_connections=${MITRAS_POSTGRES_MAX_CONNECTIONS}"
+    environment:
+      POSTGRES_USER: ${MITRAS_CERTS_DB_USER}
+      POSTGRES_PASSWORD: ${MITRAS_CERTS_DB_PASS}
+      POSTGRES_DB: ${MITRAS_CERTS_DB_NAME}
+    ports:
+      - 5454:5432
+    volumes:
+      - mitras-certs-db-volume:/var/lib/postgresql/data
+
+  am-certs:
+    image: ghcr.io/hantdev/certs:${MITRAS_RELEASE_TAG}
+    container_name: mitras-am-certs
+    depends_on:
+      - am-certs-db
+    restart: on-failure
+    networks:
+      - mitras-base-net
+    environment:
+      AM_CERTS_LOG_LEVEL: ${MITRAS_CERTS_LOG_LEVEL}
+      AM_CERTS_DB_HOST: ${MITRAS_CERTS_DB_HOST}
+      AM_CERTS_DB_PORT: ${MITRAS_CERTS_DB_PORT}
+      AM_CERTS_DB_USER: ${MITRAS_CERTS_DB_USER}
+      AM_CERTS_DB_PASS: ${MITRAS_CERTS_DB_PASS}
+      AM_CERTS_DB: ${MITRAS_CERTS_DB_NAME}
+      AM_CERTS_DB_SSL_MODE: ${MITRAS_CERTS_DB_SSL_MODE}
+      AM_CERTS_HTTP_HOST: mitras-am-certs
+      AM_CERTS_HTTP_PORT: 9010
+      AM_CERTS_GRPC_HOST: mitras-am-certs
+      AM_CERTS_GRPC_PORT: 7012
+      AM_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      AM_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+    volumes:
+     - ./config.yml:/config/config.yml
+    ports:
+      - 9010:9010
+      - 7012:7012

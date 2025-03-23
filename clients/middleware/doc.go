@@ -1,2 +1,2 @@
-// Package middleware provides middleware for SuperMQ Clients service.
+// Package middleware provides middleware for Mitras Clients service.
 package middleware

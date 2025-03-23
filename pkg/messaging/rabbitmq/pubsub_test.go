@@ -27,7 +27,7 @@ var (
 	data    = []byte("payload")
 )
 
-var errFailedHandleMessage = errors.New("failed to handle supermq message")
+var errFailedHandleMessage = errors.New("failed to handle mitras message")
 
 func TestPublisher(t *testing.T) {
 	// Subscribing with topic, and with subtopic, so that we can publish messages.
@@ -193,7 +193,7 @@ func TestSubscribe(t *testing.T) {
 				amqp.Publishing{
 					Headers:     amqp.Table{},
 					ContentType: "application/octet-stream",
-					AppId:       "supermq-publisher",
+					AppId:       "mitras-publisher",
 					Body:        data,
 				})
 			assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))

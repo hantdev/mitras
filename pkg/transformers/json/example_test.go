@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	smqjson "github.com/hantdev/mitras/pkg/transformers/json"
+	mitrasjson "github.com/hantdev/mitras/pkg/transformers/json"
 )
 
 func ExampleParseFlat() {
@@ -16,7 +16,7 @@ func ExampleParseFlat() {
 		"key5/nested2/nested4": "value5",
 	}
 
-	out := smqjson.ParseFlat(in)
+	out := mitrasjson.ParseFlat(in)
 	b, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		panic(err)
@@ -51,7 +51,7 @@ func ExampleFlatten() {
 			},
 		},
 	}
-	out, err := smqjson.Flatten(in)
+	out, err := mitrasjson.Flatten(in)
 	if err != nil {
 		panic(err)
 	}

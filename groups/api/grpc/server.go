@@ -6,7 +6,7 @@ import (
 	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	smqauth "github.com/hantdev/mitras/auth"
+	mitrasauth "github.com/hantdev/mitras/auth"
 	groups "github.com/hantdev/mitras/groups/private"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -74,7 +74,7 @@ func encodeError(err error) error {
 		err == apiutil.ErrMalformedPolicyAct:
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Contains(err, svcerr.ErrAuthentication),
-		errors.Contains(err, smqauth.ErrKeyExpired),
+		errors.Contains(err, mitrasauth.ErrKeyExpired),
 		err == apiutil.ErrMissingEmail,
 		err == apiutil.ErrBearerToken:
 		return status.Error(codes.Unauthenticated, err.Error())
