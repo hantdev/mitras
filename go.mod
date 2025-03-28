@@ -7,6 +7,7 @@ require (
 	github.com/authzed/authzed-go v1.3.1-0.20250221193325-56375fd9bd96
 	github.com/authzed/spicedb v1.41.0
 	github.com/eclipse/paho.mqtt.golang v1.5.0
+	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-kit/kit v0.13.0
 	github.com/gofrs/uuid/v5 v5.3.1
@@ -16,6 +17,7 @@ require (
 	github.com/hantdev/senml v0.0.0-20250322092632-a2a649626ade
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/hashicorp/vault/api/auth/approle v0.9.0
+	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jackc/pgtype v1.14.4
 	github.com/jackc/pgx/v5 v5.7.3
 	github.com/jmoiron/sqlx v1.4.0
@@ -24,10 +26,12 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nats-io/nats.go v1.39.1
 	github.com/ory/dockertest/v3 v3.11.0
+	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus/client_golang v1.21.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.7.1
 	github.com/rubenv/sql-migrate v1.7.1
+	github.com/spf13/cobra v1.9.1
 	github.com/sqids/sqids-go v0.4.1
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
@@ -44,11 +48,7 @@ require (
 )
 
 require (
-	github.com/fatih/color v1.18.0 // indirect
-	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 )
 
