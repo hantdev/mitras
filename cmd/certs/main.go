@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/hantdev/mitras/certs"
 	httpapi "github.com/hantdev/mitras/certs/api"
 	pki "github.com/hantdev/mitras/certs/pki/amcerts"
@@ -22,7 +23,6 @@ import (
 	"github.com/hantdev/mitras/pkg/server"
 	httpserver "github.com/hantdev/mitras/pkg/server/http"
 	"github.com/hantdev/mitras/pkg/uuid"
-	"github.com/caarlos0/env/v11"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 )

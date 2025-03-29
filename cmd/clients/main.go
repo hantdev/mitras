@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/authzed/authzed-go/v1"
 	"github.com/authzed/grpcutil"
@@ -16,16 +17,18 @@ import (
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
 	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
-	"github.com/hantdev/mitras/channels"
-	grpcapi "github.com/hantdev/mitras/channels/api/grpc"
-	httpapi "github.com/hantdev/mitras/channels/api/http"
-	"github.com/hantdev/mitras/channels/events"
-	"github.com/hantdev/mitras/channels/middleware"
-	"github.com/hantdev/mitras/channels/postgres"
-	pChannels "github.com/hantdev/mitras/channels/private"
-	"github.com/hantdev/mitras/channels/tracing"
+	"github.com/hantdev/mitras/clients"
+	grpcapi "github.com/hantdev/mitras/clients/api/grpc"
+	httpapi "github.com/hantdev/mitras/clients/api/http"
+	"github.com/hantdev/mitras/clients/cache"
+	"github.com/hantdev/mitras/clients/events"
+	"github.com/hantdev/mitras/clients/middleware"
+	"github.com/hantdev/mitras/clients/postgres"
+	pClients "github.com/hantdev/mitras/clients/private"
+	"github.com/hantdev/mitras/clients/tracing"
 	dpostgres "github.com/hantdev/mitras/domains/postgres"
 	gpostgres "github.com/hantdev/mitras/groups/postgres"
+	redisclient "github.com/hantdev/mitras/internal/clients/redis"
 	mitraslog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
 	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
@@ -48,6 +51,7 @@ import (
 	spicedbdecoder "github.com/hantdev/mitras/pkg/spicedb"
 	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -56,38 +60,42 @@ import (
 )
 
 const (
-	svcName          = "channels"
-	envPrefixDB      = "MITRAS_CHANNELS_DB_"
-	envPrefixHTTP    = "MITRAS_CHANNELS_HTTP_"
-	envPrefixGRPC    = "MITRAS_CHANNELS_GRPC_"
-	envPrefixAuth    = "MITRAS_AUTH_GRPC_"
-	envPrefixClients = "MITRAS_CLIENTS_GRPC_"
-	envPrefixGroups  = "MITRAS_GROUPS_GRPC_"
-	envPrefixDomains = "MITRAS_DOMAINS_GRPC_"
-	defDB            = "channels"
-	defSvcHTTPPort   = "9005"
-	defSvcGRPCPort   = "7005"
+	svcName            = "clients"
+	envPrefixDB        = "MITRAS_CLIENTS_DB_"
+	envPrefixHTTP      = "MITRAS_CLIENTS_HTTP_"
+	envPrefixGRPC      = "MITRAS_CLIENTS_GRPC_"
+	envPrefixAuth      = "MITRAS_AUTH_GRPC_"
+	envPrefixChannels  = "MITRAS_CHANNELS_GRPC_"
+	envPrefixGroups    = "MITRAS_GROUPS_GRPC_"
+	envPrefixDomains   = "MITRAS_DOMAINS_GRPC_"
+	defDB              = "clients"
+	defSvcHTTPPort     = "9000"
+	defSvcAuthGRPCPort = "7000"
 )
 
 type config struct {
-	LogLevel            string  `env:"MITRAS_CHANNELS_LOG_LEVEL"           envDefault:"info"`
-	InstanceID          string  `env:"MITRAS_CHANNELS_INSTANCE_ID"         envDefault:""`
-	JaegerURL           url.URL `env:"MITRAS_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"               envDefault:"false"`
-	ESURL               string  `env:"MITRAS_ES_URL"                       envDefault:"nats://localhost:4222"`
-	ESConsumerName      string  `env:"MITRAS_CHANNELS_EVENT_CONSUMER"      envDefault:"channels"`
-	TraceRatio          float64 `env:"MITRAS_JAEGER_TRACE_RATIO"           envDefault:"1.0"`
-	SpicedbHost         string  `env:"MITRAS_SPICEDB_HOST"                 envDefault:"localhost"`
-	SpicedbPort         string  `env:"MITRAS_SPICEDB_PORT"                 envDefault:"50051"`
-	SpicedbPreSharedKey string  `env:"MITRAS_SPICEDB_PRE_SHARED_KEY"       envDefault:"12345678"`
-	SpicedbSchemaFile   string  `env:"MITRAS_SPICEDB_SCHEMA_FILE"          envDefault:"schema.zed"`
+	InstanceID          string        `env:"MITRAS_CLIENTS_INSTANCE_ID"        envDefault:""`
+	LogLevel            string        `env:"MITRAS_CLIENTS_LOG_LEVEL"          envDefault:"info"`
+	StandaloneID        string        `env:"MITRAS_CLIENTS_STANDALONE_ID"      envDefault:""`
+	StandaloneToken     string        `env:"MITRAS_CLIENTS_STANDALONE_TOKEN"   envDefault:""`
+	CacheURL            string        `env:"MITRAS_CLIENTS_CACHE_URL"          envDefault:"redis://localhost:6379/0"`
+	CacheKeyDuration    time.Duration `env:"MITRAS_CLIENTS_CACHE_KEY_DURATION" envDefault:"10m"`
+	JaegerURL           url.URL       `env:"MITRAS_JAEGER_URL"                 envDefault:"http://localhost:4318/v1/traces"`
+	SendTelemetry       bool          `env:"MITRAS_SEND_TELEMETRY"             envDefault:"fasle"`
+	ESURL               string        `env:"MITRAS_ES_URL"                     envDefault:"nats://localhost:4222"`
+	ESConsumerName      string        `env:"MITRAS_CLIENTS_EVENT_CONSUMER"     envDefault:"clients"`
+	TraceRatio          float64       `env:"MITRAS_JAEGER_TRACE_RATIO"         envDefault:"1.0"`
+	SpicedbHost         string        `env:"MITRAS_SPICEDB_HOST"               envDefault:"localhost"`
+	SpicedbPort         string        `env:"MITRAS_SPICEDB_PORT"               envDefault:"50051"`
+	SpicedbPreSharedKey string        `env:"MITRAS_SPICEDB_PRE_SHARED_KEY"     envDefault:"12345678"`
+	SpicedbSchemaFile   string        `env:"MITRAS_SPICEDB_SCHEMA_FILE"        envDefault:"schema.zed"`
 }
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 
-	// Create new channels configuration
+	// Create new clients configuration
 	cfg := config{}
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
@@ -117,13 +125,13 @@ func main() {
 		exitCode = 1
 		return
 	}
-	migrations, err := postgres.Migration()
+	tm, err := postgres.Migration()
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	db, err := pgclient.Setup(dbConfig, *migrations)
+	db, err := pgclient.Setup(dbConfig, *tm)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
@@ -144,13 +152,22 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
+	// Setup new redis cache client
+	cacheclient, err := redisclient.Connect(cfg.CacheURL)
+	if err != nil {
+		logger.Error(err.Error())
+		exitCode = 1
+		return
+	}
+	defer cacheclient.Close()
+
 	policyEvaluator, policyService, err := newSpiceDBPolicyServiceEvaluator(cfg, logger)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	logger.Info("Policy service are successfully connected to SpiceDB gRPC server")
+	logger.Info("Policy evaluator and Policy manager are successfully connected to SpiceDB gRPC server")
 
 	grpcCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&grpcCfg, env.Options{Prefix: envPrefixAuth}); err != nil {
@@ -188,22 +205,22 @@ func main() {
 		return
 	}
 	defer authzClient.Close()
-	logger.Info("AuthZ  successfully connected to auth gRPC server " + authzClient.Secure())
+	logger.Info("AuthZ  successfully connected to auth gRPC server " + authnClient.Secure())
 
-	thgrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thgrpcCfg, env.Options{Prefix: envPrefixClients}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load clients gRPC client configuration : %s", err))
+	chgrpccfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&chgrpccfg, env.Options{Prefix: envPrefixChannels}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load channels gRPC client configuration : %s", err))
 		exitCode = 1
 		return
 	}
-	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, thgrpcCfg)
+	channelsgRPC, channelsClient, err := grpcclient.SetupChannelsClient(ctx, chgrpccfg)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to connect to clients gRPC server: %s", err))
+		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	defer clientsHandler.Close()
-	logger.Info("Clients gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
+	logger.Info("Channels gRPC client successfully connected to channels gRPC server " + channelsClient.Secure())
+	defer channelsClient.Close()
 
 	groupsgRPCCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&groupsgRPCCfg, env.Options{Prefix: envPrefixGroups}); err != nil {
@@ -220,7 +237,7 @@ func main() {
 	defer groupsHandler.Close()
 	logger.Info("Groups gRPC client successfully connected to groups gRPC server " + groupsHandler.Secure())
 
-	svc, psvc, err := newService(ctx, db, dbConfig, authz, policyEvaluator, policyService, cfg, tracer, clientsClient, groupsClient, logger)
+	svc, psvc, err := newService(ctx, db, dbConfig, authz, policyEvaluator, policyService, cacheclient, cfg, channelsgRPC, groupsClient, tracer, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create services: %s", err))
 		exitCode = 1
@@ -245,19 +262,6 @@ func main() {
 		return
 	}
 
-	grpcServerConfig := server.Config{Port: defSvcGRPCPort}
-	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
-		exitCode = 1
-		return
-	}
-	registerChannelsServer := func(srv *grpc.Server) {
-		reflection.Register(srv)
-		grpcChannelsV1.RegisterChannelsServiceServer(srv, grpcapi.NewServer(psvc))
-	}
-
-	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerChannelsServer, logger)
-
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err))
@@ -267,6 +271,19 @@ func main() {
 	mux := chi.NewRouter()
 	idp := uuid.New()
 	httpSvc := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, idp), logger)
+
+	grpcServerConfig := server.Config{Port: defSvcAuthGRPCPort}
+	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err))
+		exitCode = 1
+		return
+	}
+
+	registerClientsServer := func(srv *grpc.Server) {
+		reflection.Register(srv)
+		grpcClientsV1.RegisterClientsServiceServer(srv, grpcapi.NewServer(psvc))
+	}
+	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerClientsServer, logger)
 
 	// Start all servers
 	g.Go(func() error {
@@ -286,10 +303,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz mitrasauthz.Authorization,
-	pe policies.Evaluator, ps policies.Service, cfg config, tracer trace.Tracer, clientsClient grpcClientsV1.ClientsServiceClient,
-	groupsClient grpcGroupsV1.GroupsServiceClient, logger *slog.Logger,
-) (channels.Service, pChannels.Service, error) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz mitrasauthz.Authorization, pe policies.Evaluator, ps policies.Service, cacheClient *redis.Client, cfg config, channels grpcChannelsV1.ChannelsServiceClient, groups grpcGroupsV1.GroupsServiceClient, tracer trace.Tracer, logger *slog.Logger) (clients.Service, pClients.Service, error) {
 	database := pg.NewDatabase(db, dbConfig, tracer)
 	repo := postgres.NewRepository(database)
 
@@ -299,34 +313,39 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 		return nil, nil, err
 	}
 
-	availableActions, buildInRoles, err := availableActionsAndBuiltInRoles(cfg.SpicedbSchemaFile)
+	// Clients service
+	cache := cache.NewCache(cacheClient, cfg.CacheKeyDuration)
+
+	availableActions, builtInRoles, err := availableActionsAndBuiltInRoles(cfg.SpicedbSchemaFile)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	svc, err := channels.New(repo, ps, idp, clientsClient, groupsClient, sidp, availableActions, buildInRoles)
+	csvc, err := clients.NewService(repo, ps, cache, channels, groups, idp, sidp, availableActions, builtInRoles)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	svc, err = events.NewEventStoreMiddleware(ctx, svc, cfg.ESURL)
+	csvc, err = events.NewEventStoreMiddleware(ctx, csvc, cfg.ESURL)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	svc = tracing.New(svc, tracer)
+	csvc = tracing.New(csvc, tracer)
 
-	counter, latency := prometheus.MakeMetrics("channels", "api")
-	svc = middleware.MetricsMiddleware(svc, counter, latency)
+	counter, latency := prometheus.MakeMetrics(svcName, "api")
+	csvc = middleware.MetricsMiddleware(csvc, counter, latency)
+	csvc = middleware.MetricsMiddleware(csvc, counter, latency)
 
-	svc, err = middleware.AuthorizationMiddleware(svc, repo, authz, channels.NewOperationPermissionMap(), channels.NewRolesOperationPermissionMap(), channels.NewExternalOperationPermissionMap())
+	csvc, err = middleware.AuthorizationMiddleware(policies.ClientType, csvc, authz, repo, clients.NewOperationPermissionMap(), clients.NewRolesOperationPermissionMap(), clients.NewExternalOperationPermissionMap())
 	if err != nil {
 		return nil, nil, err
 	}
-	svc = middleware.LoggingMiddleware(svc, logger)
+	csvc = middleware.LoggingMiddleware(csvc, logger)
 
-	psvc := pChannels.New(repo, pe, ps)
-	return svc, psvc, err
+	isvc := pClients.New(repo, cache, pe, ps)
+
+	return csvc, isvc, err
 }
 
 func newSpiceDBPolicyServiceEvaluator(cfg config, logger *slog.Logger) (policies.Evaluator, policies.Service, error) {
@@ -338,20 +357,20 @@ func newSpiceDBPolicyServiceEvaluator(cfg config, logger *slog.Logger) (policies
 	if err != nil {
 		return nil, nil, err
 	}
+	pe := spicedb.NewPolicyEvaluator(client, logger)
 	ps := spicedb.NewPolicyService(client, logger)
 
-	pe := spicedb.NewPolicyEvaluator(client, logger)
 	return pe, ps, nil
 }
 
 func availableActionsAndBuiltInRoles(spicedbSchemaFile string) ([]roles.Action, map[roles.BuiltInRoleName][]roles.Action, error) {
-	availableActions, err := spicedbdecoder.GetActionsFromSchema(spicedbSchemaFile, policies.ChannelType)
+	availableActions, err := spicedbdecoder.GetActionsFromSchema(spicedbSchemaFile, policies.ClientType)
 	if err != nil {
 		return []roles.Action{}, map[roles.BuiltInRoleName][]roles.Action{}, err
 	}
 
 	builtInRoles := map[roles.BuiltInRoleName][]roles.Action{
-		channels.BuiltInRoleAdmin: availableActions,
+		clients.BuiltInRoleAdmin: availableActions,
 	}
 
 	return availableActions, builtInRoles, err
