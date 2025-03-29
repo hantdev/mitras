@@ -105,6 +105,9 @@ type listPatsReq struct {
 	token  string
 	offset uint64
 	limit  uint64
+	name   string
+	id     string
+	status auth.Status
 }
 
 func (req listPatsReq) validate() (err error) {

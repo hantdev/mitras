@@ -3,9 +3,9 @@ package auth
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/pkg/policies"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func authenticateEndpoint(svc auth.Service) endpoint.Endpoint {

@@ -233,12 +233,12 @@ func (et *EntityType) UnmarshalText(data []byte) (err error) {
 // ]
 
 type Scope struct {
-	ID               string     `json:"id,omitempty"`
-	PatID            string     `json:"pat_id,omitempty"`
-	OptionalDomainID string     `json:"optional_domain_id,omitempty"`
-	EntityType       EntityType `json:"entity_type,omitempty"`
-	EntityID         string     `json:"entity_id,omitempty"`
-	Operation        Operation  `json:"operation,omitempty"`
+	ID               string     `json:"id"`
+	PatID            string     `json:"pat_id"`
+	OptionalDomainID string     `json:"optional_domain_id"`
+	EntityType       EntityType `json:"entity_type"`
+	EntityID         string     `json:"entity_id"`
+	Operation        Operation  `json:"operation"`
 }
 
 func (s *Scope) Authorized(entityType EntityType, optionalDomainID string, operation Operation, entityID string) bool {
@@ -299,17 +299,21 @@ type PAT struct {
 	LastUsedAt  time.Time `json:"last_used_at,omitempty"`
 	Revoked     bool      `json:"revoked,omitempty"`
 	RevokedAt   time.Time `json:"revoked_at,omitempty"`
+	Status      Status    `json:"status,omitempty"`
 }
 
 type PATSPageMeta struct {
 	Offset uint64 `json:"offset"`
 	Limit  uint64 `json:"limit"`
+	Name   string `json:"name"`
+	ID     string `json:"id"`
+	Status Status `json:"status"`
 }
 type PATSPage struct {
 	Total  uint64 `json:"total"`
 	Offset uint64 `json:"offset"`
 	Limit  uint64 `json:"limit"`
-	PATS   []PAT  `json:"pats,omitempty"`
+	PATS   []PAT  `json:"pats"`
 }
 
 type ScopesPageMeta struct {
@@ -321,9 +325,9 @@ type ScopesPageMeta struct {
 
 type ScopesPage struct {
 	Total  uint64  `json:"total"`
-	Offset uint64  `json:"offset,omitempty"`
-	Limit  uint64  `json:"limit,omitempty"`
-	Scopes []Scope `json:"scopes,omitempty"`
+	Offset uint64  `json:"offset"`
+	Limit  uint64  `json:"limit"`
+	Scopes []Scope `json:"scopes"`
 }
 
 func (pat PAT) MarshalBinary() ([]byte, error) {
@@ -343,7 +347,7 @@ func (pat *PAT) String() string {
 }
 
 // PATS specifies function which are required for Personal access Token implementation.
-//go:generate mockery --name PATS --output=./mocks --filename pats.go --quiet --note "Soict IoT Central PATS interface"
+//go:generate mockery --name PATS --output=./mocks --filename pats.go --quiet
 
 type PATS interface {
 	// Create function creates new PAT for given valid inputs.
@@ -394,7 +398,7 @@ type PATS interface {
 
 // PATSRepository specifies PATS persistence API.
 //
-//go:generate mockery --name PATSRepository --output=./mocks --filename patsrepo.go --quiet --note "Soict IoT Central PATSRepository interface"
+//go:generate mockery --name PATSRepository --output=./mocks --filename patsrepo.go --quiet
 type PATSRepository interface {
 	// Save persists the PAT
 	Save(ctx context.Context, pat PAT) (err error)
@@ -441,7 +445,7 @@ type PATSRepository interface {
 	RemoveAllScope(ctx context.Context, patID string) error
 }
 
-//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet --note "Soict IoT Central Cache interface"
+//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet
 type Cache interface {
 	Save(ctx context.Context, userID string, scopes []Scope) error
 

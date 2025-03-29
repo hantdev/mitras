@@ -3,8 +3,8 @@ package pats
 import (
 	"context"
 
-	"github.com/hantdev/mitras/auth"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/hantdev/mitras/auth"
 )
 
 func createPATEndpoint(svc auth.Service) endpoint.Endpoint {
@@ -81,6 +81,9 @@ func listPATSEndpoint(svc auth.Service) endpoint.Endpoint {
 		pm := auth.PATSPageMeta{
 			Limit:  req.limit,
 			Offset: req.offset,
+			Name:   req.name,
+			ID:     req.id,
+			Status: req.status,
 		}
 		patsPage, err := svc.ListPATS(ctx, req.token, pm)
 		if err != nil {

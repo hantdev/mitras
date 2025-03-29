@@ -8,7 +8,7 @@ User service is using Auth service gRPC API to obtain login token or password re
 
 - ID - key ID
 - Type - one of the three types described below
-- IssuerID - an ID of the Mitras User who issued the key
+- IssuerID - an ID of the SuperMQ User who issued the key
 - Subject - user ID for which the key is issued
 - IssuedAt - the timestamp when the key is issued
 - ExpiresAt - the timestamp after which the key is invalid

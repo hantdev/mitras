@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	grpcAuthV1 "github.com/hantdev/mitras/api/grpc/auth/v1"
 	"github.com/hantdev/mitras/auth"
 	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
-	"github.com/go-kit/kit/endpoint"
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc"
 )
 
