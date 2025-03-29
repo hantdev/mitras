@@ -16,7 +16,7 @@ import (
 	httpapi "github.com/hantdev/mitras/auth/api/http"
 	"github.com/hantdev/mitras/auth/jwt"
 	"github.com/hantdev/mitras/auth/mocks"
-	atnlog "github.com/hantdev/mitras/logger"
+	mitraslog "github.com/hantdev/mitras/logger"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	policymocks "github.com/hantdev/mitras/pkg/policies/mocks"
 	"github.com/hantdev/mitras/pkg/uuid"
@@ -79,7 +79,7 @@ func newService() (auth.Service, *mocks.KeyRepository) {
 }
 
 func newServer(svc auth.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(svc, atnlog.NewMock(), "")
+	mux := httpapi.MakeHandler(svc, mitraslog.NewMock(), "")
 	return httptest.NewServer(mux)
 }
 

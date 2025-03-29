@@ -3,7 +3,7 @@ package auth
 // Hasher specifies an API for generating hashes of an arbitrary textual
 // content.
 //
-//go:generate mockery --name Hasher --output=./mocks --filename hasher.go --quiet --note "Soict IoT Central Hasher interface"
+//go:generate mockery --name Hasher --output=./mocks --filename hasher.go --quiet
 type Hasher interface {
 	// Hash generates the hashed string from plain-text.
 	Hash(string) (string, error)

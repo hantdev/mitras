@@ -3,8 +3,8 @@ package token
 import (
 	"context"
 
-	"github.com/hantdev/mitras/auth"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/hantdev/mitras/auth"
 )
 
 func issueEndpoint(svc auth.Service) endpoint.Endpoint {

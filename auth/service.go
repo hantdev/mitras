@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hantdev/mitras"
+	"github.com/google/uuid"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -47,7 +47,7 @@ var (
 // Authz represents a authorization service. It exposes
 // functionalities through `auth` to perform authorization.
 //
-//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet --note "Soict IoT Central Authz interface"
+//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet
 type Authz interface {
 	// Authorize checks authorization of the given `subject`. Basically,
 	// Authorize verifies that Is `subject` allowed to `relation` on
@@ -84,7 +84,7 @@ type Authn interface {
 // Token is a string value of the actual Key and is used to authenticate
 // an Auth service request.
 
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Soict IoT Central Service interface"
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	Authn
 	Authz
@@ -486,6 +486,8 @@ func (svc service) CreatePAT(ctx context.Context, token, name, description strin
 		Secret:      hash,
 		IssuedAt:    now,
 		ExpiresAt:   now.Add(duration),
+		Status:      ActiveStatus,
+		Revoked:     false,
 	}
 
 	if err := svc.pats.Save(ctx, pat); err != nil {
@@ -576,7 +578,7 @@ func (svc service) ResetPATSecret(ctx context.Context, token, patID string, dura
 		return PAT{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
 	pat.Secret = secret
-	pat.Revoked = false
+	pat.Status = ActiveStatus
 	pat.RevokedAt = time.Time{}
 	return pat, nil
 }
