@@ -1,0 +1,116 @@
+asyncapi: 3.0.0
+id: 'https://github.com/hantdev/mitras/blob/main/api/asyncapi/mqtt.yml'
+info:
+  title: Mitras MQTT Adapter
+  version: 1.0.0
+  description: >
+    MQTT adapter provides an MQTT API for sending messages through the platform.
+    MQTT adapter uses [Hermina](https://github.com/hantdev/hermina) for proxying
+    traffic between client and MQTT broker.
+
+    Additionally, the MQTT adapter and the message broker are replicating the
+    traffic between brokers.
+
+defaultContentType: application/json
+servers:
+  dev:
+    host: 'localhost:{port}'
+    protocol: mqtt
+    description: Test broker
+    variables:
+      port:
+        description: Secure connection (TLS) is available through port 8883.
+        default: '1883'
+        enum:
+          - '1883'
+          - '8883'
+    security:
+      - $ref: '#/components/securitySchemes/user-password'
+channels:
+  'ch/{channelID}/msg/{subtopic}':
+    address: 'ch/{channelID}/msg/{subtopic}'
+    messages:
+      publish.message:
+        $ref: '#/components/messages/jsonMsg'
+      subscribe.message:
+        $ref: '#/components/messages/jsonMsg'
+    parameters:
+      channelID:
+        $ref: '#/components/parameters/channelID'
+      subtopic:
+        $ref: '#/components/parameters/subtopic'
+operations:
+  'ch/{channelID}/msg/{subtopic}.publish':
+    action: receive
+    channel:
+      $ref: '#/channels/ch~1{channelID}~1msg~1{subtopic}'
+    traits:
+      - $ref: '#/components/operationTraits/mqtt'
+    messages:
+      - $ref: '#/channels/ch~1{channelID}~1msg~1{subtopic}/messages/publish.message'
+  'ch/{channelID}/msg/{subtopic}.subscribe':
+    action: send
+    channel:
+      $ref: '#/channels/ch~1{channelID}~1msg~1{subtopic}'
+    traits:
+      - $ref: '#/components/operationTraits/mqtt'
+    messages:
+      - $ref: '#/channels/ch~1{channelID}~1msg~1{subtopic}/messages/subscribe.message'
+components:
+  messages:
+    jsonMsg:
+      title: JSON Message
+      summary: Arbitrary JSON array or object.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/jsonMsg'
+  schemas:
+    jsonMsg:
+      type: object
+      description: Arbitrary JSON object or array. SenML format is recommended.
+      example: >
+        ### SenML
+
+        ```json
+
+        [{"bn":"some-base-name:","bt":1641646520, "bu":"A","bver":5,
+        "n":"voltage","u":"V","v":120.1}, {"n":"current","t":-5,"v":1.2},
+        {"n":"current","t":-4,"v":1.3}]
+
+        ```
+
+        ### JSON
+
+        ```json
+
+        {"field_1":"val_1", "t": 1641646525}
+
+        ```
+
+        ### JSON Array
+
+        ```json
+
+        [{"field_1":"val_1", "t": 1641646520},{"field_2":"val_2", "t":
+        1641646522}]
+
+        ```
+  parameters:
+    channelID:
+      description: Channel ID connected to the Client ID defined in the username.
+    subtopic:
+      default: ''
+      description: Arbitrary message subtopic.
+  securitySchemes:
+    user-password:
+      type: userPassword
+      description: >
+        username is client ID connected to the channel defined in the mqtt topic
+        and
+
+        password is client secret corresponding to the client ID
+  operationTraits:
+    mqtt:
+      bindings:
+        mqtt:
+          qos: 2
