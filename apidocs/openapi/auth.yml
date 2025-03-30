@@ -3,7 +3,8 @@ info:
   title: Mitras Auth Service
   version: "1.0.0"
   description: |
-    This is the Auth Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform users. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
+    This is the Auth Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform users. You can now help us improve the API whether it's by making changes to the definition itself or to the code. |
+    
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
 
