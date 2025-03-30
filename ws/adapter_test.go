@@ -32,13 +32,13 @@ const (
 )
 
 var (
-	msg = messaging.Message{
-		Channel:   chanID,
-		Publisher: id,
-		Subtopic:  "",
-		Protocol:  protocol,
-		Payload:   []byte(`[{"n":"current","t":-5,"v":1.2}]`),
-	}
+	// msg = messaging.Message{
+	// 	Channel:   chanID,
+	// 	Publisher: id,
+	// 	Subtopic:  "",
+	// 	Protocol:  protocol,
+	// 	Payload:   []byte(`[{"n":"current","t":-5,"v":1.2}]`),
+	// }
 	clientID = testsutil.GenerateUUID(&testing.T{})
 )
 
