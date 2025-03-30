@@ -152,8 +152,6 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 h1:e9Rjr40Z98/clHv5Yg79Is0Ntos
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1/go.mod h1:tIxuGz/9mpox++sgp9fJjHO0+q1X9/UOWd798aAm22M=
 github.com/hantdev/certs v0.0.0-20250323100247-a1f4899557bd h1:085zWVEfuZR/0FLkmHX2wfKJQczLzrIkBlnnvY+5y7E=
 github.com/hantdev/certs v0.0.0-20250323100247-a1f4899557bd/go.mod h1:gPmySXroYPjrtcPvsQKxxnABXYUxUxFJSi3UQnUN9vw=
-github.com/hantdev/hermina v0.0.0-20250314154010-3e95a2dc1cd5 h1:SOdCrMVUnEvlioSR5c6EBmnonY3gx/lDGjKkoYvHNus=
-github.com/hantdev/hermina v0.0.0-20250314154010-3e95a2dc1cd5/go.mod h1:RaAdcNB9MQMYbOLo3sE97PtrUdEdC5xJ5XL0CXIgmGE=
 github.com/hantdev/hermina v0.0.0-20250329165119-dedef89090b0 h1:P17dvsv5wWJreZ/jo8cBxGODeiH7uWlcEkohi8jaO0U=
 github.com/hantdev/hermina v0.0.0-20250329165119-dedef89090b0/go.mod h1:Nj7KBCsSP+Ajo4TaPlWHeCZF8BvDRtmvuoVP+p10pLY=
 github.com/hantdev/senml v0.0.0-20250322092632-a2a649626ade h1:2B9AuwgyZSxVgrp8R82yugZdurD8w+jwYmYsiF2z0Uo=
