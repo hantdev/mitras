@@ -421,7 +421,7 @@ components:
         issued_at:
           type: string
           format: date-time
-          example: "2019-11-26T13:31:52Z"
+          example: "2025-03-20T13:31:52Z"
           description: Time when the PAT was issued
         expires_at:
           type: string
@@ -431,12 +431,12 @@ components:
         updated_at:
           type: string
           format: date-time
-          example: "2019-11-26T13:31:52Z"
+          example: "2025-03-20T13:31:52Z"
           description: Time when the PAT was last updated
         last_used_at:
           type: string
           format: date-time
-          example: "2019-11-26T13:31:52Z"
+          example: "2025-03-20T13:31:52Z"
           description: Time when the PAT was last used
         revoked:
           type: boolean
@@ -445,7 +445,7 @@ components:
         revoked_at:
           type: string
           format: date-time
-          example: "2019-11-26T13:31:52Z"
+          example: "2025-03-20T13:31:52Z"
           description: Time when the PAT was revoked
     
     PATsPage:
@@ -547,12 +547,12 @@ components:
         issued_at:
           type: string
           format: date-time
-          example: "2019-11-26 13:31:52"
+          example: "2025-03-20 13:31:52"
           description: Time when the key is generated.
         expires_at:
           type: string
           format: date-time
-          example: "2019-11-26 13:31:52"
+          example: "2025-03-20 13:31:52"
           description: Time when the Key expires. If this field is missing,
             that means that Key is valid indefinitely.
 

@@ -45,7 +45,7 @@ const (
 var (
 	errClientNotInitialized     = errors.New("client is not initialized")
 	errFailedPublish            = errors.New("failed to publish")
-	errFailedPublishToMsgBroker = errors.New("failed to publish to supermq message broker")
+	errFailedPublishToMsgBroker = errors.New("failed to publish to mitras message broker")
 	errMalformedSubtopic        = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed subtopic"))
 	errMalformedTopic           = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed topic"))
 	errMissingTopicPub          = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to publish due to missing topic"))

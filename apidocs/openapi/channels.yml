@@ -592,12 +592,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2019-11-26 13:31:52"
+          example: "2025-03-20 13:31:52"
           description: Datetime when the channel was created.
         updated_at:
           type: string
           format: date-time
-          example: "2019-11-26 13:31:52"
+          example: "2025-03-20 13:31:52"
           description: Datetime when the channel was created.
         status:
           type: string
