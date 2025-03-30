@@ -14,7 +14,7 @@ require (
 	github.com/gofrs/uuid/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/hantdev/certs v0.0.0-20250323100247-a1f4899557bd
-	github.com/hantdev/hermina v0.0.0-20250314154010-3e95a2dc1cd5
+	github.com/hantdev/hermina v0.0.0-20250329165119-dedef89090b0
 	github.com/hantdev/senml v0.0.0-20250322092632-a2a649626ade
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/hashicorp/vault/api/auth/approle v0.9.0
@@ -28,6 +28,7 @@ require (
 	github.com/nats-io/nats.go v1.39.1
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/pelletier/go-toml v1.9.5
+	github.com/plgd-dev/go-coap/v3 v3.3.6
 	github.com/prometheus/client_golang v1.21.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.7.1
@@ -59,7 +60,6 @@ require (
 	github.com/pion/dtls/v3 v3.0.2 // indirect
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/transport/v3 v3.0.7 // indirect
-	github.com/plgd-dev/go-coap/v3 v3.3.6 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
