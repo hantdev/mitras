@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Mitras Certs service
   description: |
-    HTTP API for Certs service |
+    HTTP API for Certs service 
     
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
