@@ -1,5 +1,5 @@
 # Define the Docker image name prefix for all Mitras services
-MITRAS_DOCKER_IMAGE_NAME_PREFIX ?= mitras
+MITRAS_DOCKER_IMAGE_NAME_PREFIX ?= hantdev1
 
 # Output directory for compiled binaries
 BUILD_DIR ?= build
@@ -29,14 +29,14 @@ COMMIT ?= $(shell git rev-parse HEAD)
 TIME ?= $(shell date +%F_%T)
 
 # Extract repository owner and name from git origin URL
-USER_REPO ?= $(shell git remote get-url origin | sed -e 's/.*\/\([^/]*\)\/\([^/]*\).*/\1_\2/' )
+USER_REPO ?= $(shell git remote get-url origin | sed -E 's#.*[:/]([^/:]+)/([^/.]+)(\.git)?#\1_\2#')
 
 # Define empty and space variables for string manipulation
 empty:=
 space:= $(empty) $(empty)
 
 # Set Docker Compose project name based on repository info, following Docker naming guidelines
-DOCKER_PROJECT ?= $(shell echo $(subst $(space),,$(USER_REPO)) | tr -c -s '[:alnum:][=-=]' '_' | tr '[:upper:]' '[:lower:]')
+DOCKER_PROJECT ?= $(shell echo $(subst $(space),,$(USER_REPO)) | sed -E 's/[^a-zA-Z0-9]/_/g' | tr '[:upper:]' '[:lower:]')
 
 # Supported Docker Compose commands and default command
 DOCKER_COMPOSE_COMMANDS_SUPPORTED := up down config restart
@@ -147,7 +147,7 @@ clean:
 # Clean Docker resources
 cleandocker:
 	# Stops containers and removes containers, networks, volumes, and images created by up
-	docker compose -f docker/docker-compose.yml -p $(DOCKER_PROJECT) down --rmi all -v --remove-orphans
+	docker compose -f docker/docker-compose.yaml -p $(DOCKER_PROJECT) down --rmi all -v --remove-orphans
 
 # Conditionally remove unused volumes if pv is specified
 ifdef pv
@@ -165,7 +165,7 @@ install:
 mocks:
 	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
 	@unset MOCKERY_VERSION && go generate ./...
-	mockery --config ./tools/config/mockery.yaml
+	mockery --config ./tools/config/.mockery.yaml
 
 # Run tests with coverage for specified directories
 DIRS = consumers readers postgres internal
@@ -194,7 +194,7 @@ define test_api_service
 	fi
 
 	@if [ "$(svc)" = "http" ]; then \
-		st run api/openapi/$(svc).yml \
+		st run api/openapi/$(svc).yaml \
 		--checks all \
 		--base-url $(2) \
 		--header "Authorization: Client $(CLIENT_SECRET)" \
@@ -202,7 +202,7 @@ define test_api_service
 		--hypothesis-suppress-health-check=filter_too_much \
 		--stateful=links; \
 	else \
-		st run api/openapi/$(svc).yml \
+		st run api/openapi/$(svc).yaml \
 		--checks all \
 		--base-url $(2) \
 		--header "Authorization: Bearer $(USER_TOKEN)" \
@@ -318,15 +318,15 @@ endif
 
 # Run the system using Docker Compose
 run: check_certs
-	docker compose -f docker/docker-compose.yml --env-file docker/.env -p $(DOCKER_PROJECT) $(DOCKER_COMPOSE_COMMAND) $(args)
+	docker compose -f docker/docker-compose.yaml --env-file docker/.env -p $(DOCKER_PROJECT) $(DOCKER_COMPOSE_COMMAND) $(args)
 
 # Run addon services using Docker Compose
 run_addons: check_certs
 	$(foreach SVC,$(RUN_ADDON_ARGS),$(if $(filter $(SVC),$(ADDON_SERVICES) $(EXTERNAL_SERVICES)),,$(error Invalid Service $(SVC))))
 	@for SVC in $(RUN_ADDON_ARGS); do \
-		MITRAS_ADDONS_CERTS_PATH_PREFIX="../."  docker compose -f docker/addons/$$SVC/docker-compose.yml -p $(DOCKER_PROJECT) --env-file ./docker/.env $(DOCKER_COMPOSE_COMMAND) $(args) & \
+		MITRAS_ADDONS_CERTS_PATH_PREFIX="../."  docker compose -f docker/addons/$$SVC/docker-compose.yaml -p $(DOCKER_PROJECT) --env-file ./docker/.env $(DOCKER_COMPOSE_COMMAND) $(args) & \
 	done
 
 # Run the system in live development mode
 run_live: check_certs
-	GOPATH=$(go env GOPATH) docker compose  -f docker/docker-compose.yml -f docker/docker-compose-live.yaml --env-file docker/.env -p $(DOCKER_PROJECT) $(DOCKER_COMPOSE_COMMAND) $(args)
+	GOPATH=$(go env GOPATH) docker compose  -f docker/docker-compose.yaml -f docker/docker-compose-live.yaml --env-file docker/.env -p $(DOCKER_PROJECT) $(DOCKER_COMPOSE_COMMAND) $(args)
