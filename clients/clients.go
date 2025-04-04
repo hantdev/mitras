@@ -23,8 +23,6 @@ type ClientRepository struct {
 
 // Repository is the interface that wraps the basic methods for
 // a client repository.
-//
-//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Repository is the interface that wraps the basic methods for a client repository."
 type Repository interface {
 	// RetrieveByID retrieves client by its unique ID.
 	RetrieveByID(ctx context.Context, id string) (Client, error)
@@ -96,8 +94,6 @@ type Repository interface {
 
 // Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
-//
-//go:generate mockery --name Service --output=./mocks --filename service.go  --quiet --note "Service specifies an API that must be fullfiled by the domain service implementation, and all of its decorators (e.g. logging & metrics)."
 type Service interface {
 	// CreateClients creates new client. In case of the failed registration, a
 	// non-nil error value is returned.
@@ -138,8 +134,6 @@ type Service interface {
 }
 
 // Cache contains client caching interface.
-//
-//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet --note "Cache contains client caching interface."
 type Cache interface {
 	// Save stores pair client secret, client id.
 	Save(ctx context.Context, clientSecret, clientID string) error

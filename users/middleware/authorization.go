@@ -4,9 +4,9 @@ import (
 	"context"
 
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
-	mitrasauth "github.com/hantdev/mitras/auth"
+	smqauth "github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/pkg/authn"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -17,12 +17,12 @@ var _ users.Service = (*authorizationMiddleware)(nil)
 
 type authorizationMiddleware struct {
 	svc          users.Service
-	authz        mitrasauthz.Authorization
+	authz        smqauthz.Authorization
 	selfRegister bool
 }
 
 // AuthorizationMiddleware adds authorization to the clients service.
-func AuthorizationMiddleware(svc users.Service, authz mitrasauthz.Authorization, selfRegister bool) users.Service {
+func AuthorizationMiddleware(svc users.Service, authz smqauthz.Authorization, selfRegister bool) users.Service {
 	return &authorizationMiddleware{
 		svc:          svc,
 		authz:        authz,
@@ -42,11 +42,11 @@ func (am *authorizationMiddleware) Register(ctx context.Context, session authn.S
 
 func (am *authorizationMiddleware) View(ctx context.Context, session authn.Session, id string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.ReadOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.ReadOp,
 			EntityID:   id,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -62,11 +62,11 @@ func (am *authorizationMiddleware) View(ctx context.Context, session authn.Sessi
 
 func (am *authorizationMiddleware) ViewProfile(ctx context.Context, session authn.Session) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.ReadOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.ReadOp,
 			EntityID:   session.UserID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -77,12 +77,12 @@ func (am *authorizationMiddleware) ViewProfile(ctx context.Context, session auth
 
 func (am *authorizationMiddleware) ListUsers(ctx context.Context, session authn.Session, pm users.Page) (users.UsersPage, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.ListOp,
-			EntityID:   mitrasauth.AnyIDs,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.ListOp,
+			EntityID:   smqauth.AnyIDs,
 		}); err != nil {
 			return users.UsersPage{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
 		}
@@ -100,11 +100,11 @@ func (am *authorizationMiddleware) SearchUsers(ctx context.Context, pm users.Pag
 
 func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Session, user users.User) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   user.ID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -120,11 +120,11 @@ func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Ses
 
 func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn.Session, user users.User) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   user.ID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -140,11 +140,11 @@ func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn
 
 func (am *authorizationMiddleware) UpdateEmail(ctx context.Context, session authn.Session, id, email string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   id,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -159,11 +159,11 @@ func (am *authorizationMiddleware) UpdateEmail(ctx context.Context, session auth
 
 func (am *authorizationMiddleware) UpdateUsername(ctx context.Context, session authn.Session, id, username string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   id,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -179,11 +179,11 @@ func (am *authorizationMiddleware) UpdateUsername(ctx context.Context, session a
 
 func (am *authorizationMiddleware) UpdateProfilePicture(ctx context.Context, session authn.Session, user users.User) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   user.ID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -203,11 +203,11 @@ func (am *authorizationMiddleware) GenerateResetToken(ctx context.Context, email
 
 func (am *authorizationMiddleware) UpdateSecret(ctx context.Context, session authn.Session, oldSecret, newSecret string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   session.UserID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -227,11 +227,11 @@ func (am *authorizationMiddleware) SendPasswordReset(ctx context.Context, host, 
 
 func (am *authorizationMiddleware) UpdateRole(ctx context.Context, session authn.Session, user users.User) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   user.ID,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -251,11 +251,11 @@ func (am *authorizationMiddleware) UpdateRole(ctx context.Context, session authn
 
 func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Session, id string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   id,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -271,11 +271,11 @@ func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Ses
 
 func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Session, id string) (users.User, error) {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.UpdateOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.UpdateOp,
 			EntityID:   id,
 		}); err != nil {
 			return users.User{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -291,11 +291,11 @@ func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Se
 
 func (am *authorizationMiddleware) Delete(ctx context.Context, session authn.Session, id string) error {
 	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, mitrasauthz.PatReq{
+		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
 			UserID:     session.UserID,
 			PatID:      session.PatID,
-			EntityType: mitrasauth.UsersType,
-			Operation:  mitrasauth.DeleteOp,
+			EntityType: smqauth.UsersType,
+			Operation:  smqauth.DeleteOp,
 			EntityID:   id,
 		}); err != nil {
 			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
@@ -333,7 +333,7 @@ func (am *authorizationMiddleware) OAuthAddUserPolicy(ctx context.Context, user 
 }
 
 func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID string) error {
-	if err := am.authz.Authorize(ctx, mitrasauthz.PolicyReq{
+	if err := am.authz.Authorize(ctx, smqauthz.PolicyReq{
 		SubjectType: policies.UserType,
 		Subject:     adminID,
 		Permission:  policies.AdminPermission,
@@ -346,7 +346,7 @@ func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, adminID 
 }
 
 func (am *authorizationMiddleware) authorize(ctx context.Context, domain, subjType, subjKind, subj, perm, objType, obj string) error {
-	req := mitrasauthz.PolicyReq{
+	req := smqauthz.PolicyReq{
 		Domain:      domain,
 		SubjectType: subjType,
 		SubjectKind: subjKind,

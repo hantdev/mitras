@@ -9,7 +9,6 @@ import (
 	"github.com/hantdev/mitras/pkg/policies"
 )
 
-//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service is a service for managing clients."
 type Service interface {
 	// Authenticate returns client ID for given client key.
 	Authenticate(ctx context.Context, key string) (string, error)

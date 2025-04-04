@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/hantdev/mitras"
+	"github.com/gofrs/uuid/v5"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
 	"github.com/hantdev/mitras/clients"
@@ -89,6 +89,7 @@ const (
 
 var (
 	nameRegExp        = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{34}[a-z0-9]$`)
+	routeRegExp       = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,35}$`)
 	errUnreadableName = errors.New("name containing double underscores or double dashes not allowed")
 )
 
@@ -110,6 +111,19 @@ func ValidateName(id string) error {
 	// Names containing double underscores or double dashes are invalid due to similarity concerns.
 	if strings.Contains(id, "__") || strings.Contains(id, "--") {
 		return errors.Wrap(apiutil.ErrInvalidNameFormat, errUnreadableName)
+	}
+
+	return nil
+}
+
+// ValidateRoute validates route format.
+func ValidateRoute(route string) error {
+	if !routeRegExp.MatchString(route) {
+		return apiutil.ErrInvalidRouteFormat
+	}
+
+	if strings.Contains(route, "__") || strings.Contains(route, "--") {
+		return errors.Wrap(apiutil.ErrInvalidRouteFormat, errUnreadableName)
 	}
 
 	return nil
@@ -159,7 +173,7 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, errors.ErrMalformedEntity),
 		errors.Contains(err, apiutil.ErrMissingID),
 		errors.Contains(err, apiutil.ErrMissingName),
-		errors.Contains(err, apiutil.ErrMissingAlias),
+		errors.Contains(err, apiutil.ErrMissingRoute),
 		errors.Contains(err, apiutil.ErrMissingEmail),
 		errors.Contains(err, apiutil.ErrInvalidEmail),
 		errors.Contains(err, apiutil.ErrMissingHost),
@@ -215,7 +229,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, apiutil.ErrMissingPolicyEntityType),
 		errors.Contains(err, apiutil.ErrMissingRoleMembers),
 		errors.Contains(err, apiutil.ErrMissingDescription),
-		errors.Contains(err, apiutil.ErrMissingEntityID):
+		errors.Contains(err, apiutil.ErrMissingEntityID),
+		errors.Contains(err, apiutil.ErrInvalidRouteFormat):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)
 

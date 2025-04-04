@@ -16,7 +16,7 @@ import (
 	"github.com/hantdev/mitras/groups/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/authn"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -162,7 +162,7 @@ func TestCreateGroup(t *testing.T) {
 			err:      errors.Wrap(svcerr.ErrCreateEntity, errors.ErrMalformedEntity),
 		},
 		{
-			desc:  "create group with failed to add policies",
+			desc:  " create group with failed to add policies",
 			group: validGroup,
 			saveResp: groups.Group{
 				ID:        testsutil.GenerateUUID(t),
@@ -173,7 +173,7 @@ func TestCreateGroup(t *testing.T) {
 			err:            errors.Wrap(svcerr.ErrAddPolicies, errors.Wrap(svcerr.ErrCreateEntity, svcerr.ErrAuthorization)),
 		},
 		{
-			desc:  "create group with failed to add policies and failed rollback",
+			desc:  " create group with failed to add policies and failed rollback",
 			group: validGroup,
 			saveResp: groups.Group{
 				ID:        testsutil.GenerateUUID(t),
@@ -240,7 +240,7 @@ func TestViewGroup(t *testing.T) {
 
 	cases := []struct {
 		desc      string
-		session   mitrasauthn.Session
+		session   smqauthn.Session
 		id        string
 		withRoles bool
 		repoResp  groups.Group
@@ -452,7 +452,7 @@ func TestListGroups(t *testing.T) {
 
 	cases := []struct {
 		desc                 string
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		pageMeta             groups.PageMeta
 		retrieveAllRes       groups.Page
 		retrieveAllErr       error
@@ -463,7 +463,7 @@ func TestListGroups(t *testing.T) {
 	}{
 		{
 			desc:    "list groups as super admin successfully",
-			session: mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			session: smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
 			pageMeta: groups.PageMeta{
 				Limit:    10,
 				Offset:   0,
@@ -485,7 +485,7 @@ func TestListGroups(t *testing.T) {
 		},
 		{
 			desc:    "list groups as super admin with failed to retrieve",
-			session: mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			session: smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
 			pageMeta: groups.PageMeta{
 				Limit:    10,
 				Offset:   0,
@@ -547,7 +547,7 @@ func TestListUserGroups(t *testing.T) {
 
 	cases := []struct {
 		desc                 string
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		userID               string
 		pageMeta             groups.PageMeta
 		retrieveUserGroupRes groups.Page
@@ -1168,7 +1168,7 @@ func TestListAllChildrenGroups(t *testing.T) {
 
 	cases := []struct {
 		desc        string
-		session     mitrasauthn.Session
+		session     smqauthn.Session
 		pageMeta    groups.PageMeta
 		parentID    string
 		startLevel  int64

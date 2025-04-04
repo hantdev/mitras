@@ -12,7 +12,7 @@ import (
 // Metadata represents arbitrary JSON.
 type Metadata map[string]interface{}
 
-// Channel represents a Mitras "communication topic". This topic
+// Channel represents a mitras "communication topic". This topic
 // contains the clients that can exchange messages between each other.
 type Channel struct {
 	ID          string    `json:"id"`
@@ -85,7 +85,6 @@ type AuthzReq struct {
 	Type       connections.ConnType
 }
 
-//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service is an application service for managing channels."
 type Service interface {
 	// CreateChannels adds channels to the user.
 	CreateChannels(ctx context.Context, session authn.Session, channels ...Channel) ([]Channel, []roles.RoleProvision, error)
@@ -129,8 +128,6 @@ type Service interface {
 }
 
 // ChannelRepository specifies a channel persistence API.
-//
-//go:generate mockery --name Repository --output=./mocks --filename repository.go  --quiet --note "Repository is a persistence API for channels."
 type Repository interface {
 	// Save persists multiple channels. Channels are saved using a transaction. If one channel
 	// fails then none will be saved. Successful operation is indicated by non-nil

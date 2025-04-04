@@ -21,11 +21,9 @@ type Event interface {
 }
 
 // Publisher specifies events publishing API.
-//
-//go:generate mockery --name Publisher --output=./mocks --filename publisher.go --quiet --note "Mitras IoT Central Publisher interface"
 type Publisher interface {
 	// Publish publishes event to stream.
-	Publish(ctx context.Context, event Event) error
+	Publish(ctx context.Context, stream string, event Event) error
 
 	// Close gracefully closes event publisher's connection.
 	Close() error
@@ -47,8 +45,6 @@ type SubscriberConfig struct {
 }
 
 // Subscriber specifies event subscription API.
-//
-//go:generate mockery --name Subscriber --output=./mocks --filename subscriber.go --quiet --note "Mitras IoT Central Subscriber interface"
 type Subscriber interface {
 	// Subscribe subscribes to the event stream and consumes events.
 	Subscribe(ctx context.Context, cfg SubscriberConfig) error

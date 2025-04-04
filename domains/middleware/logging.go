@@ -40,6 +40,7 @@ func (lm *loggingMiddleware) CreateDomain(ctx context.Context, session authn.Ses
 			slog.Group("domain",
 				slog.String("id", d.ID),
 				slog.String("name", d.Name),
+				slog.String("route", d.Route),
 			),
 		}
 		if err != nil {

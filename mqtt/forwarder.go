@@ -46,7 +46,7 @@ func handle(ctx context.Context, pub messaging.Publisher, logger *slog.Logger) h
 		}
 		// Use concatenation instead of fmt.Sprintf for the
 		// sake of simplicity and performance.
-		topic := "ch/" + msg.GetChannel() + "/msg"
+		topic := "c/" + msg.GetChannel() + "/m"
 		if msg.GetSubtopic() != "" {
 			topic = topic + "/" + strings.ReplaceAll(msg.GetSubtopic(), ".", "/")
 		}

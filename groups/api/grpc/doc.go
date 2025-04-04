@@ -1,2 +1,2 @@
-// Package grpc contains implementation of Mitras Groups service gRPC server.
+// Package grpc contains implementation of Auth service gRPC API.
 package grpc

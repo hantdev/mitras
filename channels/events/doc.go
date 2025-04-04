@@ -1,3 +1,3 @@
 // Package events provides the domain concept definitions
-// needed to support channels events functionality.
+// needed to support clients events functionality.
 package events

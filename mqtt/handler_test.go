@@ -13,12 +13,12 @@ import (
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/mqtt"
-	"github.com/hantdev/mitras/mqtt/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/hantdev/mitras/pkg/messaging/mocks"
 	"github.com/hantdev/mitras/pkg/policies"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,11 +33,11 @@ const (
 	clientID              = "clientID"
 	clientID1             = "clientID1"
 	subtopic              = "testSubtopic"
-	invalidChannelIDTopic = "ch/**/msg"
+	invalidChannelIDTopic = "c/**/m"
 )
 
 var (
-	topicMsg            = "ch/%s/msg"
+	topicMsg            = "c/%s/m"
 	topic               = fmt.Sprintf(topicMsg, chanID)
 	invalidTopic        = invalidValue
 	payload             = []byte("[{'n':'test-name', 'v': 1.2}]")
@@ -65,8 +65,9 @@ var (
 )
 
 var (
-	clients  = new(climocks.ClientsServiceClient)
-	channels = new(chmocks.ChannelsServiceClient)
+	clients   *climocks.ClientsServiceClient
+	channels  *chmocks.ChannelsServiceClient
+	publisher *mocks.PubSub
 )
 
 func TestAuthConnect(t *testing.T) {
@@ -403,9 +404,11 @@ func TestPublish(t *testing.T) {
 		if tc.session != nil {
 			ctx = session.NewContext(ctx, tc.session)
 		}
+		repoCall := publisher.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		err := handler.Publish(ctx, &tc.topic, &tc.payload)
 		assert.Contains(t, logBuffer.String(), tc.logMsg)
 		assert.Equal(t, tc.err, err)
+		repoCall.Unset()
 	}
 }
 
@@ -518,11 +521,12 @@ func TestDisconnect(t *testing.T) {
 }
 
 func newHandler() session.Handler {
-	logger, err := mitraslog.New(&logBuffer, "debug")
+	logger, err := smqlog.New(&logBuffer, "debug")
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}
 	clients = new(climocks.ClientsServiceClient)
 	channels = new(chmocks.ChannelsServiceClient)
-	return mqtt.NewHandler(mocks.NewPublisher(), logger, clients, channels)
+	publisher = new(mocks.PubSub)
+	return mqtt.NewHandler(publisher, logger, clients, channels)
 }

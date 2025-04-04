@@ -12,7 +12,22 @@ import (
 	rmEvents "github.com/hantdev/mitras/pkg/roles/rolemanager/events"
 )
 
-const streamID = "mitras.domains"
+const (
+	mitrasPrefix             = "mitras."
+	createStream             = mitrasPrefix + domainCreate
+	retrieveStream           = mitrasPrefix + domainRetrieve
+	updateStream             = mitrasPrefix + domainUpdate
+	enableStream             = mitrasPrefix + domainEnable
+	disableStream            = mitrasPrefix + domainDisable
+	freezeStream             = mitrasPrefix + domainFreeze
+	listStream               = mitrasPrefix + domainList
+	sendInvitationStream     = mitrasPrefix + invitationSend
+	acceptInvitationStream   = mitrasPrefix + invitationAccept
+	rejectInvitationStream   = mitrasPrefix + invitationReject
+	listInvitationsStream    = mitrasPrefix + invitationList
+	retrieveInvitationStream = mitrasPrefix + invitationRetrieve
+	deleteInvitationStream   = mitrasPrefix + invitationDelete
+)
 
 var _ domains.Service = (*eventStore)(nil)
 
@@ -25,7 +40,7 @@ type eventStore struct {
 // NewEventStoreMiddleware returns wrapper around auth service that sends
 // events to event store.
 func NewEventStoreMiddleware(ctx context.Context, svc domains.Service, url string) (domains.Service, error) {
-	publisher, err := store.NewPublisher(ctx, url, streamID)
+	publisher, err := store.NewPublisher(ctx, url)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +67,7 @@ func (es *eventStore) CreateDomain(ctx context.Context, session authn.Session, d
 		requestID:        middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, createStream, event); err != nil {
 		return domain, rps, err
 	}
 
@@ -71,7 +86,7 @@ func (es *eventStore) RetrieveDomain(ctx context.Context, session authn.Session,
 		middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, retrieveStream, event); err != nil {
 		return domain, err
 	}
 
@@ -90,7 +105,7 @@ func (es *eventStore) UpdateDomain(ctx context.Context, session authn.Session, i
 		requestID: middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, updateStream, event); err != nil {
 		return domain, err
 	}
 
@@ -111,7 +126,7 @@ func (es *eventStore) EnableDomain(ctx context.Context, session authn.Session, i
 		requestID: middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, enableStream, event); err != nil {
 		return domain, err
 	}
 
@@ -132,7 +147,7 @@ func (es *eventStore) DisableDomain(ctx context.Context, session authn.Session, 
 		requestID: middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, disableStream, event); err != nil {
 		return domain, err
 	}
 
@@ -153,7 +168,7 @@ func (es *eventStore) FreezeDomain(ctx context.Context, session authn.Session, i
 		requestID: middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, freezeStream, event); err != nil {
 		return domain, err
 	}
 
@@ -175,7 +190,7 @@ func (es *eventStore) ListDomains(ctx context.Context, session authn.Session, p 
 		requestID:  middleware.GetReqID(ctx),
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, listStream, event); err != nil {
 		return dp, err
 	}
 
@@ -192,7 +207,7 @@ func (es *eventStore) SendInvitation(ctx context.Context, session authn.Session,
 		session:    session,
 	}
 
-	return es.Publish(ctx, event)
+	return es.Publish(ctx, sendInvitationStream, event)
 }
 
 func (es *eventStore) ViewInvitation(ctx context.Context, session authn.Session, userID, domainID string) (domains.Invitation, error) {
@@ -209,7 +224,7 @@ func (es *eventStore) ViewInvitation(ctx context.Context, session authn.Session,
 		session:       session,
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, retrieveInvitationStream, event); err != nil {
 		return invitation, err
 	}
 
@@ -227,7 +242,7 @@ func (es *eventStore) ListInvitations(ctx context.Context, session authn.Session
 		session:            session,
 	}
 
-	if err := es.Publish(ctx, event); err != nil {
+	if err := es.Publish(ctx, listInvitationsStream, event); err != nil {
 		return ip, err
 	}
 
@@ -244,7 +259,7 @@ func (es *eventStore) AcceptInvitation(ctx context.Context, session authn.Sessio
 		session:  session,
 	}
 
-	return es.Publish(ctx, event)
+	return es.Publish(ctx, acceptInvitationStream, event)
 }
 
 func (es *eventStore) RejectInvitation(ctx context.Context, session authn.Session, domainID string) error {
@@ -257,7 +272,7 @@ func (es *eventStore) RejectInvitation(ctx context.Context, session authn.Sessio
 		session:  session,
 	}
 
-	return es.Publish(ctx, event)
+	return es.Publish(ctx, rejectInvitationStream, event)
 }
 
 func (es *eventStore) DeleteInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) error {
@@ -271,5 +286,5 @@ func (es *eventStore) DeleteInvitation(ctx context.Context, session authn.Sessio
 		session:       session,
 	}
 
-	return es.Publish(ctx, event)
+	return es.Publish(ctx, deleteInvitationStream, event)
 }

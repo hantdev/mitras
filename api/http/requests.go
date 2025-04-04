@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func RequestIDMiddleware(idp mitras.IDProvider) func(http.Handler) http.Handler {

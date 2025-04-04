@@ -1,2 +1,2 @@
-// Package errors contains Mitras errors definitions.
+// Package errors contains mitras errors definitions.
 package errors

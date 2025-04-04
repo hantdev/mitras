@@ -7,7 +7,7 @@ import (
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
 	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasauth "github.com/hantdev/mitras/auth"
+	smqauth "github.com/hantdev/mitras/auth"
 	channels "github.com/hantdev/mitras/channels/private"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
@@ -164,7 +164,7 @@ func encodeError(err error) error {
 		err == apiutil.ErrMalformedPolicyAct:
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Contains(err, svcerr.ErrAuthentication),
-		errors.Contains(err, mitrasauth.ErrKeyExpired),
+		errors.Contains(err, smqauth.ErrKeyExpired),
 		err == apiutil.ErrMissingEmail,
 		err == apiutil.ErrBearerToken:
 		return status.Error(codes.Unauthenticated, err.Error())
