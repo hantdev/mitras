@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
+	"github.com/hantdev/mitras"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/oauth2"

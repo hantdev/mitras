@@ -1,7 +1,7 @@
 package cli
 
 import (
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var cmdJournal = cobra.Command{
 			logUsageCmd(*cmd, cmd.Use)
 			return
 		}
-		pageMetadata := mitrassdk.PageMetadata{
+		pageMetadata := smqsdk.PageMetadata{
 			Offset: Offset,
 			Limit:  Limit,
 		}
@@ -29,7 +29,7 @@ var cmdJournal = cobra.Command{
 			entityType, entityID, domainID, token = args[0], args[1], args[2], args[3]
 		}
 
-		journal, err := sdk.Journal(entityType, entityID, domainID, pageMetadata, token)
+		journal, err := sdk.Journal(cmd.Context(), entityType, entityID, domainID, pageMetadata, token)
 		if err != nil {
 			logErrorCmd(*cmd, err)
 			return

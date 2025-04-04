@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/hantdev/mitras"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"

@@ -11,13 +11,13 @@ import (
 	"github.com/hantdev/mitras/cli"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var cert = mitrassdk.Cert{
+var cert = mgsdk.Cert{
 	ClientID: client.ID,
 }
 
@@ -27,8 +27,8 @@ func TestGetCertCmd(t *testing.T) {
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
 
-	var ct mitrassdk.Cert
-	var cts mitrassdk.CertSerials
+	var ct mgsdk.Cert
+	var cts mgsdk.CertSerials
 
 	cases := []struct {
 		desc          string
@@ -36,8 +36,8 @@ func TestGetCertCmd(t *testing.T) {
 		sdkErr        errors.SDKError
 		errLogMessage string
 		logType       outputLog
-		serials       mitrassdk.CertSerials
-		cert          mitrassdk.Cert
+		serials       mgsdk.CertSerials
+		cert          mgsdk.Cert
 	}{
 		{
 			desc: "get cert successfully",
@@ -48,13 +48,13 @@ func TestGetCertCmd(t *testing.T) {
 				validToken,
 			},
 			logType: entityLog,
-			serials: mitrassdk.CertSerials{
-				PageRes: mitrassdk.PageRes{
+			serials: mgsdk.CertSerials{
+				PageRes: mgsdk.PageRes{
 					Total:  1,
 					Offset: 0,
 					Limit:  10,
 				},
-				Certs: []mitrassdk.Cert{cert},
+				Certs: []mgsdk.Cert{cert},
 			},
 		},
 		{
@@ -101,8 +101,8 @@ func TestGetCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ViewCertByClient", mock.Anything, mock.Anything, mock.Anything).Return(tc.serials, tc.sdkErr)
-			sdkCall1 := sdkMock.On("ViewCert", mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
+			sdkCall := sdkMock.On("ViewCertByClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.serials, tc.sdkErr)
+			sdkCall1 := sdkMock.On("ViewCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 			switch tc.logType {
 			case entityLog:
@@ -180,7 +180,7 @@ func TestRevokeCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RevokeCert", tc.args[0], tc.args[1], tc.args[2]).Return(tc.time, tc.sdkErr)
+			sdkCall := sdkMock.On("RevokeCert", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.time, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{revokeCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -202,18 +202,18 @@ func TestIssueCertCmd(t *testing.T) {
 	certCmd := cli.NewCertsCmd()
 	rootCmd := setFlags(certCmd)
 
-	cert := mitrassdk.Cert{
+	cert := mgsdk.Cert{
 		SerialNumber: "serial",
 	}
 
-	var cs mitrassdk.Cert
+	var cs mgsdk.Cert
 	cases := []struct {
 		desc          string
 		args          []string
 		logType       outputLog
 		errLogMessage string
 		sdkErr        errors.SDKError
-		cert          mitrassdk.Cert
+		cert          mgsdk.Cert
 	}{
 		{
 			desc: "issue cert successfully",
@@ -250,7 +250,7 @@ func TestIssueCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, tc.args[1], tc.args[2]).Return(tc.cert, tc.sdkErr)
+			sdkCall := sdkMock.On("IssueCert", mock.Anything, mock.Anything, mock.Anything, tc.args[1], tc.args[2]).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{issueCmd}, tc.args...)...)
 
 			switch tc.logType {

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	mitrasPrefix    = "mitras."
+	mitrasPrefix     = "mitras."
 	subscribeStream  = mitrasPrefix + clientSubscribe
 	connectStream    = mitrasPrefix + clientConnect
 	disconnectStream = mitrasPrefix + clientDisconnect

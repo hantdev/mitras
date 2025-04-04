@@ -10,7 +10,7 @@ import (
 
 const (
 	mitrasPrefix = "mitras."
-	rolesPrefix   = "roles"
+	rolesPrefix  = "roles"
 )
 
 var _ roles.RoleManager = (*RoleManagerEventStore)(nil)

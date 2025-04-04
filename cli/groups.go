@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/hantdev/mitras/groups"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/spf13/cobra"
 )
 
@@ -20,13 +20,13 @@ var cmdGroups = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			var group mitrassdk.Group
+			var group smqsdk.Group
 			if err := json.Unmarshal([]byte(args[0]), &group); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			group.Status = groups.EnabledStatus.String()
-			group, err := sdk.CreateGroup(group, args[1], args[2])
+			group, err := sdk.CreateGroup(cmd.Context(), group, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -46,13 +46,13 @@ var cmdGroups = []cobra.Command{
 				return
 			}
 
-			var group mitrassdk.Group
+			var group smqsdk.Group
 			if err := json.Unmarshal([]byte(args[0]), &group); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			group, err := sdk.UpdateGroup(group, args[1], args[2])
+			group, err := sdk.UpdateGroup(cmd.Context(), group, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -72,7 +72,7 @@ var cmdGroups = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			if err := sdk.DeleteGroup(args[0], args[1], args[2]); err != nil {
+			if err := sdk.DeleteGroup(cmd.Context(), args[0], args[1], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -91,7 +91,7 @@ var cmdGroups = []cobra.Command{
 				return
 			}
 
-			group, err := sdk.EnableGroup(args[0], args[1], args[2])
+			group, err := sdk.EnableGroup(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -112,7 +112,7 @@ var cmdGroups = []cobra.Command{
 				return
 			}
 
-			group, err := sdk.DisableGroup(args[0], args[1], args[2])
+			group, err := sdk.DisableGroup(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -137,12 +137,12 @@ var cmdGroupsRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			var roleReq mitrassdk.RoleReq
+			var roleReq smqsdk.RoleReq
 			if err := json.Unmarshal([]byte(args[0]), &roleReq); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			r, err := sdk.CreateGroupRole(args[1], args[2], roleReq, args[3])
+			r, err := sdk.CreateGroupRole(cmd.Context(), args[1], args[2], roleReq, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -165,12 +165,12 @@ var cmdGroupsRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 			if args[0] == all {
-				rs, err := sdk.GroupRoles(args[1], args[2], pageMetadata, args[3])
+				rs, err := sdk.GroupRoles(cmd.Context(), args[1], args[2], pageMetadata, args[3])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -178,7 +178,7 @@ var cmdGroupsRoles = []cobra.Command{
 				logJSONCmd(*cmd, rs)
 				return
 			}
-			r, err := sdk.GroupRole(args[1], args[0], args[2], args[3])
+			r, err := sdk.GroupRole(cmd.Context(), args[1], args[0], args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -201,7 +201,7 @@ var cmdGroupsRoles = []cobra.Command{
 				return
 			}
 
-			r, err := sdk.UpdateGroupRole(args[2], args[1], args[0], args[3], args[4])
+			r, err := sdk.UpdateGroupRole(cmd.Context(), args[2], args[1], args[0], args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -224,7 +224,7 @@ var cmdGroupsRoles = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DeleteGroupRole(args[1], args[0], args[2], args[3]); err != nil {
+			if err := sdk.DeleteGroupRole(cmd.Context(), args[1], args[0], args[2], args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -255,7 +255,7 @@ var cmdGroupsActions = []cobra.Command{
 				return
 			}
 
-			acts, err := sdk.AddGroupRoleActions(args[2], args[1], args[3], actions.Actions, args[4])
+			acts, err := sdk.AddGroupRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -278,7 +278,7 @@ var cmdGroupsActions = []cobra.Command{
 				return
 			}
 
-			l, err := sdk.GroupRoleActions(args[1], args[0], args[2], args[3])
+			l, err := sdk.GroupRoleActions(cmd.Context(), args[1], args[0], args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -302,7 +302,7 @@ var cmdGroupsActions = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllGroupRoleActions(args[2], args[1], args[3], args[4]); err != nil {
+				if err := sdk.RemoveAllGroupRoleActions(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -316,7 +316,7 @@ var cmdGroupsActions = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			if err := sdk.RemoveGroupRoleActions(args[2], args[1], args[3], actions.Actions, args[4]); err != nil {
+			if err := sdk.RemoveGroupRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -337,7 +337,7 @@ var cmdGroupsActions = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			acts, err := sdk.AvailableGroupRoleActions(args[0], args[1])
+			acts, err := sdk.AvailableGroupRoleActions(cmd.Context(), args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -369,7 +369,7 @@ var cmdGroupMembers = []cobra.Command{
 				return
 			}
 
-			memb, err := sdk.AddGroupRoleMembers(args[2], args[1], args[3], members.Members, args[4])
+			memb, err := sdk.AddGroupRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -391,12 +391,12 @@ var cmdGroupMembers = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 
-			l, err := sdk.GroupRoleMembers(args[1], args[0], args[2], pageMetadata, args[3])
+			l, err := sdk.GroupRoleMembers(cmd.Context(), args[1], args[0], args[2], pageMetadata, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -421,7 +421,7 @@ var cmdGroupMembers = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllGroupRoleMembers(args[2], args[1], args[3], args[4]); err != nil {
+				if err := sdk.RemoveAllGroupRoleMembers(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -437,7 +437,7 @@ var cmdGroupMembers = []cobra.Command{
 				return
 			}
 
-			if err := sdk.RemoveGroupRoleMembers(args[2], args[1], args[3], members.Members, args[4]); err != nil {
+			if err := sdk.RemoveGroupRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}

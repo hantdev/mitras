@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	mitrasPrefix     = "mitras."
+	mitrasPrefix      = "mitras."
 	publishStream     = mitrasPrefix + "publish"
 	subscribeStream   = mitrasPrefix + "subscribe"
 	unsubscribeStream = mitrasPrefix + "unsubscribe"

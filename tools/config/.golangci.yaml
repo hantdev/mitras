@@ -1,5 +1,6 @@
 version: "2"
 run:
+  timeout: 10m
   build-tags:
     - nats
 linters:
@@ -55,8 +56,10 @@ linters:
         - opinionated
     importas:
       alias:
+        - pkg: github.com/absmach/callhome/pkg/client
+          alias: chclient
         - pkg: github.com/hantdev/mitras/logger
-          alias: mitraslog
+          alias: smqlog
         - pkg: github.com/hantdev/mitras/pkg/errors/service
           alias: svcerr
         - pkg: github.com/hantdev/mitras/pkg/errors/repository

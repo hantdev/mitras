@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	mitrasPrefix           = "mitras."
+	mitrasPrefix            = "mitras."
 	createStream            = mitrasPrefix + groupCreate
 	updateStream            = mitrasPrefix + groupUpdate
 	enableStream            = mitrasPrefix + groupEnable

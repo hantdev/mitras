@@ -1,11 +1,11 @@
 package cli
 
-import mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+import smqsdk "github.com/hantdev/mitras/pkg/sdk"
 
 // Keep SDK handle in global var.
-var sdk mitrassdk.SDK
+var sdk smqsdk.SDK
 
 // SetSDK sets mitras SDK instance.
-func SetSDK(s mitrassdk.SDK) {
+func SetSDK(s smqsdk.SDK) {
 	sdk = s
 }
