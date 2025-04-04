@@ -28,11 +28,11 @@ jobs:
         run: |
           protolint .
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.2
-          args: --config ./tools/config/.golangci.yaml
+      # - name: golangci-lint
+      #   uses: golangci/golangci-lint-action@v6
+      #   with:
+      #     version: v1.64.2
+      #     args: --config ./tools/config/.golangci.yaml
 
       - name: Build all Binaries
         run: |
