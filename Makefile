@@ -21,7 +21,7 @@ DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
 
 # Go build configuration
 CGO_ENABLED ?= 0
-GOARCH ?= arm64
+GOARCH ?= amd64
 
 # Version information for builds
 VERSION ?= $(shell git describe --abbrev=0 --tags 2>/dev/null || echo 'unknown')
@@ -46,7 +46,7 @@ DEFAULT_DOCKER_COMPOSE_COMMAND  := up
 GRPC_MTLS_CERT_FILES_EXISTS = 0
 
 # Version of mockery tool to use for generating mocks
-MOCKERY_VERSION=v2.53.2
+MOCKERY_VERSION=v3.0.0-beta.6
 
 # Directories for generated protocol buffer code
 PKG_PROTO_GEN_OUT_DIR=api/grpc
@@ -163,8 +163,7 @@ install:
 
 # Generate mock objects for testing
 mocks:
-	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
-	@unset MOCKERY_VERSION && go generate ./...
+	@which mockery > /dev/null || go install github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
 	mockery --config ./tools/config/.mockery.yaml
 
 # Run tests with coverage for specified directories

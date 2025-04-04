@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras"
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/auth/api/http/keys"
 	"github.com/hantdev/mitras/auth/api/http/pats"

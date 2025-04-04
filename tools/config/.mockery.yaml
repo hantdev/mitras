@@ -1,62 +1,144 @@
-issue-845-fix: True
-with-expecter: True
-disable-version-string: True
-resolve-type-alias: False
-filename: "{{.InterfaceName}}.go"
-outpkg: "mocks"
-boilerplate-file: "./tools/config/boilerplate.txt"
-recursive: true
-inpackage: false
+pkgname: mocks
+mockname: "{{.InterfaceName}}"
+filename: "{{snakecase .InterfaceName}}.go"
+dir: "{{.InterfaceDirRelative}}/mocks"
+template-data:
+  boilerplate-file: ./tools/config/boilerplate.txt
+  with-expecter: true
+force-file-write: true
 
 packages:
-  github.com/hantdev/mitras:
-    config:
-      all: false
-      recursive: true
-      inpackage: false
-      testonly: true
-      with-expecter: true
-      keeptree: true
+  github.com/hantdev/mitras/api/grpc/clients/v1:
     interfaces:
       ClientsServiceClient:
         config:
           dir: "./clients/mocks"
           mockname: "ClientsServiceClient"
           filename: "clients_client.go"
-          package: "github.com/hantdev/mitras/api/grpc/clients/v1"
+  github.com/hantdev/mitras/api/grpc/domains/v1:
+    interfaces:
       DomainsServiceClient:
         config:
           dir: "./domains/mocks"
           mockname: "DomainsServiceClient"
           filename: "domains_client.go"
-          package: "github.com/hantdev/mitras/api/grpc/domains/v1"
+  github.com/hantdev/mitras/api/grpc/token/v1:
+    interfaces:
       TokenServiceClient:
         config:
           dir: "./auth/mocks"
           mockname: "TokenServiceClient"
           filename: "token_client.go"
-          package: "github.com/hantdev/mitras/api/grpc/token/v1"
+  github.com/hantdev/mitras/api/grpc/channels/v1:
+    interfaces:
       ChannelsServiceClient:
         config:
           dir: "./channels/mocks"
           mockname: "ChannelsServiceClient"
           filename: "channels_client.go"
-          package: "github.com/hantdev/mitras/api/grpc/channels/v1"
+  github.com/hantdev/mitras/api/grpc/groups/v1:
+    interfaces:
       GroupsServiceClient:
         config:
           dir: "./groups/mocks"
           mockname: "GroupsServiceClient"
           filename: "groups_client.go"
-          package: "github.com/hantdev/mitras/api/grpc/groups/v1"
+  github.com/hantdev/mitras/pkg/sdk:
+    interfaces:
       SDK:
         config:
           dir: "./pkg/sdk/mocks"
           mockname: "SDK"
           filename: "sdk.go"
-          package: "github.com/hantdev/mitras/pkg/sdk"
+
+  github.com/hantdev/mitras/certs/pki/amcerts:
+    interfaces:
       Agent:
         config:
           dir: "./certs/mocks"
           mockname: "Agent"
           filename: "pki.go"
-          package: "github.com/hantdev/mitras/certs/pki/amcerts"
+  github.com/hantdev/mitras/auth:
+    interfaces:
+      Authz:
+      Cache:
+      CallBack:
+      Hasher:
+      KeyRepository:
+      PATS:
+      PATSRepository:
+      Service:
+  github.com/hantdev/mitras/certs:
+    interfaces:
+      Service:
+  github.com/hantdev/mitras/channels:
+    interfaces:
+      Repository:
+      Service:
+  github.com/hantdev/mitras/channels/private:
+    interfaces:
+      Service:
+  github.com/hantdev/mitras/clients:
+    interfaces:
+      Repository:
+      Cache:
+      Service:
+  github.com/hantdev/mitras/clients/private:
+    interfaces:
+      Service:
+  github.com/hantdev/mitras/consumers:
+    interfaces:
+      Notifier:
+  github.com/hantdev/mitras/domains:
+    interfaces:
+      Repository:
+      Cache:
+      Service:
+  github.com/hantdev/mitras/domains/private:
+    interfaces:
+      Service:
+  github.com/hantdev/mitras/groups:
+    interfaces:
+      Repository:
+      Service:
+  github.com/hantdev/mitras/groups/private:
+    interfaces:
+      Service:
+  github.com/hantdev/mitras/journal:
+    interfaces:
+      Repository:
+      Service:
+  github.com/hantdev/mitras/pkg/authn:
+    interfaces:
+      Authentication:
+  github.com/hantdev/mitras/pkg/authz:
+    interfaces:
+      Authorization:
+  github.com/hantdev/mitras/pkg/events:
+    interfaces:
+      Publisher:
+      Subscriber:
+  github.com/hantdev/mitras/pkg/messaging:
+    interfaces:
+      PubSub:
+  github.com/hantdev/mitras/pkg/oauth2:
+    interfaces:
+      Provider:
+  github.com/hantdev/mitras/pkg/policies:
+    interfaces:
+      Evaluator:
+      Service:
+  github.com/hantdev/mitras/pkg/roles:
+    interfaces:
+      Provisioner:
+      RoleManager:
+      Repository:
+  github.com/hantdev/mitras/readers:
+    interfaces:
+      MessageRepository:
+  github.com/hantdev/mitras/users:
+    interfaces:
+      Emailer:
+      Hasher:
+      Repository:
+      Service:
