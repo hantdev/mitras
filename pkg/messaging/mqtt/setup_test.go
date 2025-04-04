@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	mitraslog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/messaging"
 	mqttpubsub "github.com/hantdev/mitras/pkg/messaging/mqtt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 )

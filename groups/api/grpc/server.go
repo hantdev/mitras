@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
 	apiutil "github.com/hantdev/mitras/api/http/util"
@@ -10,7 +11,6 @@ import (
 	groups "github.com/hantdev/mitras/groups/private"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

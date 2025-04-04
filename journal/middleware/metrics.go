@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/journal"
 	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
-	"github.com/go-kit/kit/metrics"
 )
 
 var _ journal.Service = (*metricsMiddleware)(nil)

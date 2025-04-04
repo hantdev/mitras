@@ -13,7 +13,7 @@ import (
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
-	smqlog "github.com/hantdev/mitras/logger"
+	mitraslog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/mqtt"
 	"github.com/hantdev/mitras/mqtt/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
@@ -518,7 +518,7 @@ func TestDisconnect(t *testing.T) {
 }
 
 func newHandler() session.Handler {
-	logger, err := smqlog.New(&logBuffer, "debug")
+	logger, err := mitraslog.New(&logBuffer, "debug")
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}

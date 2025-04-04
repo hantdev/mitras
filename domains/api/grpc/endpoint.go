@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	domains "github.com/hantdev/mitras/domains/private"
 	"github.com/go-kit/kit/endpoint"
+	domains "github.com/hantdev/mitras/domains/private"
 )
 
 func deleteUserFromDomainsEndpoint(svc domains.Service) endpoint.Endpoint {

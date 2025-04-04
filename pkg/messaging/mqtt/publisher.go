@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hantdev/mitras/pkg/messaging"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/hantdev/mitras/pkg/messaging"
 )
 
 var errPublishTimeout = errors.New("failed to publish due to timeout reached")

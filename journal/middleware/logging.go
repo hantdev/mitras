@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/journal"
 	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 var _ journal.Service = (*loggingMiddleware)(nil)

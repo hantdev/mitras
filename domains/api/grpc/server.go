@@ -3,11 +3,11 @@ package grpc
 import (
 	"context"
 
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
 	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
 	domains "github.com/hantdev/mitras/domains/private"
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
 )
 
 var _ grpcDomainsV1.DomainsServiceServer = (*domainsGrpcServer)(nil)

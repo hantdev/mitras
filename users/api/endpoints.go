@@ -3,13 +3,13 @@ package api
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func registrationEndpoint(svc users.Service, selfRegister bool) endpoint.Endpoint {

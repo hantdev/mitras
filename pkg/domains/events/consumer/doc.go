@@ -1,2 +1,2 @@
-// Package consumer 
+// Package consumer
 package consumer

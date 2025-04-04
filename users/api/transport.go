@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/oauth2"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
@@ -25,7 +26,6 @@ import (
 	"github.com/hantdev/mitras/users"
 	usersapi "github.com/hantdev/mitras/users/api"
 	"github.com/hantdev/mitras/users/mocks"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

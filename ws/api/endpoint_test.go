@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/hantdev/hermina/pkg/session"
 	"github.com/hantdev/hermina/pkg/websockets"
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
@@ -21,7 +22,6 @@ import (
 	"github.com/hantdev/mitras/pkg/messaging/mocks"
 	"github.com/hantdev/mitras/ws"
 	"github.com/hantdev/mitras/ws/api"
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

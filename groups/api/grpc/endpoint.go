@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	groups "github.com/hantdev/mitras/groups/private"
 	"github.com/go-kit/kit/endpoint"
+	groups "github.com/hantdev/mitras/groups/private"
 )
 
 func retrieveEntityEndpoint(svc groups.Service) endpoint.Endpoint {

@@ -28,7 +28,7 @@ var _ Service = (*certsService)(nil)
 // Service specifies an API that must be fulfilled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
 //
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet 
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	// IssueCert issues certificate for given client id if access is granted with token
 	IssueCert(ctx context.Context, domainID, token, clientID, ttl string) (Cert, error)

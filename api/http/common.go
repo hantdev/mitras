@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/hantdev/mitras"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
@@ -15,7 +16,6 @@ import (
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/users"
-	"github.com/gofrs/uuid/v5"
 )
 
 const (

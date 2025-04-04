@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hantdev/mitras/ws"
 	"github.com/go-kit/kit/metrics"
+	"github.com/hantdev/mitras/ws"
 )
 
 var _ ws.Service = (*metricsMiddleware)(nil)

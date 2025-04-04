@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/ws"
-	"github.com/go-chi/chi/v5"
 )
 
 var channelPartRegExp = regexp.MustCompile(`^/ch/([\w\-]+)/msg(/[^?]*)?(\?.*)?$`)

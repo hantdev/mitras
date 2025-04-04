@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/hantdev/mitras/pkg/messaging"
 	mqttpubsub "github.com/hantdev/mitras/pkg/messaging/mqtt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )

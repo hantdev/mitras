@@ -3,12 +3,12 @@ package events
 import (
 	"context"
 
+	"github.com/go-chi/chi/v5/middleware"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/events"
 	"github.com/hantdev/mitras/pkg/events/store"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 const streamID = "mitras.users"

@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
@@ -10,7 +11,6 @@ import (
 	"github.com/hantdev/mitras/pkg/events/store"
 	"github.com/hantdev/mitras/pkg/roles"
 	rmEvents "github.com/hantdev/mitras/pkg/roles/rolemanager/events"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 const streamID = "mitras.channels"

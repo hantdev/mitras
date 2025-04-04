@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"time"
+
 	"github.com/hantdev/mitras/pkg/messaging"
 )
 
@@ -38,10 +39,10 @@ type EventHandler interface {
 
 // SubscriberConfig represents event subscriber configuration.
 type SubscriberConfig struct {
-	Consumer string
-	Stream   string
-	Handler  EventHandler
-	Ordered  bool
+	Consumer       string
+	Stream         string
+	Handler        EventHandler
+	Ordered        bool
 	DeliveryPolicy messaging.DeliveryPolicy
 }
 

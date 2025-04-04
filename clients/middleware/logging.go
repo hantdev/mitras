@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 var _ clients.Service = (*loggingMiddleware)(nil)
