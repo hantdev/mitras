@@ -25,7 +25,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yml#/components/parameters/DomainID"
+        - $ref: "auth.yaml#/components/parameters/DomainID"
       requestBody:
         $ref: "#/components/requestBodies/CertReq"
       responses:
@@ -53,7 +53,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yml#/components/parameters/DomainID"
+        - $ref: "auth.yaml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/CertID"
       responses:
         "200":
@@ -79,7 +79,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yml#/components/parameters/DomainID"
+        - $ref: "auth.yaml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/CertID"
       responses:
         "200":
@@ -107,7 +107,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yml#/components/parameters/DomainID"
+        - $ref: "auth.yaml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/ClientID"
       responses:
         "200":
@@ -292,7 +292,7 @@ components:
       content:
         application/health+json:
           schema:
-            $ref: "./schemas/health_info.yml"
+            $ref: "./schemas/health_info.yaml"
 
   securitySchemes:
     bearerAuth:
