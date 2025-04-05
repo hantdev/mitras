@@ -31,16 +31,7 @@ const (
 	protocol   = "ws"
 )
 
-var (
-	// msg = messaging.Message{
-	// 	Channel:   chanID,
-	// 	Publisher: id,
-	// 	Subtopic:  "",
-	// 	Protocol:  protocol,
-	// 	Payload:   []byte(`[{"n":"current","t":-5,"v":1.2}]`),
-	// }
-	clientID = testsutil.GenerateUUID(&testing.T{})
-)
+var clientID = testsutil.GenerateUUID(&testing.T{})
 
 func newService() (ws.Service, *mocks.PubSub, *climocks.ClientsServiceClient, *chmocks.ChannelsServiceClient) {
 	pubsub := new(mocks.PubSub)

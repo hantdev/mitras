@@ -10,7 +10,6 @@ import (
 	"github.com/hantdev/mitras/pkg/policies"
 )
 
-//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service is an application service for managing channels."
 type Service interface {
 	Authorize(ctx context.Context, req channels.AuthzReq) error
 	UnsetParentGroupFromChannels(ctx context.Context, parentGroupID string) error

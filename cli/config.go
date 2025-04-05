@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/hantdev/mitras/pkg/errors"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/cobra"
 )
@@ -91,7 +91,7 @@ func read(file string) (config, error) {
 }
 
 // ParseConfig - parses the config file.
-func ParseConfig(sdkConf mitrassdk.Config) (mitrassdk.Config, error) {
+func ParseConfig(sdkConf smqsdk.Config) (smqsdk.Config, error) {
 	if ConfigPath == "" {
 		ConfigPath = defaultConfigPath
 	}

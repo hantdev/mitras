@@ -1,2 +1,2 @@
-// Package sdk contains Mitras SDK.
+// Package sdk contains mitras SDK.
 package sdk

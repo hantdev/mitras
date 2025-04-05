@@ -11,18 +11,18 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/hantdev/mitras/users"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var user = mitrassdk.User{
+var user = mgsdk.User{
 	ID:        testsutil.GenerateUUID(&testing.T{}),
 	FirstName: "testuserfirstname",
 	LastName:  "testuserfirstname",
-	Credentials: mitrassdk.Credentials{
+	Credentials: mgsdk.Credentials{
 		Secret:   "testpassword",
 		Username: "testusername",
 	},
@@ -42,14 +42,14 @@ func TestCreateUsersCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var usr mitrassdk.User
+	var usr mgsdk.User
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -100,17 +100,17 @@ func TestCreateUsersCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("CreateUser", mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
 			if len(tc.args) == 4 {
-				sdkUser := mitrassdk.User{
+				sdkUser := mgsdk.User{
 					FirstName: tc.args[0],
 					LastName:  tc.args[1],
 					Email:     tc.args[2],
-					Credentials: mitrassdk.Credentials{
+					Credentials: mgsdk.Credentials{
 						Secret: tc.args[3],
 					},
 				}
-				sdkCall = sdkMock.On("CreateUser", mock.Anything, sdkUser).Return(tc.user, tc.sdkerr)
+				sdkCall = sdkMock.On("CreateUser", mock.Anything, mock.Anything, sdkUser).Return(tc.user, tc.sdkerr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{createCmd}, tc.args...)...)
 
@@ -136,8 +136,8 @@ func TestGetUsersCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var page mitrassdk.UsersPage
-	var usr mitrassdk.User
+	var page mgsdk.UsersPage
+	var usr mgsdk.User
 	out := ""
 	userID := testsutil.GenerateUUID(t)
 
@@ -146,8 +146,8 @@ func TestGetUsersCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
-		page          mitrassdk.UsersPage
+		user          mgsdk.User
+		page          mgsdk.UsersPage
 		logType       outputLog
 	}{
 		{
@@ -157,8 +157,8 @@ func TestGetUsersCmd(t *testing.T) {
 				validToken,
 			},
 			sdkerr: nil,
-			page: mitrassdk.UsersPage{
-				Users: []mitrassdk.User{user},
+			page: mgsdk.UsersPage{
+				Users: []mgsdk.User{user},
 			},
 			logType: entityLog,
 		},
@@ -180,7 +180,7 @@ func TestGetUsersCmd(t *testing.T) {
 			},
 			sdkerr:        errors.NewSDKErrorWithStatus(svcerr.ErrViewEntity, http.StatusBadRequest),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrViewEntity, http.StatusBadRequest).Error()),
-			user:          mitrassdk.User{},
+			user:          mgsdk.User{},
 			logType:       errLog,
 		},
 		{
@@ -192,8 +192,8 @@ func TestGetUsersCmd(t *testing.T) {
 				"--limit=5",
 			},
 			sdkerr: nil,
-			page: mitrassdk.UsersPage{
-				Users: []mitrassdk.User{user},
+			page: mgsdk.UsersPage{
+				Users: []mgsdk.User{user},
 			},
 			logType: entityLog,
 		},
@@ -205,7 +205,7 @@ func TestGetUsersCmd(t *testing.T) {
 			},
 			sdkerr:        errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden).Error()),
-			page:          mitrassdk.UsersPage{},
+			page:          mgsdk.UsersPage{},
 			logType:       errLog,
 		},
 		{
@@ -230,15 +230,15 @@ func TestGetUsersCmd(t *testing.T) {
 			},
 			sdkerr:        errors.NewSDKErrorWithStatus(svcerr.ErrViewEntity, http.StatusInternalServerError),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrViewEntity, http.StatusInternalServerError).Error()),
-			user:          mitrassdk.User{},
+			user:          mgsdk.User{},
 			logType:       errLog,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Users", mock.Anything, mock.Anything).Return(tc.page, tc.sdkerr)
-			sdkCall1 := sdkMock.On("User", tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("Users", mock.Anything, mock.Anything, mock.Anything).Return(tc.page, tc.sdkerr)
+			sdkCall1 := sdkMock.On("User", mock.Anything, tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
 
 			out = executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 
@@ -284,10 +284,10 @@ func TestIssueTokenCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var tkn mitrassdk.Token
+	var tkn mgsdk.Token
 	invalidPassword := ""
 
-	token := mitrassdk.Token{
+	token := mgsdk.Token{
 		AccessToken:  testsutil.GenerateUUID(t),
 		RefreshToken: testsutil.GenerateUUID(t),
 	}
@@ -297,7 +297,7 @@ func TestIssueTokenCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		token         mitrassdk.Token
+		token         mgsdk.Token
 		logType       outputLog
 	}{
 		{
@@ -319,7 +319,7 @@ func TestIssueTokenCmd(t *testing.T) {
 			sdkerr:        errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden).Error()),
 			logType:       errLog,
-			token:         mitrassdk.Token{},
+			token:         mgsdk.Token{},
 		},
 		{
 			desc: "issue token with invalid args",
@@ -334,11 +334,11 @@ func TestIssueTokenCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			lg := mitrassdk.Login{
+			lg := mgsdk.Login{
 				Username: tc.args[0],
 				Password: tc.args[1],
 			}
-			sdkCall := sdkMock.On("CreateToken", lg).Return(tc.token, tc.sdkerr)
+			sdkCall := sdkMock.On("CreateToken", mock.Anything, lg).Return(tc.token, tc.sdkerr)
 
 			out := executeCommand(t, rootCmd, append([]string{tokCmd}, tc.args...)...)
 
@@ -364,9 +364,9 @@ func TestRefreshIssueTokenCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var tkn mitrassdk.Token
+	var tkn mgsdk.Token
 
-	token := mitrassdk.Token{
+	token := mgsdk.Token{
 		AccessToken:  testsutil.GenerateUUID(t),
 		RefreshToken: testsutil.GenerateUUID(t),
 	}
@@ -376,7 +376,7 @@ func TestRefreshIssueTokenCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		token         mitrassdk.Token
+		token         mgsdk.Token
 		logType       outputLog
 	}{
 		{
@@ -404,13 +404,13 @@ func TestRefreshIssueTokenCmd(t *testing.T) {
 			sdkerr:        errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden).Error()),
 			logType:       errLog,
-			token:         mitrassdk.Token{},
+			token:         mgsdk.Token{},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RefreshToken", mock.Anything).Return(tc.token, tc.sdkerr)
+			sdkCall := sdkMock.On("RefreshToken", mock.Anything, mock.Anything).Return(tc.token, tc.sdkerr)
 
 			out := executeCommand(t, rootCmd, append([]string{refTokCmd}, tc.args...)...)
 
@@ -436,7 +436,7 @@ func TestUpdateUserCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var usr mitrassdk.User
+	var usr mgsdk.User
 
 	userID := testsutil.GenerateUUID(t)
 
@@ -453,7 +453,7 @@ func TestUpdateUserCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -585,31 +585,31 @@ func TestUpdateUserCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("UpdateUser", mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
-			sdkCall1 := sdkMock.On("UpdateUserTags", mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
-			sdkCall2 := sdkMock.On("UpdateUserIdentity", mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
-			sdkCall3 := sdkMock.On("UpdateUserRole", mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("UpdateUser", mock.Anything, mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
+			sdkCall1 := sdkMock.On("UpdateUserTags", mock.Anything, mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
+			sdkCall2 := sdkMock.On("UpdateUserIdentity", mock.Anything, mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
+			sdkCall3 := sdkMock.On("UpdateUserRole", mock.Anything, mock.Anything, mock.Anything).Return(tc.user, tc.sdkerr)
 			switch {
 			case tc.args[0] == tagUpdateType:
-				var u mitrassdk.User
+				var u mgsdk.User
 				u.Tags = []string{"tag1", "tag2"}
 				u.ID = tc.args[1]
 
-				sdkCall1 = sdkMock.On("UpdateUserTags", u, tc.args[3]).Return(tc.user, tc.sdkerr)
+				sdkCall1 = sdkMock.On("UpdateUserTags", mock.Anything, u, tc.args[3]).Return(tc.user, tc.sdkerr)
 			case tc.args[0] == emailUpdateType:
-				var u mitrassdk.User
+				var u mgsdk.User
 				u.Email = tc.args[2]
 				u.ID = tc.args[1]
 
-				sdkCall2 = sdkMock.On("UpdateUserEmail", u, tc.args[3]).Return(tc.user, tc.sdkerr)
+				sdkCall2 = sdkMock.On("UpdateUserEmail", mock.Anything, u, tc.args[3]).Return(tc.user, tc.sdkerr)
 			case tc.args[0] == roleUpdateType && len(tc.args) == 4:
-				sdkCall3 = sdkMock.On("UpdateUserRole", mitrassdk.User{
+				sdkCall3 = sdkMock.On("UpdateUserRole", mock.Anything, mgsdk.User{
 					Role: tc.args[2],
 				}, tc.args[3]).Return(tc.user, tc.sdkerr)
 			case tc.args[0] == userID:
-				sdkCall = sdkMock.On("UpdateUser", mitrassdk.User{
+				sdkCall = sdkMock.On("UpdateUser", mock.Anything, mgsdk.User{
 					FirstName: "new name",
-					Metadata: mitrassdk.Metadata{
+					Metadata: mgsdk.Metadata{
 						"key": "value",
 					},
 				}, tc.args[2]).Return(tc.user, tc.sdkerr)
@@ -641,14 +641,14 @@ func TestGetUserProfileCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var usr mitrassdk.User
+	var usr mgsdk.User
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -680,7 +680,7 @@ func TestGetUserProfileCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("UserProfile", tc.args[0]).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("UserProfile", mock.Anything, tc.args[0]).Return(tc.user, tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{profCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -741,7 +741,7 @@ func TestResetPasswordRequestCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ResetPasswordRequest", tc.args[0]).Return(tc.sdkerr)
+			sdkCall := sdkMock.On("ResetPasswordRequest", mock.Anything, tc.args[0]).Return(tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{resPassReqCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -806,7 +806,7 @@ func TestResetPasswordCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ResetPassword", tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkerr)
+			sdkCall := sdkMock.On("ResetPassword", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{resPassCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -829,7 +829,7 @@ func TestUpdatePasswordCmd(t *testing.T) {
 	oldPassword := "old-password"
 	newPassword := "new-password"
 
-	var usr mitrassdk.User
+	var usr mgsdk.User
 	var err error
 
 	cases := []struct {
@@ -837,7 +837,7 @@ func TestUpdatePasswordCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -878,7 +878,7 @@ func TestUpdatePasswordCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("UpdatePassword", tc.args[0], tc.args[1], tc.args[2]).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("UpdatePassword", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.user, tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{passCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -902,14 +902,14 @@ func TestEnableUserCmd(t *testing.T) {
 	cli.SetSDK(sdkMock)
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
-	var usr mitrassdk.User
+	var usr mgsdk.User
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -945,7 +945,7 @@ func TestEnableUserCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("EnableUser", tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("EnableUser", mock.Anything, tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{enableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -970,14 +970,14 @@ func TestDisableUserCmd(t *testing.T) {
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 
-	var usr mitrassdk.User
+	var usr mgsdk.User
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		user          mitrassdk.User
+		user          mgsdk.User
 		logType       outputLog
 	}{
 		{
@@ -1013,7 +1013,7 @@ func TestDisableUserCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DisableUser", tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
+			sdkCall := sdkMock.On("DisableUser", mock.Anything, tc.args[0], tc.args[1]).Return(tc.user, tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{disableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -1106,7 +1106,7 @@ func TestDeleteUserCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteUser", mock.Anything, mock.Anything).Return(tc.sdkerr)
+			sdkCall := sdkMock.On("DeleteUser", mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{delCmd}, tc.args...)...)
 
 			switch tc.logType {

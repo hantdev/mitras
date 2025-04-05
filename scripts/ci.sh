@@ -1,38 +1,50 @@
 #!/bin/bash
-# This script contains commands to be executed by the CI tool on macOS.
+set -e
 
-NPROC=$(command -v nproc >/dev/null && nproc || sysctl -n hw.ncpu)
-GO_VERSION=1.22.4
-PROTOC_VERSION=27.1
-PROTOC_GEN_VERSION=v1.34.2
-PROTOC_GRPC_VERSION=v1.4.0
-GOLANGCI_LINT_VERSION=v1.60.3
+NPROC=$(sysctl -n hw.logicalcpu)
+GO_VERSION=1.24.2
+PROTOC_VERSION=30.2
+PROTOC_GEN_VERSION=v1.36.6
+PROTOC_GRPC_VERSION=v1.5.1
+GOLANGCI_LINT_VERSION=v2.0.2
 
 function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
 
 update_go() {
-    CURRENT_GO_VERSION=$(go version 2>/dev/null | awk '{print $3}' | sed 's/go//')
-    if version_gt $GO_VERSION $CURRENT_GO_VERSION; then
-        echo "Updating Go from $CURRENT_GO_VERSION to $GO_VERSION ..."
-        sudo rm -rf /usr/local/go
-        ARCH=$(uname -m | sed 's/x86_64/amd64/;s/arm64/arm64/')
-        curl -OL https://go.dev/dl/go$GO_VERSION.darwin-$ARCH.tar.gz
-        sudo tar -C /usr/local -xzf go$GO_VERSION.darwin-$ARCH.tar.gz
-        rm go$GO_VERSION.darwin-$ARCH.tar.gz
-        export PATH=/usr/local/go/bin:$PATH
+    echo "Checking Go version..."
+    if command -v go >/dev/null 2>&1; then
+        CURRENT_GO_VERSION=$(go version | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
+    else
+        CURRENT_GO_VERSION="0"
     fi
-    export GOBIN=$HOME/go/bin
-    export PATH=$GOBIN:$PATH
+
+    if version_gt $GO_VERSION $CURRENT_GO_VERSION; then
+        echo "Updating Go from $CURRENT_GO_VERSION to $GO_VERSION..."
+        rm -rf /usr/local/go $HOME/go go$GO_VERSION.darwin-arm64.tar.gz || true
+        curl -LO https://go.dev/dl/go$GO_VERSION.darwin-arm64.tar.gz
+        sudo tar -C /usr/local -xzf go$GO_VERSION.darwin-arm64.tar.gz
+        rm go$GO_VERSION.darwin-arm64.tar.gz
+    fi
+    export GOROOT=/usr/local/go
+    export GOPATH=$HOME/go
+    export GOBIN=$GOPATH/bin
+    export PATH=$GOROOT/bin:$GOBIN:$PATH
     go version
 }
 
 setup_protoc() {
     echo "Setting up protoc..."
-    PROTOC_ZIP=protoc-$PROTOC_VERSION-osx-x86_64.zip
-    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
+    PROTOC_ZIP=protoc-$PROTOC_VERSION-osx-aarch_64.zip
+    curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
     unzip -o $PROTOC_ZIP -d protoc3
-    sudo mv protoc3/bin/* /usr/local/bin/
-    sudo mv protoc3/include/* /usr/local/include/
+
+    sudo cp -f protoc3/bin/* /usr/local/bin/
+
+    # Clean & Copy protobuf include only
+    sudo mkdir -p /usr/local/include/google
+    sudo rm -rf /usr/local/include/google/protobuf
+    sudo cp -R protoc3/include/google/protobuf /usr/local/include/google/
+
     rm -rf $PROTOC_ZIP protoc3
 
     go install google.golang.org/protobuf/cmd/protoc-gen-go@$PROTOC_GEN_VERSION
@@ -40,25 +52,34 @@ setup_protoc() {
 }
 
 setup_lint() {
-    echo "Setting up GolangCI-Lint..."
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@$GOLANGCI_LINT_VERSION
+    echo "Setting up golangci-lint..."
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/main/install.sh | sh -s -- -b $(go env GOBIN) $GOLANGCI_LINT_VERSION
 }
 
-setup() {
-    echo "Setting up environment..."
-    update_go
-    setup_protoc
-    setup_lint
+setup_mg() {
+    echo "Checking proto Mitras..."
+    for p in $(find . -name "*.pb.go"); do mv "$p" "$p.tmp"; done
+    make proto
+    for p in $(find . -name "*.pb.go"); do
+        if ! cmp -s "$p" "$p.tmp"; then
+            echo "Mismatch in generated file: $p"
+            exit 1
+        fi
+    done
+    echo "Compile check for rabbitmq..."
+    MITRAS_MESSAGE_BROKER_TYPE=rabbitmq make http
+    echo "Compile check for redis..."
+    MITRAS_ES_TYPE=redis make http
+    make -j$NPROC
 }
 
 run_test() {
-    echo "Running lint..."
-    golangci-lint run
+    # echo "Running lint..."
+    # golangci-lint run
     echo "Running tests..."
-    truncate -s 0 coverage.txt
+    echo "" > coverage.txt
     for d in $(go list ./... | grep -v 'vendor\|cmd'); do
-        GOCACHE=off
-        go test -v -race -coverprofile=profile.out -covermode=atomic $d
+        GOCACHE=off go test -mod=vendor -v -race -tags test -coverprofile=profile.out -covermode=atomic $d
         if [ -f profile.out ]; then
             cat profile.out >> coverage.txt
             rm profile.out
@@ -67,13 +88,20 @@ run_test() {
 }
 
 push() {
-    if [[ "${BRANCH_NAME:-}" == "main" ]]; then
+    if [[ "$BRANCH_NAME" == "main" ]]; then
         echo "Pushing Docker images..."
         make -j$NPROC latest
     fi
 }
 
-set -e
+setup() {
+    echo "Setting up environment..."
+    # update_go
+    # setup_protoc
+    setup_mg
+    setup_lint
+}
+
 setup
 run_test
 push

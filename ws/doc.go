@@ -6,5 +6,4 @@
 // adapter service. It abstracts the underlying complexities of WebSocket
 // communication and provides a structured approach to working with WebSocket
 // clients and servers.
-//
 package ws

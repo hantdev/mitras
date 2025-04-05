@@ -5,9 +5,9 @@ package middleware
 import (
 	"context"
 
+	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/roles"
-	"github.com/go-kit/kit/metrics"
 )
 
 var _ roles.RoleManager = (*RoleManagerMetricsMiddleware)(nil)

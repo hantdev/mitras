@@ -47,7 +47,7 @@ var (
 	errFailedPublishToMsgBroker = errors.New("failed to publish to mitras message broker")
 )
 
-var channelRegExp = regexp.MustCompile(`^\/?ch\/([\w\-]+)\/msg(\/[^?]*)?(\?.*)?$`)
+var channelRegExp = regexp.MustCompile(`^\/?c\/([\w\-]+)\/m(\/[^?]*)?(\?.*)?$`)
 
 // Event implements events.Event interface.
 type handler struct {
@@ -136,7 +136,7 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 	}
 
 	// Topics are in the format:
-	// ch/<channel_id>/msg/<subtopic>/.../ct/<content_type>
+	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
 	channelParts := channelRegExp.FindStringSubmatch(*topic)
 	if len(channelParts) < 2 {
 		return errors.Wrap(errFailedPublish, errMalformedTopic)
@@ -221,7 +221,7 @@ func (h *handler) authAccess(ctx context.Context, token, topic string, msgType c
 	clientID := authnRes.GetId()
 
 	// Topics are in the format:
-	// ch/<channel_id>/msg/<subtopic>/.../ct/<content_type>
+	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
 	if !channelRegExp.MatchString(topic) {
 		return "", "", errMalformedTopic
 	}

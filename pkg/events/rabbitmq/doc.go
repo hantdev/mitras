@@ -1,5 +1,5 @@
-// Package rabbitmq contains the domain concept definitions needed to support
-// Mitras rabbitmq events source service functionality.
+// Package redis contains the domain concept definitions needed to support
+// mitras redis events source service functionality.
 //
-// It provides the abstraction of the rabbitmq stream and its operations.
+// It provides the abstraction of the redis stream and its operations.
 package rabbitmq

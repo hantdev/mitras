@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/kit/metrics"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-kit/kit/metrics"
 )
 
 var _ users.Service = (*metricsMiddleware)(nil)

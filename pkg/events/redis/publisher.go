@@ -13,12 +13,11 @@ import (
 type pubEventStore struct {
 	client            *redis.Client
 	unpublishedEvents chan *redis.XAddArgs
-	stream            string
 	mu                sync.Mutex
 	flushPeriod       time.Duration
 }
 
-func NewPublisher(ctx context.Context, url, stream string, flushPeriod time.Duration) (events.Publisher, error) {
+func NewPublisher(ctx context.Context, url string, flushPeriod time.Duration) (events.Publisher, error) {
 	opts, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, err
@@ -27,7 +26,6 @@ func NewPublisher(ctx context.Context, url, stream string, flushPeriod time.Dura
 	es := &pubEventStore{
 		client:            redis.NewClient(opts),
 		unpublishedEvents: make(chan *redis.XAddArgs, events.MaxUnpublishedEvents),
-		stream:            eventsPrefix + stream,
 		flushPeriod:       flushPeriod,
 	}
 
@@ -36,7 +34,7 @@ func NewPublisher(ctx context.Context, url, stream string, flushPeriod time.Dura
 	return es, nil
 }
 
-func (es *pubEventStore) Publish(ctx context.Context, event events.Event) error {
+func (es *pubEventStore) Publish(ctx context.Context, stream string, event events.Event) error {
 	values, err := event.Encode()
 	if err != nil {
 		return err
@@ -49,7 +47,7 @@ func (es *pubEventStore) Publish(ctx context.Context, event events.Event) error 
 	}
 
 	record := &redis.XAddArgs{
-		Stream: es.stream,
+		Stream: eventsPrefix + stream,
 		MaxLen: events.MaxEventStreamLen,
 		Approx: true,
 		Values: map[string]interface{}{"data": string(data)},

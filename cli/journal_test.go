@@ -11,13 +11,13 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var journal = mitrassdk.Journal{
+var journal = mgsdk.Journal{
 	ID: testsutil.GenerateUUID(&testing.T{}),
 }
 
@@ -27,7 +27,7 @@ func TestGetJournalCmd(t *testing.T) {
 	invCmd := cli.NewJournalCmd()
 	rootCmd := setFlags(invCmd)
 
-	var page mitrassdk.JournalsPage
+	var page mgsdk.JournalsPage
 	entityType := "group"
 	entityId := testsutil.GenerateUUID(t)
 	domainId := testsutil.GenerateUUID(t)
@@ -36,7 +36,7 @@ func TestGetJournalCmd(t *testing.T) {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
-		page          mitrassdk.JournalsPage
+		page          mgsdk.JournalsPage
 		logType       outputLog
 		errLogMessage string
 	}{
@@ -48,11 +48,11 @@ func TestGetJournalCmd(t *testing.T) {
 				token,
 			},
 			logType: entityLog,
-			page: mitrassdk.JournalsPage{
+			page: mgsdk.JournalsPage{
 				Total:    1,
 				Offset:   0,
 				Limit:    10,
-				Journals: []mitrassdk.Journal{journal},
+				Journals: []mgsdk.Journal{journal},
 			},
 		},
 		{
@@ -64,11 +64,11 @@ func TestGetJournalCmd(t *testing.T) {
 				token,
 			},
 			logType: entityLog,
-			page: mitrassdk.JournalsPage{
+			page: mgsdk.JournalsPage{
 				Total:    1,
 				Offset:   0,
 				Limit:    10,
-				Journals: []mitrassdk.Journal{journal},
+				Journals: []mgsdk.Journal{journal},
 			},
 		},
 		{
@@ -98,9 +98,9 @@ func TestGetJournalCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Journal", tc.args[0], tc.args[1], "", mock.Anything, tc.args[2]).Return(tc.page, tc.sdkErr)
+			sdkCall := sdkMock.On("Journal", mock.Anything, tc.args[0], tc.args[1], "", mock.Anything, tc.args[2]).Return(tc.page, tc.sdkErr)
 			if tc.args[0] != "user" {
-				sdkCall = sdkMock.On("Journal", tc.args[0], tc.args[1], tc.args[2], mock.Anything, tc.args[3]).Return(tc.page, tc.sdkErr)
+				sdkCall = sdkMock.On("Journal", mock.Anything, tc.args[0], tc.args[1], tc.args[2], mock.Anything, tc.args[3]).Return(tc.page, tc.sdkErr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 

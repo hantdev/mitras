@@ -1,3 +1,3 @@
 // Package events provides the domain concept definitions needed to
-// support Mitras auth service functionality.
+// support mitras auth service functionality.
 package events

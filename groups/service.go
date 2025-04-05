@@ -9,7 +9,7 @@ import (
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
 	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -44,7 +44,7 @@ func NewService(repo Repository, policy policies.Service, idp mitras.IDProvider,
 	}, nil
 }
 
-func (svc service) CreateGroup(ctx context.Context, session mitrasauthn.Session, g Group) (retGr Group, retRps []roles.RoleProvision, retErr error) {
+func (svc service) CreateGroup(ctx context.Context, session smqauthn.Session, g Group) (retGr Group, retRps []roles.RoleProvision, retErr error) {
 	groupID, err := svc.idProvider.ID()
 	if err != nil {
 		return Group{}, []roles.RoleProvision{}, err
@@ -102,7 +102,7 @@ func (svc service) CreateGroup(ctx context.Context, session mitrasauthn.Session,
 	return saved, nrps, nil
 }
 
-func (svc service) ViewGroup(ctx context.Context, session mitrasauthn.Session, id string, withRoles bool) (Group, error) {
+func (svc service) ViewGroup(ctx context.Context, session smqauthn.Session, id string, withRoles bool) (Group, error) {
 	var group Group
 	var err error
 	switch withRoles {
@@ -118,7 +118,7 @@ func (svc service) ViewGroup(ctx context.Context, session mitrasauthn.Session, i
 	return group, nil
 }
 
-func (svc service) ListGroups(ctx context.Context, session mitrasauthn.Session, gm PageMeta) (Page, error) {
+func (svc service) ListGroups(ctx context.Context, session smqauthn.Session, gm PageMeta) (Page, error) {
 	switch session.SuperAdmin {
 	case true:
 		gm.DomainID = session.DomainID
@@ -136,7 +136,7 @@ func (svc service) ListGroups(ctx context.Context, session mitrasauthn.Session, 
 	}
 }
 
-func (svc service) ListUserGroups(ctx context.Context, session mitrasauthn.Session, userID string, pm PageMeta) (Page, error) {
+func (svc service) ListUserGroups(ctx context.Context, session smqauthn.Session, userID string, pm PageMeta) (Page, error) {
 	page, err := svc.repo.RetrieveUserGroups(ctx, session.DomainID, userID, pm)
 	if err != nil {
 		return Page{}, errors.Wrap(svcerr.ErrViewEntity, err)
@@ -144,7 +144,7 @@ func (svc service) ListUserGroups(ctx context.Context, session mitrasauthn.Sessi
 	return page, nil
 }
 
-func (svc service) UpdateGroup(ctx context.Context, session mitrasauthn.Session, g Group) (Group, error) {
+func (svc service) UpdateGroup(ctx context.Context, session smqauthn.Session, g Group) (Group, error) {
 	g.UpdatedAt = time.Now()
 	g.UpdatedBy = session.UserID
 
@@ -155,7 +155,7 @@ func (svc service) UpdateGroup(ctx context.Context, session mitrasauthn.Session,
 	return group, nil
 }
 
-func (svc service) EnableGroup(ctx context.Context, session mitrasauthn.Session, id string) (Group, error) {
+func (svc service) EnableGroup(ctx context.Context, session smqauthn.Session, id string) (Group, error) {
 	group := Group{
 		ID:        id,
 		Status:    EnabledStatus,
@@ -168,7 +168,7 @@ func (svc service) EnableGroup(ctx context.Context, session mitrasauthn.Session,
 	return group, nil
 }
 
-func (svc service) DisableGroup(ctx context.Context, session mitrasauthn.Session, id string) (Group, error) {
+func (svc service) DisableGroup(ctx context.Context, session smqauthn.Session, id string) (Group, error) {
 	group := Group{
 		ID:        id,
 		Status:    DisabledStatus,
@@ -181,7 +181,7 @@ func (svc service) DisableGroup(ctx context.Context, session mitrasauthn.Session
 	return group, nil
 }
 
-func (svc service) RetrieveGroupHierarchy(ctx context.Context, session mitrasauthn.Session, id string, hm HierarchyPageMeta) (HierarchyPage, error) {
+func (svc service) RetrieveGroupHierarchy(ctx context.Context, session smqauthn.Session, id string, hm HierarchyPageMeta) (HierarchyPage, error) {
 	hp, err := svc.repo.RetrieveHierarchy(ctx, id, hm)
 	if err != nil {
 		return HierarchyPage{}, errors.Wrap(svcerr.ErrViewEntity, err)
@@ -229,7 +229,7 @@ func (svc service) getGroupIDs(gps []Group) []string {
 	return hids
 }
 
-func (svc service) AddParentGroup(ctx context.Context, session mitrasauthn.Session, id, parentID string) (retErr error) {
+func (svc service) AddParentGroup(ctx context.Context, session smqauthn.Session, id, parentID string) (retErr error) {
 	group, err := svc.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
@@ -265,7 +265,7 @@ func (svc service) AddParentGroup(ctx context.Context, session mitrasauthn.Sessi
 	return nil
 }
 
-func (svc service) RemoveParentGroup(ctx context.Context, session mitrasauthn.Session, id string) (retErr error) {
+func (svc service) RemoveParentGroup(ctx context.Context, session smqauthn.Session, id string) (retErr error) {
 	group, err := svc.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
@@ -302,7 +302,7 @@ func (svc service) RemoveParentGroup(ctx context.Context, session mitrasauthn.Se
 	return nil
 }
 
-func (svc service) AddChildrenGroups(ctx context.Context, session mitrasauthn.Session, parentGroupID string, childrenGroupIDs []string) (retErr error) {
+func (svc service) AddChildrenGroups(ctx context.Context, session smqauthn.Session, parentGroupID string, childrenGroupIDs []string) (retErr error) {
 	childrenGroupsPage, err := svc.repo.RetrieveByIDs(ctx, PageMeta{Limit: 1<<63 - 1}, childrenGroupIDs...)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
@@ -346,7 +346,7 @@ func (svc service) AddChildrenGroups(ctx context.Context, session mitrasauthn.Se
 	return nil
 }
 
-func (svc service) RemoveChildrenGroups(ctx context.Context, session mitrasauthn.Session, parentGroupID string, childrenGroupIDs []string) (retErr error) {
+func (svc service) RemoveChildrenGroups(ctx context.Context, session smqauthn.Session, parentGroupID string, childrenGroupIDs []string) (retErr error) {
 	childrenGroupsPage, err := svc.repo.RetrieveByIDs(ctx, PageMeta{Limit: 1<<63 - 1}, childrenGroupIDs...)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
@@ -388,7 +388,7 @@ func (svc service) RemoveChildrenGroups(ctx context.Context, session mitrasauthn
 	return nil
 }
 
-func (svc service) RemoveAllChildrenGroups(ctx context.Context, session mitrasauthn.Session, id string) error {
+func (svc service) RemoveAllChildrenGroups(ctx context.Context, session smqauthn.Session, id string) error {
 	pol := policies.Policy{
 		Domain:      session.DomainID,
 		SubjectType: policies.GroupType,
@@ -407,7 +407,7 @@ func (svc service) RemoveAllChildrenGroups(ctx context.Context, session mitrasau
 	return nil
 }
 
-func (svc service) ListChildrenGroups(ctx context.Context, session mitrasauthn.Session, id string, startLevel, endLevel int64, pm PageMeta) (Page, error) {
+func (svc service) ListChildrenGroups(ctx context.Context, session smqauthn.Session, id string, startLevel, endLevel int64, pm PageMeta) (Page, error) {
 	page, err := svc.repo.RetrieveChildrenGroups(ctx, session.DomainID, session.UserID, id, startLevel, endLevel, pm)
 	if err != nil {
 		return Page{}, errors.Wrap(svcerr.ErrViewEntity, err)
@@ -415,7 +415,7 @@ func (svc service) ListChildrenGroups(ctx context.Context, session mitrasauthn.S
 	return page, nil
 }
 
-func (svc service) DeleteGroup(ctx context.Context, session mitrasauthn.Session, id string) error {
+func (svc service) DeleteGroup(ctx context.Context, session smqauthn.Session, id string) error {
 	if _, err := svc.channels.UnsetParentGroupFromChannels(ctx, &grpcChannelsV1.UnsetParentGroupFromChannelsReq{ParentGroupId: id}); err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -499,7 +499,7 @@ func (svc service) listAllGroupsOfUserID(ctx context.Context, userID, permission
 	return allowedIDs.Policies, nil
 }
 
-func (svc service) changeGroupStatus(ctx context.Context, session mitrasauthn.Session, group Group) (Group, error) {
+func (svc service) changeGroupStatus(ctx context.Context, session smqauthn.Session, group Group) (Group, error) {
 	dbGroup, err := svc.repo.RetrieveByID(ctx, group.ID)
 	if err != nil {
 		return Group{}, errors.Wrap(svcerr.ErrViewEntity, err)

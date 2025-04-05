@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/domains"
@@ -23,7 +24,6 @@ import (
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/roles"
 	"github.com/hantdev/mitras/pkg/uuid"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -37,7 +37,7 @@ var (
 		Tags:     []string{"tag1", "tag2"},
 		Metadata: validMetadata,
 		Status:   domains.EnabledStatus,
-		Alias:    "mydomain",
+		Route:    "mydomain",
 	}
 	validToken   = "token"
 	inValidToken = "invalid"
@@ -120,7 +120,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       validToken,
 			contentType: contentType,
@@ -133,7 +133,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       "",
 			contentType: contentType,
@@ -146,7 +146,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       inValidToken,
 			contentType: contentType,
@@ -160,7 +160,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       validToken,
 			contentType: contentType,
@@ -168,17 +168,17 @@ func TestCreateDomain(t *testing.T) {
 			err:         apiutil.ErrMissingName,
 		},
 		{
-			desc: "register a new domain with an empty alias",
+			desc: "register a new domain with an empty route",
 			domain: domains.Domain{
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "",
+				Route:    "",
 			},
 			token:       validToken,
 			contentType: contentType,
 			status:      http.StatusBadRequest,
-			err:         apiutil.ErrMissingAlias,
+			err:         apiutil.ErrMissingRoute,
 		},
 		{
 			desc: "register a  new domain with invalid content type",
@@ -186,7 +186,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       validToken,
 			contentType: "application/xml",
@@ -201,7 +201,7 @@ func TestCreateDomain(t *testing.T) {
 					"test": make(chan int),
 				},
 				Tags:  []string{"tag1", "tag2"},
-				Alias: "test",
+				Route: "test",
 			},
 			token:       validToken,
 			contentType: contentType,
@@ -214,7 +214,7 @@ func TestCreateDomain(t *testing.T) {
 				Name:     "test",
 				Metadata: domains.Metadata{"role": "domain"},
 				Tags:     []string{"tag1", "tag2"},
-				Alias:    "test",
+				Route:    "test",
 			},
 			token:       validToken,
 			contentType: contentType,
@@ -692,13 +692,12 @@ func TestUpdateDomain(t *testing.T) {
 	updatedName := "test"
 	updatedMetadata := domains.Metadata{"role": "domain"}
 	updatedTags := []string{"tag1", "tag2"}
-	updatedAlias := "test"
+
 	updatedDomain := domains.Domain{
 		ID:       ID,
 		Name:     updatedName,
 		Metadata: updatedMetadata,
 		Tags:     updatedTags,
-		Alias:    updatedAlias,
 	}
 	unMetadata := domains.Metadata{
 		"test": make(chan int),
@@ -725,7 +724,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &updatedMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: contentType,
 			status:      http.StatusOK,
@@ -740,7 +738,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &updatedMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: contentType,
 			status:      http.StatusUnauthorized,
@@ -754,7 +751,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &updatedMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: contentType,
 			status:      http.StatusUnauthorized,
@@ -769,7 +765,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &updatedMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: "application/xml",
 			status:      http.StatusUnsupportedMediaType,
@@ -783,7 +778,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &unMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: contentType,
 			status:      http.StatusBadRequest,
@@ -797,7 +791,6 @@ func TestUpdateDomain(t *testing.T) {
 				Name:     &updatedName,
 				Metadata: &updatedMetadata,
 				Tags:     &updatedTags,
-				Alias:    &updatedAlias,
 			},
 			contentType: contentType,
 			status:      http.StatusUnprocessableEntity,

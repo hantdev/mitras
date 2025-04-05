@@ -11,13 +11,13 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var invitation = mitrassdk.Invitation{
+var invitation = mgsdk.Invitation{
 	InvitedBy:     testsutil.GenerateUUID(&testing.T{}),
 	InviteeUserID: user.ID,
 	DomainID:      domain.ID,
@@ -73,7 +73,7 @@ func TestSendUserInvitationCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("SendInvitation", mock.Anything, mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("SendInvitation", mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{sendCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
@@ -94,15 +94,15 @@ func TestGetInvitationCmd(t *testing.T) {
 	invCmd := cli.NewInvitationsCmd()
 	rootCmd := setFlags(invCmd)
 
-	var inv mitrassdk.Invitation
-	var page mitrassdk.InvitationPage
+	var inv mgsdk.Invitation
+	var page mgsdk.InvitationPage
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
-		page          mitrassdk.InvitationPage
-		inv           mitrassdk.Invitation
+		page          mgsdk.InvitationPage
+		inv           mgsdk.Invitation
 		logType       outputLog
 		errLogMessage string
 	}{
@@ -112,11 +112,11 @@ func TestGetInvitationCmd(t *testing.T) {
 				all,
 				token,
 			},
-			page: mitrassdk.InvitationPage{
+			page: mgsdk.InvitationPage{
 				Total:       1,
 				Offset:      0,
 				Limit:       10,
-				Invitations: []mitrassdk.Invitation{invitation},
+				Invitations: []mgsdk.Invitation{invitation},
 			},
 			logType: entityLog,
 		},
@@ -165,8 +165,8 @@ func TestGetInvitationCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Invitation", tc.args[0], tc.args[1], mock.Anything).Return(tc.inv, tc.sdkErr)
-			sdkCall1 := sdkMock.On("Invitations", mock.Anything, tc.args[1]).Return(tc.page, tc.sdkErr)
+			sdkCall := sdkMock.On("Invitation", mock.Anything, tc.args[0], tc.args[1], mock.Anything).Return(tc.inv, tc.sdkErr)
+			sdkCall1 := sdkMock.On("Invitations", mock.Anything, mock.Anything, tc.args[1]).Return(tc.page, tc.sdkErr)
 
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 
@@ -236,7 +236,7 @@ func TestAcceptInvitationCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("AcceptInvitation", mock.Anything, mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("AcceptInvitation", mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{acceptCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
@@ -295,7 +295,7 @@ func TestRejectInvitationCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("RejectInvitation", mock.Anything, mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("RejectInvitation", mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{rejectCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:
@@ -357,7 +357,7 @@ func TestDeleteInvitationCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteInvitation", mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteInvitation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{delCmd}, tc.args...)...)
 			switch tc.logType {
 			case okLog:

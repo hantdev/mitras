@@ -824,7 +824,7 @@ func TestRetrieveAll(t *testing.T) {
 				"department": namegen.Generate(),
 			},
 			Status:    clients.EnabledStatus,
-			CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
+			CreatedAt: time.Now().UTC(),
 		}
 		if i%50 == 0 {
 			client.Status = clients.DisabledStatus

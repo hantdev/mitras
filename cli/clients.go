@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/hantdev/mitras/clients"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/spf13/cobra"
 )
 
@@ -21,13 +21,13 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			var client mitrassdk.Client
+			var client smqsdk.Client
 			if err := json.Unmarshal([]byte(args[0]), &client); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			client.Status = clients.EnabledStatus.String()
-			client, err := sdk.CreateClient(client, args[1], args[2])
+			client, err := sdk.CreateClient(cmd.Context(), client, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -54,14 +54,14 @@ var cmdClients = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Name:     Name,
 				Offset:   Offset,
 				Limit:    Limit,
 				Metadata: metadata,
 			}
 			if args[0] == all {
-				l, err := sdk.Clients(pageMetadata, args[1], args[2])
+				l, err := sdk.Clients(cmd.Context(), pageMetadata, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -69,7 +69,7 @@ var cmdClients = []cobra.Command{
 				logJSONCmd(*cmd, l)
 				return
 			}
-			t, err := sdk.Client(args[0], args[1], args[2])
+			t, err := sdk.Client(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -89,7 +89,7 @@ var cmdClients = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			if err := sdk.DeleteClient(args[0], args[1], args[2]); err != nil {
+			if err := sdk.DeleteClient(cmd.Context(), args[0], args[1], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -110,14 +110,14 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			var client mitrassdk.Client
+			var client smqsdk.Client
 			if args[0] == "tags" {
 				if err := json.Unmarshal([]byte(args[2]), &client.Tags); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
 				client.ID = args[1]
-				client, err := sdk.UpdateClientTags(client, args[3], args[4])
+				client, err := sdk.UpdateClientTags(cmd.Context(), client, args[3], args[4])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -128,7 +128,7 @@ var cmdClients = []cobra.Command{
 			}
 
 			if args[0] == "secret" {
-				client, err := sdk.UpdateClientSecret(args[1], args[2], args[3], args[4])
+				client, err := sdk.UpdateClientSecret(cmd.Context(), args[1], args[2], args[3], args[4])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -143,7 +143,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 			client.ID = args[0]
-			client, err := sdk.UpdateClient(client, args[2], args[3])
+			client, err := sdk.UpdateClient(cmd.Context(), client, args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -164,7 +164,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			client, err := sdk.EnableClient(args[0], args[1], args[2])
+			client, err := sdk.EnableClient(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -185,7 +185,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			client, err := sdk.DisableClient(args[0], args[1], args[2])
+			client, err := sdk.DisableClient(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -212,12 +212,12 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			connIDs := mitrassdk.Connection{
+			connIDs := smqsdk.Connection{
 				ChannelIDs: []string{args[1]},
 				ClientIDs:  []string{args[0]},
 				Types:      conn_types,
 			}
-			if err := sdk.Connect(connIDs, args[3], args[4]); err != nil {
+			if err := sdk.Connect(cmd.Context(), connIDs, args[3], args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -244,12 +244,12 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			connIDs := mitrassdk.Connection{
+			connIDs := smqsdk.Connection{
 				ClientIDs:  []string{args[0]},
 				ChannelIDs: []string{args[1]},
 				Types:      conn_types,
 			}
-			if err := sdk.Disconnect(connIDs, args[3], args[4]); err != nil {
+			if err := sdk.Disconnect(cmd.Context(), connIDs, args[3], args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -268,11 +268,11 @@ var cmdClients = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pm := mitrassdk.PageMetadata{
+			pm := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
-			ul, err := sdk.ListClientMembers(args[0], args[1], pm, args[2])
+			ul, err := sdk.ListClientMembers(cmd.Context(), args[0], args[1], pm, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -297,12 +297,12 @@ var cmdClientsRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			var roleReq mitrassdk.RoleReq
+			var roleReq smqsdk.RoleReq
 			if err := json.Unmarshal([]byte(args[0]), &roleReq); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			r, err := sdk.CreateClientRole(args[1], args[2], roleReq, args[3])
+			r, err := sdk.CreateClientRole(cmd.Context(), args[1], args[2], roleReq, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -325,12 +325,12 @@ var cmdClientsRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 			if args[0] == all {
-				rs, err := sdk.ClientRoles(args[1], args[2], pageMetadata, args[3])
+				rs, err := sdk.ClientRoles(cmd.Context(), args[1], args[2], pageMetadata, args[3])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -338,7 +338,7 @@ var cmdClientsRoles = []cobra.Command{
 				logJSONCmd(*cmd, rs)
 				return
 			}
-			r, err := sdk.ClientRole(args[1], args[0], args[2], args[3])
+			r, err := sdk.ClientRole(cmd.Context(), args[1], args[0], args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -361,7 +361,7 @@ var cmdClientsRoles = []cobra.Command{
 				return
 			}
 
-			r, err := sdk.UpdateClientRole(args[2], args[1], args[0], args[3], args[4])
+			r, err := sdk.UpdateClientRole(cmd.Context(), args[2], args[1], args[0], args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -384,7 +384,7 @@ var cmdClientsRoles = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DeleteClientRole(args[1], args[0], args[2], args[3]); err != nil {
+			if err := sdk.DeleteClientRole(cmd.Context(), args[1], args[0], args[2], args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -415,7 +415,7 @@ var cmdClientsActions = []cobra.Command{
 				return
 			}
 
-			acts, err := sdk.AddClientRoleActions(args[2], args[1], args[3], actions.Actions, args[4])
+			acts, err := sdk.AddClientRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -438,7 +438,7 @@ var cmdClientsActions = []cobra.Command{
 				return
 			}
 
-			l, err := sdk.ClientRoleActions(args[1], args[0], args[2], args[3])
+			l, err := sdk.ClientRoleActions(cmd.Context(), args[1], args[0], args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -462,7 +462,7 @@ var cmdClientsActions = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllClientRoleActions(args[2], args[1], args[3], args[4]); err != nil {
+				if err := sdk.RemoveAllClientRoleActions(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -476,7 +476,7 @@ var cmdClientsActions = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			if err := sdk.RemoveClientRoleActions(args[2], args[1], args[3], actions.Actions, args[4]); err != nil {
+			if err := sdk.RemoveClientRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -497,7 +497,7 @@ var cmdClientsActions = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			acts, err := sdk.AvailableClientRoleActions(args[0], args[1])
+			acts, err := sdk.AvailableClientRoleActions(cmd.Context(), args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -529,7 +529,7 @@ var cmdClientMembers = []cobra.Command{
 				return
 			}
 
-			memb, err := sdk.AddClientRoleMembers(args[2], args[1], args[3], members.Members, args[4])
+			memb, err := sdk.AddClientRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -551,12 +551,12 @@ var cmdClientMembers = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 
-			l, err := sdk.ClientRoleMembers(args[1], args[0], args[2], pageMetadata, args[3])
+			l, err := sdk.ClientRoleMembers(cmd.Context(), args[1], args[0], args[2], pageMetadata, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -581,7 +581,7 @@ var cmdClientMembers = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllClientRoleMembers(args[2], args[1], args[3], args[4]); err != nil {
+				if err := sdk.RemoveAllClientRoleMembers(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -597,7 +597,7 @@ var cmdClientMembers = []cobra.Command{
 				return
 			}
 
-			if err := sdk.RemoveClientRoleMembers(args[2], args[1], args[3], members.Members, args[4]); err != nil {
+			if err := sdk.RemoveClientRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}

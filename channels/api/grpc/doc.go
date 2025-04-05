@@ -1,2 +1,2 @@
-// Package grpc contains implementation of Channels service gRPC API.
+// Package grpc contains implementation of Auth service gRPC API.
 package grpc

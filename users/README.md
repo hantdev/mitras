@@ -5,7 +5,3 @@ Users service provides an HTTP API for managing users. Through this API clients 
 - register new accounts
 - login
 - manage account(s) (list, update, delete)
-
-## API
-
-## CLI

@@ -8,7 +8,7 @@ import (
 
 	"github.com/hantdev/mitras/cli"
 	"github.com/hantdev/mitras/pkg/errors"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,13 +21,13 @@ func TestHealthCmd(t *testing.T) {
 	rootCmd := setFlags(healthCmd)
 	service := "users"
 
-	var health mitrassdk.HealthInfo
+	var health mgsdk.HealthInfo
 	cases := []struct {
 		desc          string
 		args          []string
 		logType       outputLog
 		errLogMessage string
-		health        mitrassdk.HealthInfo
+		health        mgsdk.HealthInfo
 		sdkErr        errors.SDKError
 	}{
 		{
@@ -36,7 +36,7 @@ func TestHealthCmd(t *testing.T) {
 				service,
 			},
 			logType: entityLog,
-			health: mitrassdk.HealthInfo{
+			health: mgsdk.HealthInfo{
 				Status:      "pass",
 				Description: "users service",
 			},

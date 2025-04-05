@@ -3,9 +3,9 @@ package grpc
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	ch "github.com/hantdev/mitras/channels"
 	channels "github.com/hantdev/mitras/channels/private"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func authorizeEndpoint(svc channels.Service) endpoint.Endpoint {

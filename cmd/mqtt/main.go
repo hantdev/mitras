@@ -14,6 +14,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env/v11"
+	"github.com/cenkalti/backoff/v4"
+	"github.com/eclipse/paho.mqtt.golang/packets"
 	hermina "github.com/hantdev/hermina"
 	herminamqtt "github.com/hantdev/hermina/pkg/mqtt"
 	"github.com/hantdev/hermina/pkg/mqtt/websocket"
@@ -32,9 +35,6 @@ import (
 	mqttpub "github.com/hantdev/mitras/pkg/messaging/mqtt"
 	"github.com/hantdev/mitras/pkg/server"
 	"github.com/hantdev/mitras/pkg/uuid"
-	"github.com/caarlos0/env/v11"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/eclipse/paho.mqtt.golang/packets"
 	"golang.org/x/sync/errgroup"
 )
 

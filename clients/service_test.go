@@ -13,7 +13,7 @@ import (
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	gpmocks "github.com/hantdev/mitras/groups/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -296,7 +296,7 @@ func TestCreateClients(t *testing.T) {
 			policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePolicyErr)
 			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.RoleProvision{}, tc.addRoleErr)
 			repoCall2 := repo.On("Delete", context.Background(), mock.Anything).Return(tc.deleteErr)
-			expected, _, err := svc.CreateClients(context.Background(), mitrasauthn.Session{}, tc.client)
+			expected, _, err := svc.CreateClients(context.Background(), smqauthn.Session{}, tc.client)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			if err == nil {
 				tc.client.ID = expected[0].ID
@@ -369,7 +369,7 @@ func TestViewClient(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.response, tc.err)
 			repoCall1 := repo.On("RetrieveByIDWithRoles", context.Background(), tc.clientID, mock.Anything).Return(tc.response, tc.err)
-			rClient, err := svc.View(context.Background(), mitrasauthn.Session{}, tc.clientID, tc.withRoles)
+			rClient, err := svc.View(context.Background(), smqauthn.Session{}, tc.clientID, tc.withRoles)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
 			switch tc.withRoles {
@@ -399,7 +399,7 @@ func TestListClients(t *testing.T) {
 	cases := []struct {
 		desc                    string
 		userKind                string
-		session                 mitrasauthn.Session
+		session                 smqauthn.Session
 		page                    clients.Page
 		listObjectsResponse     policysvc.PolicyPage
 		retrieveAllResponse     clients.ClientsPage
@@ -415,7 +415,7 @@ func TestListClients(t *testing.T) {
 		{
 			desc:     "list all clients successfully as non admin",
 			userKind: "non-admin",
-			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
 				Offset: 0,
@@ -443,7 +443,7 @@ func TestListClients(t *testing.T) {
 		{
 			desc:     "list all clients as non admin with failed to retrieve all",
 			userKind: "non-admin",
-			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
 				Offset: 0,
@@ -458,7 +458,7 @@ func TestListClients(t *testing.T) {
 		{
 			desc:     "list all clients as non admin with failed super admin",
 			userKind: "non-admin",
-			session:  mitrasauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
 				Offset: 0,
@@ -499,7 +499,7 @@ func TestListClients(t *testing.T) {
 	cases2 := []struct {
 		desc                    string
 		userKind                string
-		session                 mitrasauthn.Session
+		session                 smqauthn.Session
 		page                    clients.Page
 		listObjectsResponse     policysvc.PolicyPage
 		retrieveAllResponse     clients.ClientsPage
@@ -516,7 +516,7 @@ func TestListClients(t *testing.T) {
 			desc:     "list all clients as admin successfully",
 			userKind: "admin",
 			id:       adminID,
-			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
 				Offset: 0,
 				Limit:  100,
@@ -545,7 +545,7 @@ func TestListClients(t *testing.T) {
 			desc:     "list all clients as admin with failed to retrieve all",
 			userKind: "admin",
 			id:       adminID,
-			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
 				Offset: 0,
 				Limit:  100,
@@ -560,7 +560,7 @@ func TestListClients(t *testing.T) {
 			desc:     "list all clients as admin with failed to list clients",
 			userKind: "admin",
 			id:       adminID,
-			session:  mitrasauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
 				Offset: 0,
 				Limit:  100,
@@ -594,7 +594,7 @@ func TestUpdateClient(t *testing.T) {
 	cases := []struct {
 		desc           string
 		client         clients.Client
-		session        mitrasauthn.Session
+		session        smqauthn.Session
 		updateResponse clients.Client
 		updateErr      error
 		err            error
@@ -602,7 +602,7 @@ func TestUpdateClient(t *testing.T) {
 		{
 			desc:           "update client name successfully",
 			client:         client1,
-			session:        mitrasauthn.Session{UserID: validID},
+			session:        smqauthn.Session{UserID: validID},
 			updateResponse: client1,
 			err:            nil,
 		},
@@ -610,14 +610,14 @@ func TestUpdateClient(t *testing.T) {
 			desc:           "update client metadata with valid token",
 			client:         client2,
 			updateResponse: client2,
-			session:        mitrasauthn.Session{UserID: validID},
+			session:        smqauthn.Session{UserID: validID},
 			err:            nil,
 		},
 		{
 			desc:           "update client with failed to update repo",
 			client:         client1,
 			updateResponse: clients.Client{},
-			session:        mitrasauthn.Session{UserID: validID},
+			session:        smqauthn.Session{UserID: validID},
 			updateErr:      repoerr.ErrMalformedEntity,
 			err:            svcerr.ErrUpdateEntity,
 		},
@@ -642,7 +642,7 @@ func TestUpdateTags(t *testing.T) {
 	cases := []struct {
 		desc           string
 		client         clients.Client
-		session        mitrasauthn.Session
+		session        smqauthn.Session
 		updateResponse clients.Client
 		updateErr      error
 		err            error
@@ -650,7 +650,7 @@ func TestUpdateTags(t *testing.T) {
 		{
 			desc:           "update client tags successfully",
 			client:         client,
-			session:        mitrasauthn.Session{UserID: validID},
+			session:        smqauthn.Session{UserID: validID},
 			updateResponse: client,
 			err:            nil,
 		},
@@ -658,7 +658,7 @@ func TestUpdateTags(t *testing.T) {
 			desc:           "update client tags with failed to update repo",
 			client:         client,
 			updateResponse: clients.Client{},
-			session:        mitrasauthn.Session{UserID: validID},
+			session:        smqauthn.Session{UserID: validID},
 			updateErr:      repoerr.ErrMalformedEntity,
 			err:            svcerr.ErrUpdateEntity,
 		},
@@ -683,7 +683,7 @@ func TestUpdateSecret(t *testing.T) {
 		client               clients.Client
 		newSecret            string
 		updateSecretResponse clients.Client
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		updateErr            error
 		err                  error
 	}{
@@ -691,7 +691,7 @@ func TestUpdateSecret(t *testing.T) {
 			desc:      "update client secret successfully",
 			client:    client,
 			newSecret: "newSecret",
-			session:   mitrasauthn.Session{UserID: validID},
+			session:   smqauthn.Session{UserID: validID},
 			updateSecretResponse: clients.Client{
 				ID: client.ID,
 				Credentials: clients.Credentials{
@@ -705,7 +705,7 @@ func TestUpdateSecret(t *testing.T) {
 			desc:                 "update client secret with failed to update repo",
 			client:               client,
 			newSecret:            "newSecret",
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			updateSecretResponse: clients.Client{},
 			updateErr:            repoerr.ErrMalformedEntity,
 			err:                  svcerr.ErrUpdateEntity,
@@ -734,7 +734,7 @@ func TestEnable(t *testing.T) {
 	cases := []struct {
 		desc                 string
 		id                   string
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		client               clients.Client
 		changeStatusResponse clients.Client
 		retrieveByIDResponse clients.Client
@@ -745,7 +745,7 @@ func TestEnable(t *testing.T) {
 		{
 			desc:                 "enable disabled client",
 			id:                   disabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               disabledClient1,
 			changeStatusResponse: endisabledClient1,
 			retrieveByIDResponse: disabledClient1,
@@ -754,7 +754,7 @@ func TestEnable(t *testing.T) {
 		{
 			desc:                 "enable disabled client with failed to update repo",
 			id:                   disabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               disabledClient1,
 			changeStatusResponse: clients.Client{},
 			retrieveByIDResponse: disabledClient1,
@@ -764,7 +764,7 @@ func TestEnable(t *testing.T) {
 		{
 			desc:                 "enable enabled client",
 			id:                   enabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               enabledClient1,
 			changeStatusResponse: enabledClient1,
 			retrieveByIDResponse: enabledClient1,
@@ -774,7 +774,7 @@ func TestEnable(t *testing.T) {
 		{
 			desc:                 "enable non-existing client",
 			id:                   wrongID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               clients.Client{},
 			changeStatusResponse: clients.Client{},
 			retrieveByIDResponse: clients.Client{},
@@ -806,7 +806,7 @@ func TestDisable(t *testing.T) {
 	cases := []struct {
 		desc                 string
 		id                   string
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		client               clients.Client
 		changeStatusResponse clients.Client
 		retrieveByIDResponse clients.Client
@@ -818,7 +818,7 @@ func TestDisable(t *testing.T) {
 		{
 			desc:                 "disable enabled client",
 			id:                   enabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               enabledClient1,
 			changeStatusResponse: disenabledClient1,
 			retrieveByIDResponse: enabledClient1,
@@ -827,7 +827,7 @@ func TestDisable(t *testing.T) {
 		{
 			desc:                 "disable client with failed to update repo",
 			id:                   enabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               enabledClient1,
 			changeStatusResponse: clients.Client{},
 			retrieveByIDResponse: enabledClient1,
@@ -837,7 +837,7 @@ func TestDisable(t *testing.T) {
 		{
 			desc:                 "disable disabled client",
 			id:                   disabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               disabledClient1,
 			changeStatusResponse: clients.Client{},
 			retrieveByIDResponse: disabledClient1,
@@ -848,7 +848,7 @@ func TestDisable(t *testing.T) {
 			desc:                 "disable non-existing client",
 			id:                   wrongID,
 			client:               clients.Client{},
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			changeStatusResponse: clients.Client{},
 			retrieveByIDResponse: clients.Client{},
 			retrieveIDErr:        repoerr.ErrNotFound,
@@ -857,7 +857,7 @@ func TestDisable(t *testing.T) {
 		{
 			desc:                 "disable client with failed to remove from cache",
 			id:                   enabledClient1.ID,
-			session:              mitrasauthn.Session{UserID: validID},
+			session:              smqauthn.Session{UserID: validID},
 			client:               disabledClient1,
 			changeStatusResponse: disenabledClient1,
 			retrieveByIDResponse: enabledClient1,
@@ -958,8 +958,8 @@ func TestDelete(t *testing.T) {
 			repoCall3 := repo.On("RetrieveEntitiesRolesActionsMembers", context.Background(), []string{tc.clientID}).Return([]roles.EntityActionRole{}, []roles.EntityMemberRole{}, nil)
 			policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
 			policyCall2 := pService.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
-			repoCall4 := repo.On("Delete", context.Background(), tc.clientID).Return(tc.deleteErr)
-			err := svc.Delete(context.Background(), mitrasauthn.Session{}, tc.clientID)
+			repoCall4 := repo.On("Delete", context.Background(), []string{tc.clientID}).Return(tc.deleteErr)
+			err := svc.Delete(context.Background(), smqauthn.Session{}, tc.clientID)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			repoCall.Unset()
 			repoCall1.Unset()
@@ -986,7 +986,7 @@ func TestSetParentGroup(t *testing.T) {
 		desc               string
 		clientID           string
 		parentGroupID      string
-		session            mitrasauthn.Session
+		session            smqauthn.Session
 		retrieveByIDResp   clients.Client
 		retrieveByIDErr    error
 		retrieveEntityResp *grpcCommonV1.RetrieveEntityRes
@@ -1000,7 +1000,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group successfully",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1015,7 +1015,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with failed to retrieve client",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: clients.Client{},
 			retrieveByIDErr:  svcerr.ErrNotFound,
 			err:              svcerr.ErrUpdateEntity,
@@ -1024,7 +1024,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with parent already set",
 			clientID:         parentedClient.ID,
 			parentGroupID:    validID,
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: parentedClient,
 			err:              nil,
 		},
@@ -1032,7 +1032,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group of client with existing parent group",
 			clientID:         cparentedClient.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: cparentedClient,
 			err:              svcerr.ErrConflict,
 		},
@@ -1040,7 +1040,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:              "set parent group with failed to retrieve entity",
 			clientID:          client.ID,
 			parentGroupID:     testsutil.GenerateUUID(t),
-			session:           mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:           smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp:  client,
 			retrieveEntityErr: svcerr.ErrAuthorization,
 			err:               svcerr.ErrUpdateEntity,
@@ -1049,7 +1049,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with parent group from different domain",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1064,7 +1064,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with disabled parent group",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1079,7 +1079,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with failed to add policies",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1095,7 +1095,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with failed to set parent group",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1111,7 +1111,7 @@ func TestSetParentGroup(t *testing.T) {
 			desc:             "set parent group with failed to set parent group and failed rollback",
 			clientID:         client.ID,
 			parentGroupID:    testsutil.GenerateUUID(t),
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: client,
 			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
 				Entity: &grpcCommonV1.EntityBasic{
@@ -1163,7 +1163,7 @@ func TestRemoveParentGroup(t *testing.T) {
 	cases := []struct {
 		desc                 string
 		clientID             string
-		session              mitrasauthn.Session
+		session              smqauthn.Session
 		retrieveByIDResp     clients.Client
 		retrieveByIDErr      error
 		deletePoliciesErr    error
@@ -1174,14 +1174,14 @@ func TestRemoveParentGroup(t *testing.T) {
 		{
 			desc:             "remove parent group successfully",
 			clientID:         parentedGroup.ID,
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: parentedGroup,
 			err:              nil,
 		},
 		{
 			desc:             "remove parent group with failed to retrieve client",
 			clientID:         parentedGroup.ID,
-			session:          mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:          smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp: clients.Client{},
 			retrieveByIDErr:  svcerr.ErrNotFound,
 			err:              svcerr.ErrViewEntity,
@@ -1189,7 +1189,7 @@ func TestRemoveParentGroup(t *testing.T) {
 		{
 			desc:              "remove parent group with failed to delete policies",
 			clientID:          parentedGroup.ID,
-			session:           mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:           smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp:  parentedGroup,
 			deletePoliciesErr: svcerr.ErrAuthorization,
 			err:               svcerr.ErrDeletePolicies,
@@ -1197,7 +1197,7 @@ func TestRemoveParentGroup(t *testing.T) {
 		{
 			desc:                 "remove parent group with failed to remove parent group",
 			clientID:             parentedGroup.ID,
-			session:              mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:              smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp:     parentedGroup,
 			removeParentGroupErr: svcerr.ErrUpdateEntity,
 			err:                  svcerr.ErrUpdateEntity,
@@ -1205,7 +1205,7 @@ func TestRemoveParentGroup(t *testing.T) {
 		{
 			desc:                 "remove parent group with failed to remove parent group and failed to add policies",
 			clientID:             parentedGroup.ID,
-			session:              mitrasauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			session:              smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
 			retrieveByIDResp:     parentedGroup,
 			removeParentGroupErr: svcerr.ErrUpdateEntity,
 			addPoliciesErr:       svcerr.ErrUpdateEntity,

@@ -3,18 +3,18 @@ package http
 import (
 	"log/slog"
 
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	roleManagerHttp "github.com/hantdev/mitras/pkg/roles/rolemanager/api"
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func clientsHandler(svc clients.Service, authn mitrasauthn.Authentication, r *chi.Mux, logger *slog.Logger, idp mitras.IDProvider) *chi.Mux {
+func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.Mux, logger *slog.Logger, idp mitras.IDProvider) *chi.Mux {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}

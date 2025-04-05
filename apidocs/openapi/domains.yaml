@@ -3,7 +3,6 @@ info:
   title: Mitras Domains Service
   description: |
     This is the Domains Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform domains. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-    
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
   version: 0.0.1
@@ -40,7 +39,7 @@ paths:
         "401":
           description: Missing or invalid access token provided.
         "409":
-          description: Failed due to using an existing alias.
+          description: Failed due to using an existing route.
         "415":
           description: Missing or invalid content type.
         "422":
@@ -104,9 +103,9 @@ paths:
           $ref: "#/components/responses/ServiceError"
 
     patch:
-      summary: Updates name, metadata, tags and alias of the domain.
+      summary: Updates name, metadata and tags of the domain.
       description: |
-        Updates name, metadata, tags and alias of the domain.
+        Updates name, metadata and tags of the domain.
       tags:
         - Domains
       parameters:
@@ -911,13 +910,13 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-        alias:
+        route:
           type: string
-          example: domain alias
-          description: Domain alias.
+          example: domain_route
+          description: Domain route.
       required:
         - name
-        - alias
+        - route
     Domain:
       type: object
       properties:
@@ -941,10 +940,10 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-        alias:
+        route:
           type: string
-          example: domain alias
-          description: Domain alias.
+          example: domain_route
+          description: Domain route.
         status:
           type: string
           description: Domain Status
@@ -958,7 +957,7 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the domain was created.
         updated_by:
           type: string
@@ -968,7 +967,7 @@ components:
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the domain was last updated.
       xml:
         name: domain
@@ -1015,10 +1014,6 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-        alias:
-          type: string
-          example: domain alias
-          description: Domain alias.
 
     SendInvitationReqObj:
       type: object
@@ -1073,17 +1068,17 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the group was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the group was created.
         confirmed_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the group was created.
       xml:
         name: invitation
@@ -1272,7 +1267,7 @@ components:
           schema:
             $ref: "#/components/schemas/DomainReqObj"
     DomainUpdateReq:
-      description: JSON-formated document describing the name, alias, tags, and metadata of the domain to be updated
+      description: JSON-formated document describing the name, tags, and metadata of the domain to be updated
       required: true
       content:
         application/json:

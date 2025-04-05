@@ -1,6 +1,8 @@
 package authn
 
-import "context"
+import (
+	"context"
+)
 
 type TokenType uint32
 
@@ -31,9 +33,7 @@ type Session struct {
 	SuperAdmin   bool
 }
 
-// Authn is Mitras authentication library.
-//
-//go:generate mockery --name Authentication --output=./mocks --filename authn.go --quiet --note "Mitras IoT Central Authentication interface"
+// Authn is mitras authentication library.
 type Authentication interface {
 	Authenticate(ctx context.Context, token string) (Session, error)
 }

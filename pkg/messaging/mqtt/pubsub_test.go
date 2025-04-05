@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/hantdev/mitras/pkg/messaging"
 	mqttpubsub "github.com/hantdev/mitras/pkg/messaging/mqtt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,7 +25,7 @@ const (
 var data = []byte("payload")
 
 // ErrFailedHandleMessage indicates that the message couldn't be handled.
-var errFailedHandleMessage = errors.New("failed to handle Mitras message")
+var errFailedHandleMessage = errors.New("failed to handle mitras message")
 
 func TestPublisher(t *testing.T) {
 	msgChan := make(chan []byte)

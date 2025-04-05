@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
 	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
-	"github.com/go-chi/chi/v5"
 )
 
 type sessionKeyType string

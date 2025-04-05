@@ -1,8 +1,8 @@
 package ws
 
 import (
-	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/gorilla/websocket"
+	"github.com/hantdev/mitras/pkg/messaging"
 )
 
 // Client handles messaging and websocket connection.

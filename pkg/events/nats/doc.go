@@ -1,5 +1,5 @@
-// Package nats contains the domain concept definitions needed to support
-// Mitras nats events source service functionality.
+// Package redis contains the domain concept definitions needed to support
+// mitras redis events source service functionality.
 //
-// It provides the abstraction of the nats stream and its operations.
+// It provides the abstraction of the redis stream and its operations.
 package nats

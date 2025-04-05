@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"testing"
 
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/hantdev/mitras/pkg/messaging/nats"
 	"github.com/ory/dockertest/v3"
@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	logger, err := mitraslog.New(os.Stdout, "error")
+	logger, err := smqlog.New(os.Stdout, "error")
 	if err != nil {
 		log.Fatal(err.Error())
 	}

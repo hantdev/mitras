@@ -1,3 +1,3 @@
 // Package consumer contains events consumer for events
-// published by Groups service.
+// published by Bootstrap service.
 package consumer

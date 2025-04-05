@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 var _ users.Service = (*loggingMiddleware)(nil)

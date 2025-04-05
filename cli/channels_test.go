@@ -11,13 +11,13 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	mgsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var channel = mitrassdk.Channel{
+var channel = mgsdk.Channel{
 	ID:   testsutil.GenerateUUID(&testing.T{}),
 	Name: "testchannel",
 }
@@ -29,12 +29,12 @@ func TestCreateChannelCmd(t *testing.T) {
 	channelCmd := cli.NewChannelsCmd()
 	rootCmd := setFlags(channelCmd)
 
-	cp := mitrassdk.Channel{}
+	cp := mgsdk.Channel{}
 	cases := []struct {
 		desc          string
 		args          []string
 		logType       outputLog
-		channel       mitrassdk.Channel
+		channel       mgsdk.Channel
 		sdkErr        errors.SDKError
 		errLogMessage string
 	}{
@@ -84,7 +84,7 @@ func TestCreateChannelCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("CreateChannel", mock.Anything, tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
+			sdkCall := sdkMock.On("CreateChannel", mock.Anything, mock.Anything, tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{createCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -108,15 +108,15 @@ func TestGetChannelsCmd(t *testing.T) {
 	channelCmd := cli.NewChannelsCmd()
 	rootCmd := setFlags(channelCmd)
 
-	var ch mitrassdk.Channel
-	var page mitrassdk.ChannelsPage
+	var ch mgsdk.Channel
+	var page mgsdk.ChannelsPage
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
-		page          mitrassdk.ChannelsPage
-		channel       mitrassdk.Channel
+		page          mgsdk.ChannelsPage
+		channel       mgsdk.Channel
 		logType       outputLog
 		errLogMessage string
 	}{
@@ -127,8 +127,8 @@ func TestGetChannelsCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			page: mitrassdk.ChannelsPage{
-				Channels: []mitrassdk.Channel{channel},
+			page: mgsdk.ChannelsPage{
+				Channels: []mgsdk.Channel{channel},
 			},
 			logType: entityLog,
 		},
@@ -178,8 +178,8 @@ func TestGetChannelsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Channel", tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
-			sdkCall1 := sdkMock.On("Channels", mock.Anything, tc.args[1], tc.args[2]).Return(tc.page, tc.sdkErr)
+			sdkCall := sdkMock.On("Channel", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
+			sdkCall1 := sdkMock.On("Channels", mock.Anything, mock.Anything, tc.args[1], tc.args[2]).Return(tc.page, tc.sdkErr)
 
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 
@@ -263,7 +263,7 @@ func TestDeleteChannelCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteChannel", tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteChannel", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{delCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -289,7 +289,7 @@ func TestUpdateChannelCmd(t *testing.T) {
 	cases := []struct {
 		desc          string
 		args          []string
-		channel       mitrassdk.Channel
+		channel       mgsdk.Channel
 		sdkErr        errors.SDKError
 		errLogMessage string
 		logType       outputLog
@@ -302,7 +302,7 @@ func TestUpdateChannelCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			channel: mitrassdk.Channel{
+			channel: mgsdk.Channel{
 				Name: "newchannel1",
 				ID:   channel.ID,
 			},
@@ -346,8 +346,8 @@ func TestUpdateChannelCmd(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			var ch mitrassdk.Channel
-			sdkCall := sdkMock.On("UpdateChannel", mock.Anything, tc.args[2], tc.args[3]).Return(tc.channel, tc.sdkErr)
+			var ch mgsdk.Channel
+			sdkCall := sdkMock.On("UpdateChannel", mock.Anything, mock.Anything, tc.args[2], tc.args[3]).Return(tc.channel, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{updCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -370,14 +370,14 @@ func TestEnableChannelCmd(t *testing.T) {
 	cli.SetSDK(sdkMock)
 	channelCmd := cli.NewChannelsCmd()
 	rootCmd := setFlags(channelCmd)
-	var ch mitrassdk.Channel
+	var ch mgsdk.Channel
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		channel       mitrassdk.Channel
+		channel       mgsdk.Channel
 		logType       outputLog
 	}{
 		{
@@ -426,7 +426,7 @@ func TestEnableChannelCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("EnableChannel", tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
+			sdkCall := sdkMock.On("EnableChannel", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{enableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -451,14 +451,14 @@ func TestDisableChannelCmd(t *testing.T) {
 	channelsCmd := cli.NewChannelsCmd()
 	rootCmd := setFlags(channelsCmd)
 
-	var ch mitrassdk.Channel
+	var ch mgsdk.Channel
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		channel       mitrassdk.Channel
+		channel       mgsdk.Channel
 		logType       outputLog
 	}{
 		{
@@ -507,7 +507,7 @@ func TestDisableChannelCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DisableChannel", tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
+			sdkCall := sdkMock.On("DisableChannel", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.channel, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{disableCmd}, tc.args...)...)
 
 			switch tc.logType {

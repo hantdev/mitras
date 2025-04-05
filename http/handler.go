@@ -52,7 +52,7 @@ var (
 	errFailedParseSubtopic      = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to parse subtopic"))
 )
 
-var channelRegExp = regexp.MustCompile(`^\/?ch\/([\w\-]+)\/msg(\/[^?]*)?(\?.*)?$`)
+var channelRegExp = regexp.MustCompile(`^\/?c\/([\w\-]+)\/m(\/[^?]*)?(\?.*)?$`)
 
 // Event implements events.Event interface.
 type handler struct {
@@ -207,7 +207,7 @@ func (h *handler) Disconnect(ctx context.Context) error {
 
 func parseTopic(topic string) (string, string, error) {
 	// Topics are in the format:
-	// ch/<channel_id>/msg/<subtopic>/.../ct/<content_type>
+	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
 	channelParts := channelRegExp.FindStringSubmatch(topic)
 	if len(channelParts) < 2 {
 		return "", "", errors.Wrap(errFailedPublish, errMalformedTopic)

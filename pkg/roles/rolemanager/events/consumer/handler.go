@@ -182,6 +182,10 @@ func (es *EventHandler) AddEntityRoleMembersHandler(ctx context.Context, data ma
 	if !ok {
 		return fmt.Errorf(errAddEntityRoleMembersEvent, es.entityType, errRoleID)
 	}
+	entityID, ok := data["entity_id"].(string)
+	if !ok {
+		return fmt.Errorf(errRemoveEntityRoleAllMembersEvent, es.entityType, errEntityID)
+	}
 	imems, ok := data["members"].([]interface{})
 	if !ok {
 		return fmt.Errorf(errAddEntityRoleMembersEvent, es.entityType, errMembers)
@@ -191,7 +195,7 @@ func (es *EventHandler) AddEntityRoleMembersHandler(ctx context.Context, data ma
 		return fmt.Errorf(errAddEntityRoleMembersEvent, es.entityType, err)
 	}
 
-	if _, err := es.repo.RoleAddMembers(ctx, roles.Role{ID: id}, mems); err != nil {
+	if _, err := es.repo.RoleAddMembers(ctx, roles.Role{ID: id, EntityID: entityID}, mems); err != nil {
 		return fmt.Errorf(errAddEntityRoleMembersEvent, es.entityType, err)
 	}
 

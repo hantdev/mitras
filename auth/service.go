@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hantdev/mitras"
 	"github.com/google/uuid"
+	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -46,8 +46,6 @@ var (
 
 // Authz represents a authorization service. It exposes
 // functionalities through `auth` to perform authorization.
-//
-//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet
 type Authz interface {
 	// Authorize checks authorization of the given `subject`. Basically,
 	// Authorize verifies that Is `subject` allowed to `relation` on
@@ -83,8 +81,6 @@ type Authn interface {
 // implementation, and all of its decorators (e.g. logging & metrics).
 // Token is a string value of the actual Key and is used to authenticate
 // an Auth service request.
-
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	Authn
 	Authz

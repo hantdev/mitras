@@ -3,10 +3,10 @@ package api
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
 	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func issueCert(svc certs.Service) endpoint.Endpoint {

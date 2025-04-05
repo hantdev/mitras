@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	mitras "github.com/hantdev/mitras"
+	smq "github.com/hantdev/mitras"
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
 	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
 	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
@@ -29,12 +29,12 @@ type service struct {
 	channels   grpcChannelsV1.ChannelsServiceClient
 	groups     grpcGroupsV1.GroupsServiceClient
 	cache      Cache
-	idProvider mitras.IDProvider
+	idProvider smq.IDProvider
 	roles.ProvisionManageService
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(repo Repository, policy policies.Service, cache Cache, channels grpcChannelsV1.ChannelsServiceClient, groups grpcGroupsV1.GroupsServiceClient, idProvider mitras.IDProvider, sIDProvider mitras.IDProvider, availableActions []roles.Action, builtInRoles map[roles.BuiltInRoleName][]roles.Action) (Service, error) {
+func NewService(repo Repository, policy policies.Service, cache Cache, channels grpcChannelsV1.ChannelsServiceClient, groups grpcGroupsV1.GroupsServiceClient, idProvider smq.IDProvider, sIDProvider smq.IDProvider, availableActions []roles.Action, builtInRoles map[roles.BuiltInRoleName][]roles.Action) (Service, error) {
 	rpms, err := roles.NewProvisionManageService(policies.ClientType, repo, policy, sIDProvider, availableActions, builtInRoles)
 	if err != nil {
 		return service{}, err

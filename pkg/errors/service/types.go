@@ -1,6 +1,6 @@
 package service
 
-import "errors"
+import "github.com/hantdev/mitras/pkg/errors"
 
 // Wrapper for Service errors.
 var (

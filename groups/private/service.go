@@ -6,7 +6,6 @@ import (
 	"github.com/hantdev/mitras/groups"
 )
 
-//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Service is a service for groups"
 type Service interface {
 	RetrieveById(ctx context.Context, id string) (groups.Group, error)
 }

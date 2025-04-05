@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hantdev/mitras/certs"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/hantdev/mitras/certs"
 )
 
 var _ certs.Service = (*loggingMiddleware)(nil)

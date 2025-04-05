@@ -3,28 +3,28 @@ package cli
 import (
 	"encoding/json"
 
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/spf13/cobra"
 )
 
 var cmdDomains = []cobra.Command{
 	{
-		Use:   "create <name> <alias> <token>",
+		Use:   "create <name> <route> <token>",
 		Short: "Create Domain",
-		Long: "Create Domain with provided name and alias. \n" +
+		Long: "Create Domain with provided name and route. \n" +
 			"For example:\n" +
-			"\tmitras-cli domains create domain_1 domain_1_alias $TOKEN\n",
+			"\tmitras-cli domains create domain_1 domain_1_route $TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			dom := mitrassdk.Domain{
+			dom := smqsdk.Domain{
 				Name:  args[0],
-				Alias: args[1],
+				Route: args[1],
 			}
-			d, err := sdk.CreateDomain(dom, args[2])
+			d, err := sdk.CreateDomain(cmd.Context(), dom, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -46,7 +46,7 @@ var cmdDomains = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Name:     Name,
 				Offset:   Offset,
 				Limit:    Limit,
@@ -54,7 +54,7 @@ var cmdDomains = []cobra.Command{
 				Status:   Status,
 			}
 			if args[0] == all {
-				l, err := sdk.Domains(pageMetadata, args[1])
+				l, err := sdk.Domains(cmd.Context(), pageMetadata, args[1])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -62,7 +62,7 @@ var cmdDomains = []cobra.Command{
 				logJSONCmd(*cmd, l)
 				return
 			}
-			d, err := sdk.Domain(args[0], args[1])
+			d, err := sdk.Domain(cmd.Context(), args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -86,14 +86,14 @@ var cmdDomains = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset:   Offset,
 				Limit:    Limit,
 				Metadata: metadata,
 				Status:   Status,
 			}
 
-			l, err := sdk.ListDomainMembers(args[0], pageMetadata, args[1])
+			l, err := sdk.ListDomainMembers(cmd.Context(), args[0], pageMetadata, args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -105,23 +105,23 @@ var cmdDomains = []cobra.Command{
 	{
 		Use:   "update <domain_id> <JSON_string> <user_auth_token>",
 		Short: "Update domains",
-		Long: "Updates domains name, alias and metadata \n" +
+		Long: "Updates domains name, route and metadata \n" +
 			"Usage:\n" +
-			"\tmitras-cli domains update <domain_id> '{\"name\":\"new name\", \"alias\":\"new_alias\", \"metadata\":{\"key\": \"value\"}}' $TOKEN \n",
+			"\tmitras-cli domains update <domain_id> '{\"name\":\"new name\", \"route\":\"new_route\", \"metadata\":{\"key\": \"value\"}}' $TOKEN \n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 && len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			var d mitrassdk.Domain
+			var d smqsdk.Domain
 
 			if err := json.Unmarshal([]byte(args[1]), &d); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			d.ID = args[0]
-			d, err := sdk.UpdateDomain(d, args[2])
+			d, err := sdk.UpdateDomain(cmd.Context(), d, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -142,7 +142,7 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 
-			if err := sdk.EnableDomain(args[0], args[1]); err != nil {
+			if err := sdk.EnableDomain(cmd.Context(), args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -162,7 +162,7 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DisableDomain(args[0], args[1]); err != nil {
+			if err := sdk.DisableDomain(cmd.Context(), args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -182,7 +182,7 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 
-			if err := sdk.FreezeDomain(args[0], args[1]); err != nil {
+			if err := sdk.FreezeDomain(cmd.Context(), args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -205,12 +205,12 @@ var cmdDomainRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			var roleReq mitrassdk.RoleReq
+			var roleReq smqsdk.RoleReq
 			if err := json.Unmarshal([]byte(args[0]), &roleReq); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			r, err := sdk.CreateDomainRole(args[1], roleReq, args[2])
+			r, err := sdk.CreateDomainRole(cmd.Context(), args[1], roleReq, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -233,12 +233,12 @@ var cmdDomainRoles = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 			if args[0] == all {
-				rs, err := sdk.DomainRoles(args[1], pageMetadata, args[2])
+				rs, err := sdk.DomainRoles(cmd.Context(), args[1], pageMetadata, args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -246,7 +246,7 @@ var cmdDomainRoles = []cobra.Command{
 				logJSONCmd(*cmd, rs)
 				return
 			}
-			r, err := sdk.DomainRole(args[0], args[1], args[2])
+			r, err := sdk.DomainRole(cmd.Context(), args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -269,7 +269,7 @@ var cmdDomainRoles = []cobra.Command{
 				return
 			}
 
-			r, err := sdk.UpdateDomainRole(args[2], args[1], args[0], args[3])
+			r, err := sdk.UpdateDomainRole(cmd.Context(), args[2], args[1], args[0], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -292,7 +292,7 @@ var cmdDomainRoles = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DeleteDomainRole(args[1], args[0], args[2]); err != nil {
+			if err := sdk.DeleteDomainRole(cmd.Context(), args[1], args[0], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -323,7 +323,7 @@ var cmdDomainsActions = []cobra.Command{
 				return
 			}
 
-			acts, err := sdk.AddDomainRoleActions(args[2], args[1], actions.Actions, args[3])
+			acts, err := sdk.AddDomainRoleActions(cmd.Context(), args[2], args[1], actions.Actions, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -346,7 +346,7 @@ var cmdDomainsActions = []cobra.Command{
 				return
 			}
 
-			l, err := sdk.DomainRoleActions(args[1], args[0], args[2])
+			l, err := sdk.DomainRoleActions(cmd.Context(), args[1], args[0], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -370,7 +370,7 @@ var cmdDomainsActions = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllDomainRoleActions(args[2], args[1], args[3]); err != nil {
+				if err := sdk.RemoveAllDomainRoleActions(cmd.Context(), args[2], args[1], args[3]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -384,7 +384,7 @@ var cmdDomainsActions = []cobra.Command{
 				logErrorCmd(*cmd, err)
 				return
 			}
-			if err := sdk.RemoveDomainRoleActions(args[2], args[1], actions.Actions, args[3]); err != nil {
+			if err := sdk.RemoveDomainRoleActions(cmd.Context(), args[2], args[1], actions.Actions, args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -405,7 +405,7 @@ var cmdDomainsActions = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			acts, err := sdk.AvailableDomainRoleActions(args[0])
+			acts, err := sdk.AvailableDomainRoleActions(cmd.Context(), args[0])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -437,7 +437,7 @@ var cmdDomainsMembers = []cobra.Command{
 				return
 			}
 
-			memb, err := sdk.AddDomainRoleMembers(args[2], args[1], members.Members, args[3])
+			memb, err := sdk.AddDomainRoleMembers(cmd.Context(), args[2], args[1], members.Members, args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -459,12 +459,12 @@ var cmdDomainsMembers = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			pageMetadata := mitrassdk.PageMetadata{
+			pageMetadata := smqsdk.PageMetadata{
 				Offset: Offset,
 				Limit:  Limit,
 			}
 
-			l, err := sdk.DomainRoleMembers(args[1], args[0], pageMetadata, args[2])
+			l, err := sdk.DomainRoleMembers(cmd.Context(), args[1], args[0], pageMetadata, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -489,7 +489,7 @@ var cmdDomainsMembers = []cobra.Command{
 				return
 			}
 			if args[0] == all {
-				if err := sdk.RemoveAllDomainRoleMembers(args[2], args[1], args[3]); err != nil {
+				if err := sdk.RemoveAllDomainRoleMembers(cmd.Context(), args[2], args[1], args[3]); err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
@@ -505,7 +505,7 @@ var cmdDomainsMembers = []cobra.Command{
 				return
 			}
 
-			if err := sdk.RemoveDomainRoleMembers(args[2], args[1], members.Members, args[3]); err != nil {
+			if err := sdk.RemoveDomainRoleMembers(cmd.Context(), args[2], args[1], members.Members, args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}

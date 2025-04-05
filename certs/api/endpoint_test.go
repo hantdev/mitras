@@ -15,8 +15,8 @@ import (
 	"github.com/hantdev/mitras/certs/api"
 	"github.com/hantdev/mitras/certs/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
-	mitraslog "github.com/hantdev/mitras/logger"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqlog "github.com/hantdev/mitras/logger"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -66,7 +66,7 @@ func (tr testRequest) make() (*http.Response, error) {
 
 func newCertServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
 	svc := new(mocks.Service)
-	logger := mitraslog.NewMock()
+	logger := smqlog.NewMock()
 	idp := uuid.NewMock()
 	authn := new(authnmocks.Authentication)
 	mux := api.MakeHandler(svc, authn, logger, "", idp)
@@ -85,7 +85,7 @@ func TestIssueCert(t *testing.T) {
 		desc            string
 		domainID        string
 		token           string
-		session         mitrasauthn.Session
+		session         smqauthn.Session
 		contentType     string
 		clientID        string
 		ttl             string
@@ -223,7 +223,7 @@ func TestIssueCert(t *testing.T) {
 				body:        strings.NewReader(tc.request),
 			}
 			if tc.token == valid {
-				tc.session = mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
+				tc.session = smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("IssueCert", mock.Anything, tc.domainID, tc.token, tc.clientID, tc.ttl).Return(tc.svcRes, tc.svcErr)
@@ -251,10 +251,10 @@ func TestViewCert(t *testing.T) {
 		desc            string
 		domainID        string
 		token           string
-		session         mitrasauthn.Session
+		session         smqauthn.Session
 		serialID        string
 		status          int
-		authenticateRes mitrasauthn.Session
+		authenticateRes smqauthn.Session
 		authenticateErr error
 		svcRes          certs.Cert
 		svcErr          error
@@ -309,7 +309,7 @@ func TestViewCert(t *testing.T) {
 				token:  tc.token,
 			}
 			if tc.token == valid {
-				tc.session = mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
+				tc.session = smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ViewCert", mock.Anything, tc.serialID).Return(tc.svcRes, tc.svcErr)
@@ -337,7 +337,7 @@ func TestRevokeCert(t *testing.T) {
 		desc            string
 		domainID        string
 		token           string
-		session         mitrasauthn.Session
+		session         smqauthn.Session
 		serialID        string
 		status          int
 		authenticateErr error
@@ -402,7 +402,7 @@ func TestRevokeCert(t *testing.T) {
 				token:  tc.token,
 			}
 			if tc.token == valid {
-				tc.session = mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
+				tc.session = smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RevokeCert", mock.Anything, tc.domainID, tc.token, tc.serialID).Return(tc.svcRes, tc.svcErr)
@@ -431,7 +431,7 @@ func TestListSerials(t *testing.T) {
 		desc            string
 		token           string
 		domainID        string
-		session         mitrasauthn.Session
+		session         smqauthn.Session
 		clientID        string
 		revoked         string
 		offset          uint64
@@ -645,7 +645,7 @@ func TestListSerials(t *testing.T) {
 				token:  tc.token,
 			}
 			if tc.token == valid {
-				tc.session = mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
+				tc.session = smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ListSerials", mock.Anything, tc.clientID, certs.PageMetadata{Revoked: tc.revoked, Offset: tc.offset, Limit: tc.limit}).Return(tc.svcRes, tc.svcErr)

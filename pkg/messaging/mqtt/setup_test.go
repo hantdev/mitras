@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	mitraslog "github.com/hantdev/mitras/logger"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/messaging"
 	mqttpubsub "github.com/hantdev/mitras/pkg/messaging/mqtt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 )
@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 	address = fmt.Sprintf("%s:%s", "localhost", container.GetPort(port))
 	pool.MaxWait = poolMaxWait
 
-	logger, err = mitraslog.New(os.Stdout, "debug")
+	logger, err = smqlog.New(os.Stdout, "debug")
 	if err != nil {
 		log.Fatal(err.Error())
 	}

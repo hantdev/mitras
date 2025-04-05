@@ -3,13 +3,13 @@ package http
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/roles"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func CreateRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hantdev/mitras/pkg/messaging"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/hantdev/mitras/pkg/messaging"
 	"google.golang.org/protobuf/proto"
 )
 

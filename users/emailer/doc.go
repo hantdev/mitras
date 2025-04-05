@@ -1,3 +1,3 @@
 // Package emailer contains the domain concept definitions needed to support
-// Mitras users email service functionality.
+// mitras users email service functionality.
 package emailer

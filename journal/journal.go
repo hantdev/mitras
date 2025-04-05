@@ -6,7 +6,7 @@ import (
 	"time"
 
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 )
 
 type EntityType uint8
@@ -140,22 +140,18 @@ type ClientSubscription struct {
 }
 
 // Service provides access to the journal log service.
-//
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	// Save saves the journal to the database.
 	Save(ctx context.Context, journal Journal) error
 
 	// RetrieveAll retrieves all journals from the database with the given page.
-	RetrieveAll(ctx context.Context, session mitrasauthn.Session, page Page) (JournalsPage, error)
+	RetrieveAll(ctx context.Context, session smqauthn.Session, page Page) (JournalsPage, error)
 
 	// RetrieveClientTelemetry retrieves telemetry data for a client.
-	RetrieveClientTelemetry(ctx context.Context, session mitrasauthn.Session, clientID string) (ClientTelemetry, error)
+	RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (ClientTelemetry, error)
 }
 
 // Repository provides access to the journal log database.
-//
-//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet
 type Repository interface {
 	// Save persists the journal to a database.
 	Save(ctx context.Context, journal Journal) error
