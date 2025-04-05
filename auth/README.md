@@ -28,3 +28,27 @@ User keys are issued when user logs in. Each user request (other than `registrat
 API keys are similar to the User keys. The main difference is that API keys have configurable expiration time. If no time is set, the key will never expire. For that reason, API keys are _the only key type that can be revoked_. This also means that, despite being used as a JWT, it requires a query to the database to validate the API key. The user with API key can perform all the same actions as the user with login key (can act on behalf of the user for Client, Channel, or user profile management), _except issuing new API keys_.
 
 Recovery key is the password recovery key. It's short-lived token used for password recovery process.
+
+The following actions are supported:
+
+- create (all key types)
+- verify (all key types)
+- obtain (API keys only)
+- revoke (API keys only)
+
+## Domains
+
+Domains are used to group users and clients. Each domain has a unique route that is associated with the domain. Domains are used to group users and their entities.
+
+Domain consists of the following fields:
+
+- ID - UUID uniquely representing domain
+- Name - name of the domain
+- Tags - array of tags
+- Metadata - Arbitrary, object-encoded domain's data
+- Route - unique route of the domain used in messaging
+- CreatedAt - timestamp at which the domain is created
+- UpdatedAt - timestamp at which the domain is updated
+- UpdatedBy - user that updated the domain
+- CreatedBy - user that created the domain
+- Status - domain status

@@ -13,11 +13,12 @@ import (
 )
 
 const (
-	stream = "events.mitras.groups"
+	stream = "events.mitras.group.*"
 
 	create                  = "group.create"
 	update                  = "group.update"
-	changeStatus            = "group.change_status"
+	enable                  = "group.enable"
+	disable                 = "group.disable"
 	remove                  = "group.remove"
 	addParentGroup          = "group.add_parent_group"
 	removeParentGroup       = "group.remove_parent_group"
@@ -84,7 +85,7 @@ func (es *eventHandler) Handle(ctx context.Context, event events.Event) error {
 		return es.createGroupHandler(ctx, msg)
 	case update:
 		return es.updateGroupHandler(ctx, msg)
-	case changeStatus:
+	case enable, disable:
 		return es.changeStatusGroupHandler(ctx, msg)
 	case remove:
 		return es.removeGroupHandler(ctx, msg)

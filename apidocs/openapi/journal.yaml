@@ -3,10 +3,9 @@ info:
   title: Mitras Journal Log Service
   description: |
     This is the Journal Log Server based on the OpenAPI 3.0 specification.  It is the HTTP API for viewing journal log history. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9021
@@ -119,25 +118,25 @@ components:
         occurred_at:
           type: string
           format: date-time
-          example: "2025-03-11T12:05:07.449053Z"
+          example: "2024-01-11T12:05:07.449053Z"
           description: Time when the journal occurred.
         attributes:
           type: object
           description: Journal attributes.
           example:
             {
-              "created_at": "2025-03-12T11:34:32.991591Z",
+              "created_at": "2024-06-12T11:34:32.991591Z",
               "id": "29d425c8-542b-4614-8a4d-a5951945d720",
-              "identity": "captainnemot1k60@gmail.com",
-              "name": "CaptainNemo",
+              "identity": "Gawne-Havlicek@email.com",
+              "name": "Newgard-Frisina",
               "status": "enabled",
-              "updated_at": "2025-03-12T11:34:33.116795Z",
+              "updated_at": "2024-06-12T11:34:33.116795Z",
               "updated_by": "ad228f20-4741-47c5-bef7-d871b541c019",
             }
         metadata:
           type: object
           description: Journal payload.
-          example: { "Update": "CaptainNemo1" }
+          example: { "Update": "Calvo-Felkins" }
       xml:
         name: journal
 

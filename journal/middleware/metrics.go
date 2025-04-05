@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/journal"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 )
 
 var _ journal.Service = (*metricsMiddleware)(nil)
@@ -36,7 +36,7 @@ func (mm *metricsMiddleware) Save(ctx context.Context, j journal.Journal) error 
 	return mm.service.Save(ctx, j)
 }
 
-func (mm *metricsMiddleware) RetrieveAll(ctx context.Context, session mitrasauthn.Session, page journal.Page) (journal.JournalsPage, error) {
+func (mm *metricsMiddleware) RetrieveAll(ctx context.Context, session smqauthn.Session, page journal.Page) (journal.JournalsPage, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "retrieve_all").Add(1)
 		mm.latency.With("method", "retrieve_all").Observe(time.Since(begin).Seconds())
@@ -45,7 +45,7 @@ func (mm *metricsMiddleware) RetrieveAll(ctx context.Context, session mitrasauth
 	return mm.service.RetrieveAll(ctx, session, page)
 }
 
-func (mm *metricsMiddleware) RetrieveClientTelemetry(ctx context.Context, session mitrasauthn.Session, clientID string) (journal.ClientTelemetry, error) {
+func (mm *metricsMiddleware) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (journal.ClientTelemetry, error) {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "retrieve_client_telemetry").Add(1)
 		mm.latency.With("method", "retrieve_client_telemetry").Observe(time.Since(begin).Seconds())

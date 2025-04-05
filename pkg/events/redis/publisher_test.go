@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/events"
 	"github.com/hantdev/mitras/pkg/events/redis"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ var (
 	stream     = "tests.events"
 	consumer   = "test-consumer"
 	eventsChan = make(chan map[string]interface{})
-	logger     = mitraslog.NewMock()
+	logger     = smqlog.NewMock()
 	errFailed  = errors.New("failed")
 	numEvents  = 100
 )
