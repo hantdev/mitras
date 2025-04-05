@@ -37,8 +37,8 @@ func MakeHandler(ctx context.Context, svc ws.Service, l *slog.Logger, instanceID
 	logger = l
 
 	mux := chi.NewRouter()
-	mux.Get("/ch/{chanID}/msg", handshake(ctx, svc))
-	mux.Get("/ch/{chanID}/msg/*", handshake(ctx, svc))
+	mux.Get("/c/{chanID}/m", handshake(ctx, svc))
+	mux.Get("/c/{chanID}/m/*", handshake(ctx, svc))
 
 	mux.Get("/health", mitras.Health(service, instanceID))
 	mux.Handle("/metrics", promhttp.Handler())

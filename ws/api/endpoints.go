@@ -13,7 +13,7 @@ import (
 	"github.com/hantdev/mitras/ws"
 )
 
-var channelPartRegExp = regexp.MustCompile(`^/ch/([\w\-]+)/msg(/[^?]*)?(\?.*)?$`)
+var channelPartRegExp = regexp.MustCompile(`^/c/([\w\-]+)/m(/[^?]*)?(\?.*)?$`)
 
 func handshake(ctx context.Context, svc ws.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

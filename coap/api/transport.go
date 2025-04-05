@@ -30,7 +30,7 @@ const (
 	startObserve = 0 // observe option value that indicates start of observation
 )
 
-var channelPartRegExp = regexp.MustCompile(`^/ch/([\w\-]+)/msg(/[^?]*)?(\?.*)?$`)
+var channelPartRegExp = regexp.MustCompile(`^/c/([\w\-]+)/m(/[^?]*)?(\?.*)?$`)
 
 const (
 	numGroups    = 3 // entire expression + channel group + subtopic group

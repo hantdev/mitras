@@ -30,14 +30,14 @@ func MakeHandler(logger *slog.Logger, instanceID string) http.Handler {
 	}
 
 	r := chi.NewRouter()
-	r.Post("/ch/{chanID}/msg", otelhttp.NewHandler(kithttp.NewServer(
+	r.Post("/c/{chanID}/m", otelhttp.NewHandler(kithttp.NewServer(
 		sendMessageEndpoint(),
 		decodeRequest,
 		api.EncodeResponse,
 		opts...,
 	), "publish").ServeHTTP)
 
-	r.Post("/ch/{chanID}/msg/*", otelhttp.NewHandler(kithttp.NewServer(
+	r.Post("/c/{chanID}/m/*", otelhttp.NewHandler(kithttp.NewServer(
 		sendMessageEndpoint(),
 		decodeRequest,
 		api.EncodeResponse,

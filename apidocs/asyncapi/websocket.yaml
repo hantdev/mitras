@@ -2,7 +2,7 @@ asyncapi: 2.6.0
 id: 'https://github.com/hantdev/mitras/blob/main/api/asyncapi/websocket.yaml'
 info:
   title: Mitras WebSocket adapter
-  description: WebSocket adapter provides a WebSocket API for sending messages through communication channels. WebSocket adapter uses [Hermina](https://github.com/hantdev/hermina) for proxying traffic between client and MQTT broker.
+  description: WebSocket adapter provides a WebSocket API for sending messages through communication channels. WebSocket adapter uses Hermina for proxying traffic between client and MQTT broker.
   version: '1.0.0'
 tags:
   - name: WebSocket
@@ -22,7 +22,7 @@ servers:
         default: '8186'
 
 channels:
-  'ch/{channelID}/msg/{subtopic}':
+  'c/{channelID}/m/{subtopic}':
     parameters:
       channelID:
         $ref: '#/components/parameters/channelID'
