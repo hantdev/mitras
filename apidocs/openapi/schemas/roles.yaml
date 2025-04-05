@@ -25,7 +25,7 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
         updated_by:
           type: string
@@ -63,7 +63,7 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
         updated_by:
           type: string
@@ -73,7 +73,7 @@ components:
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
 
     CreateRoleObj:
