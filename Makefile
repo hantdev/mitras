@@ -29,7 +29,7 @@ COMMIT ?= $(shell git rev-parse HEAD)
 TIME ?= $(shell date +%F_%T)
 
 # Extract repository owner and name from git origin URL
-USER_REPO ?= $(shell git remote get-url origin | sed -E 's#.*[:/]([^/:]+)/([^/.]+)(\.git)?#\1_\2#')
+USER_REPO ?= $(shell git remote get-url origin | sed -E 's@.*/([^/]+)/([^/.]+)(\.git)?@\1_\2@')
 
 # Define empty and space variables for string manipulation
 empty:=
