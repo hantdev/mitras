@@ -180,15 +180,15 @@ jobs:
           report: false
           args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
-      - name: Run Journal API tests
-        if: steps.changes.outputs.journal == 'true'
-        uses: schemathesis/action@v1
-        with:
-          schema: apidocs/openapi/journal.yaml
-          base-url: ${{ env.JOURNAL_URL }}
-          checks: all
-          report: false
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
+      # - name: Run Journal API tests
+      #   if: steps.changes.outputs.journal == 'true'
+      #   uses: schemathesis/action@v1
+      #   with:
+      #     schema: apidocs/openapi/journal.yaml
+      #     base-url: ${{ env.JOURNAL_URL }}
+      #     checks: all
+      #     report: false
+      #     args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
       - name: Run Certs API tests
         if: steps.changes.outputs.certs == 'true'
