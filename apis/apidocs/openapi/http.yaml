@@ -17,7 +17,7 @@ tags:
     description: Everything about your Messages
 
 paths:
-  /ch/{id}/msg:
+  /c/{id}/m:
     post:
       summary: Sends message to the communication channel
       description: |

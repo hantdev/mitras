@@ -3,7 +3,7 @@ info:
   title: Mitras Groups Service
   description: |
     This is the Groups Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform groups. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-    
+
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
   version: 0.0.1
@@ -1072,7 +1072,7 @@ components:
           description: User's last name.
         email:
           type: string
-          example: user@supermq.com
+          example: user@mitras.com
           description: User's email address.
         tags:
           type: array
