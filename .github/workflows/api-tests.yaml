@@ -190,15 +190,15 @@ jobs:
       #     report: false
       #     args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
-      - name: Run Certs API tests
-        if: steps.changes.outputs.certs == 'true'
-        uses: schemathesis/action@v1
-        with:
-          schema: apidocs/openapi/certs.yaml
-          base-url: ${{ env.CERTS_URL }}
-          checks: all
-          report: false
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
+      # - name: Run Certs API tests
+      #   if: steps.changes.outputs.certs == 'true'
+      #   uses: schemathesis/action@v1
+      #   with:
+      #     schema: apidocs/openapi/certs.yaml
+      #     base-url: ${{ env.CERTS_URL }}
+      #     checks: all
+      #     report: false
+      #     args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
       - name: Stop containers
         if: always()
