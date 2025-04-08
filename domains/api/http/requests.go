@@ -13,7 +13,7 @@ type createDomainReq struct {
 	Name     string                 `json:"name"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	Tags     []string               `json:"tags,omitempty"`
-	Alias    string                 `json:"alias"`
+	Route    string                 `json:"route"`
 }
 
 func (req createDomainReq) validate() error {
@@ -23,8 +23,11 @@ func (req createDomainReq) validate() error {
 	if req.Name == "" {
 		return apiutil.ErrMissingName
 	}
-	if req.Alias == "" {
-		return apiutil.ErrMissingAlias
+	if req.Route == "" {
+		return apiutil.ErrMissingRoute
+	}
+	if err := validateRoute(req.Route); err != nil {
+		return err
 	}
 
 	return nil
@@ -48,7 +51,6 @@ type updateDomainReq struct {
 	Name     *string                 `json:"name,omitempty"`
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 	Tags     *[]string               `json:"tags,omitempty"`
-	Alias    *string                 `json:"alias,omitempty"`
 }
 
 func (req updateDomainReq) validate() error {
@@ -151,6 +153,17 @@ func (req *invitationReq) validate() error {
 	}
 	if req.domainID == "" {
 		return apiutil.ErrMissingDomainID
+	}
+
+	return nil
+}
+
+func validateRoute(route string) error {
+	if err := api.ValidateUUID(route); err == nil {
+		return nil
+	}
+	if err := api.ValidateRoute(route); err != nil {
+		return err
 	}
 
 	return nil

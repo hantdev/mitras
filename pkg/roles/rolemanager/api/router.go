@@ -1,10 +1,10 @@
 package http
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	"github.com/hantdev/mitras/pkg/roles"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
+	api "github.com/hantdev/mitras/api/http"
+	"github.com/hantdev/mitras/pkg/roles"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

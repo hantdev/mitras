@@ -88,8 +88,6 @@ func (key Key) Expired() bool {
 }
 
 // KeyRepository specifies Key persistence API.
-//
-//go:generate mockery --name KeyRepository --output=./mocks --filename keys.go --quiet
 type KeyRepository interface {
 	// Save persists the Key. A non-nil error is returned to indicate
 	// operation failure

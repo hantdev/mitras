@@ -1,6 +1,8 @@
 package errors
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // Error specifies an API that must be fullfiled by error type.
 type Error interface {
@@ -19,7 +21,7 @@ type Error interface {
 
 var _ Error = (*customError)(nil)
 
-// customError represents a Mitras error.
+// customError represents a mitras error.
 type customError struct {
 	msg string
 	err Error

@@ -32,7 +32,7 @@ func TestNewSDKError(t *testing.T) {
 		},
 		{
 			desc: "native error",
-			err:  errNative,
+			err:  nat,
 		},
 	}
 
@@ -85,12 +85,12 @@ func TestNewSDKErrorWithStatus(t *testing.T) {
 		},
 		{
 			desc: "native error with 0 status code",
-			err:  errNative,
+			err:  nat,
 			sc:   0,
 		},
 		{
 			desc: "native error with 404 status code",
-			err:  errNative,
+			err:  nat,
 			sc:   404,
 		},
 	}

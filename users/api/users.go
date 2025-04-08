@@ -8,24 +8,24 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasauth "github.com/hantdev/mitras/auth"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauth "github.com/hantdev/mitras/auth"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/oauth2"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var passRegex = regexp.MustCompile("^.{8,}$")
 
 // usersHandler returns a HTTP handler for API endpoints.
-func usersHandler(svc users.Service, authn mitrasauthn.Authentication, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp mitras.IDProvider, providers ...oauth2.Provider) *chi.Mux {
+func usersHandler(svc users.Service, authn smqauthn.Authentication, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp mitras.IDProvider, providers ...oauth2.Provider) *chi.Mux {
 	passRegex = pr
 
 	opts := []kithttp.ServerOption{
@@ -545,7 +545,7 @@ func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient
 
 			jwt, err := tokenClient.Issue(r.Context(), &grpcTokenV1.IssueReq{
 				UserId: user.ID,
-				Type:   uint32(mitrasauth.AccessKey),
+				Type:   uint32(smqauth.AccessKey),
 			})
 			if err != nil {
 				http.Redirect(w, r, oauth.ErrorURL()+"?error="+err.Error(), http.StatusSeeOther)

@@ -3,13 +3,13 @@ package http
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/domains"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/go-kit/kit/endpoint"
 )
 
 // InvitationSent is the message returned when an invitation is sent.
@@ -32,7 +32,7 @@ func createDomainEndpoint(svc domains.Service) endpoint.Endpoint {
 			Name:     req.Name,
 			Metadata: req.Metadata,
 			Tags:     req.Tags,
-			Alias:    req.Alias,
+			Route:    req.Route,
 		}
 		domain, _, err := svc.CreateDomain(ctx, session, d)
 		if err != nil {
@@ -83,7 +83,6 @@ func updateDomainEndpoint(svc domains.Service) endpoint.Endpoint {
 			Name:     req.Name,
 			Metadata: &metadata,
 			Tags:     req.Tags,
-			Alias:    req.Alias,
 		}
 		domain, err := svc.UpdateDomain(ctx, session, req.domainID, d)
 		if err != nil {

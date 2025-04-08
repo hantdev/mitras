@@ -55,8 +55,6 @@ type Subscriber interface {
 }
 
 // PubSub  represents aggregation interface for publisher and subscriber.
-//
-//go:generate mockery --name PubSub --output=./mocks --filename pubsub.go --quiet --note "Mitras IoT Central PubSub interface"
 type PubSub interface {
 	Publisher
 	Subscriber

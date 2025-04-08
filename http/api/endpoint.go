@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func sendMessageEndpoint() endpoint.Endpoint {

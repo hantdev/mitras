@@ -10,7 +10,7 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/journal"
 	"github.com/hantdev/mitras/journal/mocks"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	"github.com/hantdev/mitras/pkg/uuid"
@@ -70,7 +70,7 @@ func TestReadAll(t *testing.T) {
 	repo := new(mocks.Repository)
 	svc := journal.NewService(idProvider, repo)
 
-	validSession := mitrasauthn.Session{DomainUserID: testsutil.GenerateUUID(t), UserID: testsutil.GenerateUUID(t), DomainID: testsutil.GenerateUUID(t)}
+	validSession := smqauthn.Session{DomainUserID: testsutil.GenerateUUID(t), UserID: testsutil.GenerateUUID(t), DomainID: testsutil.GenerateUUID(t)}
 	validPage := journal.Page{
 		Offset:     0,
 		Limit:      10,
@@ -80,7 +80,7 @@ func TestReadAll(t *testing.T) {
 
 	cases := []struct {
 		desc    string
-		session mitrasauthn.Session
+		session smqauthn.Session
 		page    journal.Page
 		resp    journal.JournalsPage
 		authErr error

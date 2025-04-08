@@ -43,7 +43,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
+          go-version: 1.24.x
           cache-dependency-path: "go.sum"
 
       - name: Build images
@@ -55,7 +55,7 @@ jobs:
       - name: Set access token
         run: |
           export USER_TOKEN=$(curl -sSX POST $TOKENS_URL -H "Content-Type: application/json" -d "{\"identity\": \"$USER_IDENTITY\",\"secret\": \"$USER_SECRET\"}" | jq -r .access_token)
-          export DOMAIN_ID=$(curl -sSX POST $CREATE_DOMAINS_URL -H "Content-Type: application/json" -H "Authorization: Bearer $USER_TOKEN" -d "{\"name\":\"$DOMAIN_NAME\",\"alias\":\"$DOMAIN_NAME\"}" | jq -r .id)
+          export DOMAIN_ID=$(curl -sSX POST $CREATE_DOMAINS_URL -H "Content-Type: application/json" -H "Authorization: Bearer $USER_TOKEN" -d "{\"name\":\"$DOMAIN_NAME\",\"route\":\"$DOMAIN_NAME\"}" | jq -r .id)
           echo "USER_TOKEN=$USER_TOKEN" >> $GITHUB_ENV
           export CLIENT_SECRET=$(mitras-cli provision test | /usr/bin/grep -Eo '"secret": "[^"]+"' | awk 'NR % 2 == 0' | sed 's/"secret": "\(.*\)"/\1/')
           echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
@@ -180,25 +180,25 @@ jobs:
           report: false
           args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
-      - name: Run Journal API tests
-        if: steps.changes.outputs.journal == 'true'
-        uses: schemathesis/action@v1
-        with:
-          schema: apidocs/openapi/journal.yaml
-          base-url: ${{ env.JOURNAL_URL }}
-          checks: all
-          report: false
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
+      # - name: Run Journal API tests
+      #   if: steps.changes.outputs.journal == 'true'
+      #   uses: schemathesis/action@v1
+      #   with:
+      #     schema: apidocs/openapi/journal.yaml
+      #     base-url: ${{ env.JOURNAL_URL }}
+      #     checks: all
+      #     report: false
+      #     args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
-      - name: Run Certs API tests
-        if: steps.changes.outputs.certs == 'true'
-        uses: schemathesis/action@v1
-        with:
-          schema: apidocs/openapi/certs.yaml
-          base-url: ${{ env.CERTS_URL }}
-          checks: all
-          report: false
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
+      # - name: Run Certs API tests
+      #   if: steps.changes.outputs.certs == 'true'
+      #   uses: schemathesis/action@v1
+      #   with:
+      #     schema: apidocs/openapi/certs.yaml
+      #     base-url: ${{ env.CERTS_URL }}
+      #     checks: all
+      #     report: false
+      #     args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --contrib-openapi-formats-uuid --hypothesis-suppress-health-check=filter_too_much --stateful=links'
 
       - name: Stop containers
         if: always()

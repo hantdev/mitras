@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hantdev/mitras"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 )
@@ -51,7 +51,7 @@ func (svc *service) Save(ctx context.Context, journal Journal) error {
 	return nil
 }
 
-func (svc *service) RetrieveAll(ctx context.Context, session mitrasauthn.Session, page Page) (JournalsPage, error) {
+func (svc *service) RetrieveAll(ctx context.Context, session smqauthn.Session, page Page) (JournalsPage, error) {
 	journalPage, err := svc.repository.RetrieveAll(ctx, page)
 	if err != nil {
 		return JournalsPage{}, errors.Wrap(svcerr.ErrViewEntity, err)
@@ -60,7 +60,7 @@ func (svc *service) RetrieveAll(ctx context.Context, session mitrasauthn.Session
 	return journalPage, nil
 }
 
-func (svc *service) RetrieveClientTelemetry(ctx context.Context, session mitrasauthn.Session, clientID string) (ClientTelemetry, error) {
+func (svc *service) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (ClientTelemetry, error) {
 	ct, err := svc.repository.RetrieveClientTelemetry(ctx, clientID, session.DomainID)
 	if err != nil {
 		return ClientTelemetry{}, errors.Wrap(svcerr.ErrViewEntity, err)

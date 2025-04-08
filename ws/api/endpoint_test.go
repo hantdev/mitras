@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/hantdev/hermina/pkg/session"
 	"github.com/hantdev/hermina/pkg/websockets"
 	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
@@ -21,7 +22,6 @@ import (
 	"github.com/hantdev/mitras/pkg/messaging/mocks"
 	"github.com/hantdev/mitras/ws"
 	"github.com/hantdev/mitras/ws/api"
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -62,9 +62,9 @@ func makeURL(tsURL, chanID, subtopic, clientKey string, header bool) (string, er
 
 	if chanID == "0" || chanID == "" {
 		if header {
-			return fmt.Sprintf("%s/ch/%s/msg", u, chanID), fmt.Errorf("invalid channel id")
+			return fmt.Sprintf("%s/c/%s/m", u, chanID), fmt.Errorf("invalid channel id")
 		}
-		return fmt.Sprintf("%s/ch/%s/msg?authorization=%s", u, chanID, clientKey), fmt.Errorf("invalid channel id")
+		return fmt.Sprintf("%s/c/%s/m?authorization=%s", u, chanID, clientKey), fmt.Errorf("invalid channel id")
 	}
 
 	subtopicPart := ""
@@ -72,10 +72,10 @@ func makeURL(tsURL, chanID, subtopic, clientKey string, header bool) (string, er
 		subtopicPart = fmt.Sprintf("/%s", subtopic)
 	}
 	if header {
-		return fmt.Sprintf("%s/ch/%s/msg%s", u, chanID, subtopicPart), nil
+		return fmt.Sprintf("%s/c/%s/m%s", u, chanID, subtopicPart), nil
 	}
 
-	return fmt.Sprintf("%s/ch/%s/msg%s?authorization=%s", u, chanID, subtopicPart, clientKey), nil
+	return fmt.Sprintf("%s/c/%s/m%s?authorization=%s", u, chanID, subtopicPart, clientKey), nil
 }
 
 func handshake(tsURL, chanID, subtopic, clientKey string, addHeader bool) (*websocket.Conn, *http.Response, error) {

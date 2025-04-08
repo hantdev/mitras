@@ -7,7 +7,7 @@ import (
 	"github.com/hantdev/mitras/domains"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/authz"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -23,13 +23,13 @@ var ErrMemberExist = errors.New("user is already a member of the domain")
 
 type authorizationMiddleware struct {
 	svc   domains.Service
-	authz mitrasauthz.Authorization
+	authz smqauthz.Authorization
 	opp   svcutil.OperationPerm
 	rmMW.RoleManagerAuthorizationMiddleware
 }
 
 // AuthorizationMiddleware adds authorization to the clients service.
-func AuthorizationMiddleware(entityType string, svc domains.Service, authz mitrasauthz.Authorization, domainsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission) (domains.Service, error) {
+func AuthorizationMiddleware(entityType string, svc domains.Service, authz smqauthz.Authorization, domainsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission) (domains.Service, error) {
 	opp := domains.NewOperationPerm()
 	if err := opp.AddOperationPermissionMap(domainsOpPerm); err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Ope
 
 // checkAdmin checks if the given user is a domain or platform administrator.
 func (am *authorizationMiddleware) checkAdmin(ctx context.Context, session authn.Session) error {
-	req := mitrasauthz.PolicyReq{
+	req := smqauthz.PolicyReq{
 		SubjectType: policies.UserType,
 		SubjectKind: policies.UsersKind,
 		Subject:     session.DomainUserID,
@@ -228,7 +228,7 @@ func (am *authorizationMiddleware) checkAdmin(ctx context.Context, session authn
 		return nil
 	}
 
-	req = mitrasauthz.PolicyReq{
+	req = smqauthz.PolicyReq{
 		SubjectType: policies.UserType,
 		SubjectKind: policies.UsersKind,
 		Subject:     session.UserID,

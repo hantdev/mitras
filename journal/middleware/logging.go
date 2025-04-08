@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hantdev/mitras/journal"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/hantdev/mitras/journal"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 )
 
 var _ journal.Service = (*loggingMiddleware)(nil)
@@ -46,7 +46,7 @@ func (lm *loggingMiddleware) Save(ctx context.Context, j journal.Journal) (err e
 	return lm.service.Save(ctx, j)
 }
 
-func (lm *loggingMiddleware) RetrieveAll(ctx context.Context, session mitrasauthn.Session, page journal.Page) (journalsPage journal.JournalsPage, err error) {
+func (lm *loggingMiddleware) RetrieveAll(ctx context.Context, session smqauthn.Session, page journal.Page) (journalsPage journal.JournalsPage, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
@@ -70,7 +70,7 @@ func (lm *loggingMiddleware) RetrieveAll(ctx context.Context, session mitrasauth
 	return lm.service.RetrieveAll(ctx, session, page)
 }
 
-func (lm *loggingMiddleware) RetrieveClientTelemetry(ctx context.Context, session mitrasauthn.Session, clientID string) (ct journal.ClientTelemetry, err error) {
+func (lm *loggingMiddleware) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (ct journal.ClientTelemetry, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),

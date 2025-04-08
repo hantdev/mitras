@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/hantdev/mitras"
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/journal"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/uuid"
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -32,7 +32,7 @@ const (
 )
 
 // MakeHandler returns a HTTP API handler with health check and metrics.
-func MakeHandler(svc journal.Service, authn mitrasauthn.Authentication, logger *slog.Logger, svcName, instanceID string) http.Handler {
+func MakeHandler(svc journal.Service, authn smqauthn.Authentication, logger *slog.Logger, svcName, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/hantdev/mitras/journal"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	"github.com/hantdev/mitras/pkg/policies"
 )
 
@@ -17,11 +17,11 @@ var (
 
 type authorizationMiddleware struct {
 	svc   journal.Service
-	authz mitrasauthz.Authorization
+	authz smqauthz.Authorization
 }
 
 // AuthorizationMiddleware adds authorization to the journal service.
-func AuthorizationMiddleware(svc journal.Service, authz mitrasauthz.Authorization) journal.Service {
+func AuthorizationMiddleware(svc journal.Service, authz smqauthz.Authorization) journal.Service {
 	return &authorizationMiddleware{
 		svc:   svc,
 		authz: authz,
@@ -32,7 +32,7 @@ func (am *authorizationMiddleware) Save(ctx context.Context, journal journal.Jou
 	return am.svc.Save(ctx, journal)
 }
 
-func (am *authorizationMiddleware) RetrieveAll(ctx context.Context, session mitrasauthn.Session, page journal.Page) (journal.JournalsPage, error) {
+func (am *authorizationMiddleware) RetrieveAll(ctx context.Context, session smqauthn.Session, page journal.Page) (journal.JournalsPage, error) {
 	permission := readPermission
 	objectType := page.EntityType.String()
 	object := page.EntityID
@@ -46,7 +46,7 @@ func (am *authorizationMiddleware) RetrieveAll(ctx context.Context, session mitr
 		subject = session.UserID
 	}
 
-	req := mitrasauthz.PolicyReq{
+	req := smqauthz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		SubjectKind: policies.UsersKind,
@@ -62,8 +62,8 @@ func (am *authorizationMiddleware) RetrieveAll(ctx context.Context, session mitr
 	return am.svc.RetrieveAll(ctx, session, page)
 }
 
-func (am *authorizationMiddleware) RetrieveClientTelemetry(ctx context.Context, session mitrasauthn.Session, clientID string) (journal.ClientTelemetry, error) {
-	req := mitrasauthz.PolicyReq{
+func (am *authorizationMiddleware) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (journal.ClientTelemetry, error) {
+	req := smqauthz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		SubjectKind: policies.UsersKind,

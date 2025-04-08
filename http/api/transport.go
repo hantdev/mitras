@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/messaging"
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -30,14 +30,14 @@ func MakeHandler(logger *slog.Logger, instanceID string) http.Handler {
 	}
 
 	r := chi.NewRouter()
-	r.Post("/ch/{chanID}/msg", otelhttp.NewHandler(kithttp.NewServer(
+	r.Post("/c/{chanID}/m", otelhttp.NewHandler(kithttp.NewServer(
 		sendMessageEndpoint(),
 		decodeRequest,
 		api.EncodeResponse,
 		opts...,
 	), "publish").ServeHTTP)
 
-	r.Post("/ch/{chanID}/msg/*", otelhttp.NewHandler(kithttp.NewServer(
+	r.Post("/c/{chanID}/m/*", otelhttp.NewHandler(kithttp.NewServer(
 		sendMessageEndpoint(),
 		decodeRequest,
 		api.EncodeResponse,

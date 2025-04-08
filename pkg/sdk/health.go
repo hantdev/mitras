@@ -26,7 +26,7 @@ type HealthInfo struct {
 	BuildTime string `json:"build_time"`
 }
 
-func (sdk mitrasSDK) Health(service string) (HealthInfo, errors.SDKError) {
+func (sdk mgSDK) Health(service string) (HealthInfo, errors.SDKError) {
 	var url string
 	switch service {
 	case "clients":

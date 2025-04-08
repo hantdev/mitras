@@ -13,7 +13,7 @@ import (
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrassdk "github.com/hantdev/mitras/pkg/sdk"
+	smqsdk "github.com/hantdev/mitras/pkg/sdk"
 	sdkmocks "github.com/hantdev/mitras/pkg/sdk/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -27,10 +27,10 @@ var (
 	conntype = `["publish","subscribe"]`
 )
 
-var client = mitrassdk.Client{
+var client = smqsdk.Client{
 	ID:   testsutil.GenerateUUID(&testing.T{}),
 	Name: "testclient",
-	Credentials: mitrassdk.ClientCredentials{
+	Credentials: smqsdk.ClientCredentials{
 		Secret: "secret",
 	},
 	DomainID: testsutil.GenerateUUID(&testing.T{}),
@@ -44,14 +44,14 @@ func TestCreateClientsCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	var tg mitrassdk.Client
+	var tg smqsdk.Client
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		client        mitrassdk.Client
+		client        smqsdk.Client
 		logType       outputLog
 	}{
 		{
@@ -134,16 +134,16 @@ func TestGetClientssCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	var tg mitrassdk.Client
-	var page mitrassdk.ClientsPage
+	var tg smqsdk.Client
+	var page smqsdk.ClientsPage
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		client        mitrassdk.Client
-		page          mitrassdk.ClientsPage
+		client        smqsdk.Client
+		page          smqsdk.ClientsPage
 		logType       outputLog
 	}{
 		{
@@ -154,8 +154,8 @@ func TestGetClientssCmd(t *testing.T) {
 				token,
 			},
 			logType: entityLog,
-			page: mitrassdk.ClientsPage{
-				Clients: []mitrassdk.Client{client},
+			page: smqsdk.ClientsPage{
+				Clients: []smqsdk.Client{client},
 			},
 		},
 		{
@@ -177,7 +177,7 @@ func TestGetClientssCmd(t *testing.T) {
 			},
 			sdkErr:        errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
 			errLogMessage: fmt.Sprintf("\nerror: %s\n\n", errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden)),
-			page:          mitrassdk.ClientsPage{},
+			page:          smqsdk.ClientsPage{},
 			logType:       errLog,
 		},
 		{
@@ -276,7 +276,7 @@ func TestUpdateClientCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		client        mitrassdk.Client
+		client        smqsdk.Client
 		logType       outputLog
 	}{
 		{
@@ -287,7 +287,7 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			client: mitrassdk.Client{
+			client: smqsdk.Client{
 				Name: "clientName",
 				Metadata: map[string]interface{}{
 					"metadata": map[string]interface{}{
@@ -333,7 +333,7 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			client: mitrassdk.Client{
+			client: smqsdk.Client{
 				Name:     client.Name,
 				ID:       client.ID,
 				DomainID: client.DomainID,
@@ -377,12 +377,12 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			client: mitrassdk.Client{
+			client: smqsdk.Client{
 				Name:     client.Name,
 				ID:       client.ID,
 				DomainID: client.DomainID,
 				Status:   client.Status,
-				Credentials: mitrassdk.ClientCredentials{
+				Credentials: smqsdk.ClientCredentials{
 					Secret: newSecret,
 				},
 			},
@@ -430,20 +430,20 @@ func TestUpdateClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			var tg mitrassdk.Client
-			sdkCall := sdkMock.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
-			sdkCall1 := sdkMock.On("UpdateClientTags", mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
-			sdkCall2 := sdkMock.On("UpdateClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
+			var tg smqsdk.Client
+			sdkCall := sdkMock.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
+			sdkCall1 := sdkMock.On("UpdateClientTags", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
+			sdkCall2 := sdkMock.On("UpdateClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
 
 			switch {
 			case tc.args[0] == tagUpdateType:
-				var th mitrassdk.Client
+				var th smqsdk.Client
 				th.Tags = []string{"tag1", "tag2"}
 				th.ID = tc.args[1]
 
 				sdkCall1 = sdkMock.On("UpdateClientTags", th, tc.args[3]).Return(tc.client, tc.sdkErr)
 			case tc.args[0] == secretUpdateType:
-				var th mitrassdk.Client
+				var th smqsdk.Client
 				th.Credentials.Secret = tc.args[2]
 				th.ID = tc.args[1]
 
@@ -527,7 +527,7 @@ func TestDeleteClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteClient", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{delCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -548,14 +548,14 @@ func TestEnableClientCmd(t *testing.T) {
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
-	var tg mitrassdk.Client
+	var tg smqsdk.Client
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		client        mitrassdk.Client
+		client        smqsdk.Client
 		logType       outputLog
 	}{
 		{
@@ -605,7 +605,7 @@ func TestEnableClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("EnableClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
+			sdkCall := sdkMock.On("EnableClient", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{enableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -630,14 +630,14 @@ func TestDisableclientCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	var tg mitrassdk.Client
+	var tg smqsdk.Client
 
 	cases := []struct {
 		desc          string
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		client        mitrassdk.Client
+		client        smqsdk.Client
 		logType       outputLog
 	}{
 		{
@@ -686,7 +686,7 @@ func TestDisableclientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DisableClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
+			sdkCall := sdkMock.On("DisableClient", mock.Anything, tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{disableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -786,7 +786,7 @@ func TestConnectClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Connect", mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("Connect", mock.Anything, mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{connCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -881,7 +881,7 @@ func TestDisconnectClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("Disconnect", mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("Disconnect", mock.Anything, mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{disconnCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -903,7 +903,7 @@ func TestCreateClientRoleCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	roleReq := mitrassdk.RoleReq{
+	roleReq := smqsdk.RoleReq{
 		RoleName:        "admin",
 		OptionalActions: []string{"read", "update"},
 	}
@@ -913,7 +913,7 @@ func TestCreateClientRoleCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		role          mitrassdk.Role
+		role          smqsdk.Role
 		logType       outputLog
 	}{
 		{
@@ -924,7 +924,7 @@ func TestCreateClientRoleCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			role: mitrassdk.Role{
+			role: smqsdk.Role{
 				ID:              testsutil.GenerateUUID(&testing.T{}),
 				Name:            "admin",
 				OptionalActions: []string{"read", "update"},
@@ -947,12 +947,12 @@ func TestCreateClientRoleCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("CreateClientRole", tc.args[1], tc.args[2], roleReq, tc.args[3]).Return(tc.role, tc.sdkErr)
+			sdkCall := sdkMock.On("CreateClientRole", mock.Anything, tc.args[1], tc.args[2], roleReq, tc.args[3]).Return(tc.role, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "create"}, tc.args...)...)
 
 			switch tc.logType {
 			case entityLog:
-				var role mitrassdk.Role
+				var role smqsdk.Role
 				err := json.Unmarshal([]byte(out), &role)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.role, role, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.role, role))
@@ -971,16 +971,16 @@ func TestGetClientRolesCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	role := mitrassdk.Role{
+	role := smqsdk.Role{
 		ID:              testsutil.GenerateUUID(&testing.T{}),
 		Name:            "admin",
 		OptionalActions: []string{"read", "update"},
 	}
-	rolesPage := mitrassdk.RolesPage{
+	rolesPage := smqsdk.RolesPage{
 		Total:  1,
 		Offset: 0,
 		Limit:  10,
-		Roles:  []mitrassdk.Role{role},
+		Roles:  []smqsdk.Role{role},
 	}
 
 	cases := []struct {
@@ -988,7 +988,7 @@ func TestGetClientRolesCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		roles         mitrassdk.RolesPage
+		roles         smqsdk.RolesPage
 		logType       outputLog
 	}{
 		{
@@ -1018,15 +1018,15 @@ func TestGetClientRolesCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ClientRoles", tc.args[1], tc.args[2], mock.Anything, tc.args[3]).Return(tc.roles, tc.sdkErr)
+			sdkCall := sdkMock.On("ClientRoles", mock.Anything, tc.args[1], tc.args[2], mock.Anything, tc.args[3]).Return(tc.roles, tc.sdkErr)
 			if tc.args[0] != all {
-				sdkCall = sdkMock.On("ClientRole", tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(role, tc.sdkErr)
+				sdkCall = sdkMock.On("ClientRole", mock.Anything, tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(role, tc.sdkErr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{"roles", "get"}, tc.args...)...)
 
 			switch tc.logType {
 			case entityLog:
-				var roles mitrassdk.RolesPage
+				var roles smqsdk.RolesPage
 				err := json.Unmarshal([]byte(out), &roles)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.roles, roles, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.roles, roles))
@@ -1045,7 +1045,7 @@ func TestUpdateClientRoleCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	role := mitrassdk.Role{
+	role := smqsdk.Role{
 		ID:              testsutil.GenerateUUID(&testing.T{}),
 		Name:            "new_name",
 		OptionalActions: []string{"read", "update"},
@@ -1056,7 +1056,7 @@ func TestUpdateClientRoleCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		role          mitrassdk.Role
+		role          smqsdk.Role
 		logType       outputLog
 	}{
 		{
@@ -1088,12 +1088,12 @@ func TestUpdateClientRoleCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("UpdateClientRole", tc.args[2], tc.args[1], tc.args[0], tc.args[3], tc.args[4]).Return(tc.role, tc.sdkErr)
+			sdkCall := sdkMock.On("UpdateClientRole", mock.Anything, tc.args[2], tc.args[1], tc.args[0], tc.args[3], tc.args[4]).Return(tc.role, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "update"}, tc.args...)...)
 
 			switch tc.logType {
 			case entityLog:
-				var role mitrassdk.Role
+				var role smqsdk.Role
 				err := json.Unmarshal([]byte(out), &role)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.role, role, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.role, role))
@@ -1145,7 +1145,7 @@ func TestDeleteClientRoleCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteClientRole", tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteClientRole", mock.Anything, tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "delete"}, tc.args...)...)
 
 			switch tc.logType {
@@ -1209,7 +1209,7 @@ func TestAddClientRoleActionsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("AddClientRoleActions", tc.args[2], tc.args[1], tc.args[3], tc.actions, tc.args[4]).Return(tc.actions, tc.sdkErr)
+			sdkCall := sdkMock.On("AddClientRoleActions", mock.Anything, tc.args[2], tc.args[1], tc.args[3], tc.actions, tc.args[4]).Return(tc.actions, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "actions", "add"}, tc.args...)...)
 
 			switch tc.logType {
@@ -1270,7 +1270,7 @@ func TestListClientRoleActionsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ClientRoleActions", tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(tc.actions, tc.sdkErr)
+			sdkCall := sdkMock.On("ClientRoleActions", mock.Anything, tc.args[1], tc.args[0], tc.args[2], tc.args[3]).Return(tc.actions, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "actions", "list"}, tc.args...)...)
 
 			switch tc.logType {
@@ -1348,9 +1348,9 @@ func TestDeleteClientRoleActionsCmd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			var sdkCall *mock.Call
 			if tc.args[0] == all {
-				sdkCall = sdkMock.On("RemoveAllClientRoleActions", tc.args[2], tc.args[1], tc.args[3], tc.args[4]).Return(tc.sdkErr)
+				sdkCall = sdkMock.On("RemoveAllClientRoleActions", mock.Anything, tc.args[2], tc.args[1], tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			} else {
-				sdkCall = sdkMock.On("RemoveClientRoleActions", tc.args[2], tc.args[1], tc.args[3], actions.Actions, tc.args[4]).Return(tc.sdkErr)
+				sdkCall = sdkMock.On("RemoveClientRoleActions", mock.Anything, tc.args[2], tc.args[1], tc.args[3], actions.Actions, tc.args[4]).Return(tc.sdkErr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{"roles", "actions", "delete"}, tc.args...)...)
 
@@ -1405,7 +1405,7 @@ func TestAvailableClientRoleActionsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("AvailableClientRoleActions", tc.args[0], tc.args[1]).Return(tc.actions, tc.sdkErr)
+			sdkCall := sdkMock.On("AvailableClientRoleActions", mock.Anything, tc.args[0], tc.args[1]).Return(tc.actions, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "actions", "available-actions"}, tc.args...)...)
 
 			switch tc.logType {
@@ -1472,7 +1472,7 @@ func TestAddClientRoleMembersCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("AddClientRoleMembers", tc.args[2], tc.args[1], tc.args[3], tc.members, tc.args[4]).Return(tc.members, tc.sdkErr)
+			sdkCall := sdkMock.On("AddClientRoleMembers", mock.Anything, tc.args[2], tc.args[1], tc.args[3], tc.members, tc.args[4]).Return(tc.members, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "members", "add"}, tc.args...)...)
 
 			switch tc.logType {
@@ -1496,7 +1496,7 @@ func TestListClientRoleMembersCmd(t *testing.T) {
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
-	membersPage := mitrassdk.RoleMembersPage{
+	membersPage := smqsdk.RoleMembersPage{
 		Total:  1,
 		Offset: 0,
 		Limit:  10,
@@ -1510,7 +1510,7 @@ func TestListClientRoleMembersCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		members       mitrassdk.RoleMembersPage
+		members       smqsdk.RoleMembersPage
 		logType       outputLog
 	}{
 		{
@@ -1540,12 +1540,12 @@ func TestListClientRoleMembersCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ClientRoleMembers", tc.args[1], tc.args[0], tc.args[2], mock.Anything, tc.args[3]).Return(tc.members, tc.sdkErr)
+			sdkCall := sdkMock.On("ClientRoleMembers", mock.Anything, tc.args[1], tc.args[0], tc.args[2], mock.Anything, tc.args[3]).Return(tc.members, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{"roles", "members", "list"}, tc.args...)...)
 
 			switch tc.logType {
 			case entityLog:
-				var members mitrassdk.RoleMembersPage
+				var members smqsdk.RoleMembersPage
 				err := json.Unmarshal([]byte(out), &members)
 				assert.Nil(t, err)
 				assert.Equal(t, tc.members, members, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.members, members))
@@ -1618,9 +1618,9 @@ func TestDeleteClientRoleMembersCmd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			var sdkCall *mock.Call
 			if tc.args[0] == all {
-				sdkCall = sdkMock.On("RemoveAllClientRoleMembers", tc.args[2], tc.args[1], tc.args[3], tc.args[4]).Return(tc.sdkErr)
+				sdkCall = sdkMock.On("RemoveAllClientRoleMembers", mock.Anything, tc.args[2], tc.args[1], tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			} else {
-				sdkCall = sdkMock.On("RemoveClientRoleMembers", tc.args[2], tc.args[1], tc.args[3], members.Members, tc.args[4]).Return(tc.sdkErr)
+				sdkCall = sdkMock.On("RemoveClientRoleMembers", mock.Anything, tc.args[2], tc.args[1], tc.args[3], members.Members, tc.args[4]).Return(tc.sdkErr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{"roles", "members", "delete"}, tc.args...)...)
 

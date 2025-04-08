@@ -14,8 +14,8 @@ import (
 	"github.com/hantdev/mitras/journal"
 	"github.com/hantdev/mitras/journal/api"
 	"github.com/hantdev/mitras/journal/mocks"
-	mitraslog "github.com/hantdev/mitras/logger"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqlog "github.com/hantdev/mitras/logger"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +48,7 @@ func (tr testRequest) make() (*http.Response, error) {
 func newjournalServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
 	svc := new(mocks.Service)
 
-	logger := mitraslog.NewMock()
+	logger := smqlog.NewMock()
 	authn := new(authnmocks.Authentication)
 	mux := api.MakeHandler(svc, authn, logger, "journal-log", "test")
 	return httptest.NewServer(mux), svc, authn
@@ -60,7 +60,7 @@ func TestListUserJournalsEndpoint(t *testing.T) {
 	cases := []struct {
 		desc        string
 		token       string
-		session     mitrasauthn.Session
+		session     smqauthn.Session
 		url         string
 		contentType string
 		status      int
@@ -253,7 +253,7 @@ func TestListUserJournalsEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			if c.token == validToken {
-				c.session = mitrasauthn.Session{
+				c.session = smqauthn.Session{
 					UserID: testsutil.GenerateUUID(t),
 				}
 			}
@@ -285,7 +285,7 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 	cases := []struct {
 		desc        string
 		token       string
-		session     mitrasauthn.Session
+		session     smqauthn.Session
 		domainID    string
 		url         string
 		contentType string
@@ -376,7 +376,7 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			if c.token == validToken {
-				c.session = mitrasauthn.Session{
+				c.session = smqauthn.Session{
 					UserID:       userID,
 					DomainID:     domainID,
 					DomainUserID: domainID + "_" + userID,
@@ -410,7 +410,7 @@ func TestRetrieveClientTelemetryEndpoint(t *testing.T) {
 	cases := []struct {
 		desc        string
 		token       string
-		session     mitrasauthn.Session
+		session     smqauthn.Session
 		clientID    string
 		domainID    string
 		url         string
@@ -459,7 +459,7 @@ func TestRetrieveClientTelemetryEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			if c.token == validToken {
-				c.session = mitrasauthn.Session{
+				c.session = smqauthn.Session{
 					UserID:       userID,
 					DomainID:     c.domainID,
 					DomainUserID: c.domainID + "_" + userID,

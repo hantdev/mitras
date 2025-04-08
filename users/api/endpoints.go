@@ -3,13 +3,13 @@ package api
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	api "github.com/hantdev/mitras/api/http"
 	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/users"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func registrationEndpoint(svc users.Service, selfRegister bool) endpoint.Endpoint {
@@ -238,10 +238,10 @@ func updateEmailEndpoint(svc users.Service) endpoint.Endpoint {
 
 // Password reset request endpoint.
 // When successful password reset link is generated.
-// Link is generated using MITRAS_TOKEN_RESET_ENDPOINT env.
+// Link is generated using SMQ_TOKEN_RESET_ENDPOINT env.
 // and value from Referer header for host.
-// {Referer}+{MITRAS_TOKEN_RESET_ENDPOINT}+{token=TOKEN}
-// http://mitras.cloud/reset-request?token=xxxxxxxxxxx.
+// {Referer}+{SMQ_TOKEN_RESET_ENDPOINT}+{token=TOKEN}
+// http://mitras.com/reset-request?token=xxxxxxxxxxx.
 // Email with a link is being sent to the user.
 // When user clicks on a link it should get the ui with form to
 // enter new password, when form is submitted token and new password

@@ -35,3 +35,20 @@ The following actions are supported:
 - verify (all key types)
 - obtain (API keys only)
 - revoke (API keys only)
+
+## Domains
+
+Domains are used to group users and clients. Each domain has a unique route that is associated with the domain. Domains are used to group users and their entities.
+
+Domain consists of the following fields:
+
+- ID - UUID uniquely representing domain
+- Name - name of the domain
+- Tags - array of tags
+- Metadata - Arbitrary, object-encoded domain's data
+- Route - unique route of the domain used in messaging
+- CreatedAt - timestamp at which the domain is created
+- UpdatedAt - timestamp at which the domain is updated
+- UpdatedBy - user that updated the domain
+- CreatedBy - user that created the domain
+- Status - domain status

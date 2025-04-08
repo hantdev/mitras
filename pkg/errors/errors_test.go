@@ -13,10 +13,10 @@ import (
 const level = 10
 
 var (
-	err0      = errors.New("0")
-	err1      = errors.New("1")
-	err2      = errors.New("2")
-	errNative = nerrors.New("native error")
+	err0 = errors.New("0")
+	err1 = errors.New("1")
+	err2 = errors.New("2")
+	nat  = nerrors.New("native error")
 )
 
 func TestError(t *testing.T) {
@@ -139,25 +139,25 @@ func TestContains(t *testing.T) {
 		},
 		{
 			desc:      "native error contains error",
-			container: errNative,
+			container: nat,
 			contained: err0,
 			contains:  false,
 		},
 		{
 			desc:      "res of errors.Wrap(err1, errors.New('')) contains err1",
-			container: errors.Wrap(err1, errNative),
+			container: errors.Wrap(err1, nat),
 			contained: err1,
 			contains:  true,
 		},
 		{
 			desc:      "error contains native error",
 			container: err0,
-			contained: errNative,
+			contained: nat,
 			contains:  false,
 		},
 		{
 			desc:      "res of errors.Wrap(errors.New(''), err0) contains err0",
-			container: errors.Wrap(errNative, err0),
+			container: errors.Wrap(nat, err0),
 			contained: err0,
 			contains:  true,
 		},
@@ -223,27 +223,27 @@ func TestWrap(t *testing.T) {
 		{
 			desc:      "err0 wraps native error",
 			wrapper:   err0,
-			wrapped:   errNative,
-			contained: errNative,
+			wrapped:   nat,
+			contained: nat,
 			contains:  true,
 		},
 		{
 			desc:      "nil wraps native error",
 			wrapper:   nil,
-			wrapped:   errNative,
-			contained: errNative,
+			wrapped:   nat,
+			contained: nat,
 			contains:  false,
 		},
 		{
 			desc:      "native error wraps err0",
-			wrapper:   errNative,
+			wrapper:   nat,
 			wrapped:   err0,
 			contained: err0,
 			contains:  true,
 		},
 		{
 			desc:      "native error wraps nil",
-			wrapper:   errNative,
+			wrapper:   nat,
 			wrapped:   nil,
 			contained: nil,
 			contains:  false,
@@ -251,13 +251,13 @@ func TestWrap(t *testing.T) {
 		{
 			desc:      "err0 wraps err1 wraps native error",
 			wrapper:   err0,
-			wrapped:   errors.Wrap(err1, errNative),
-			contained: errNative,
+			wrapped:   errors.Wrap(err1, nat),
+			contained: nat,
 			contains:  true,
 		},
 		{
 			desc:      "native error wraps err1 wraps err0",
-			wrapper:   errNative,
+			wrapper:   nat,
 			wrapped:   errors.Wrap(err1, err0),
 			contained: err0,
 			contains:  true,
@@ -312,15 +312,15 @@ func TestUnwrap(t *testing.T) {
 		},
 		{
 			desc:    "nil wraps native error",
-			err:     errors.Wrap(nil, errNative),
+			err:     errors.Wrap(nil, nat),
 			wrapper: nil,
 			wrapped: nil,
 		},
 		{
 			desc:    "native error wraps nil",
-			err:     errors.Wrap(errNative, nil),
+			err:     errors.Wrap(nat, nil),
 			wrapper: nil,
-			wrapped: errNative,
+			wrapped: nat,
 		},
 	}
 

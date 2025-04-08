@@ -32,12 +32,12 @@ const (
 	chanID                = "123e4567-e89b-12d3-a456-000000000001"
 	invalidID             = "invalidID"
 	invalidValue          = "invalidValue"
-	invalidChannelIDTopic = "ch/**/msg"
+	invalidChannelIDTopic = "c/**/m"
 )
 
 var (
-	topicMsg      = "ch/%s/msg"
-	subtopicMsg   = "ch/%s/msg/subtopic"
+	topicMsg      = "c/%s/m"
+	subtopicMsg   = "c/%s/m/subtopic"
 	topic         = fmt.Sprintf(topicMsg, chanID)
 	subtopic      = fmt.Sprintf(subtopicMsg, chanID)
 	invalidTopic  = invalidValue

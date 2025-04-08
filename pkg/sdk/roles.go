@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,7 +9,7 @@ import (
 	"github.com/hantdev/mitras/pkg/errors"
 )
 
-func (sdk mitrasSDK) createRole(entityURL, entityEndpoint, id, domainID string, rq RoleReq, token string) (Role, errors.SDKError) {
+func (sdk mgSDK) createRole(ctx context.Context, entityURL, entityEndpoint, id, domainID string, rq RoleReq, token string) (Role, errors.SDKError) {
 	data, err := json.Marshal(rq)
 	if err != nil {
 		return Role{}, errors.NewSDKError(err)
@@ -18,7 +19,7 @@ func (sdk mitrasSDK) createRole(entityURL, entityEndpoint, id, domainID string, 
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusCreated)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Role{}, sdkerr
 	}
@@ -31,7 +32,7 @@ func (sdk mitrasSDK) createRole(entityURL, entityEndpoint, id, domainID string, 
 	return role, nil
 }
 
-func (sdk mitrasSDK) listRoles(entityURL, entityEndpoint, id, domainID string, pm PageMetadata, token string) (RolesPage, errors.SDKError) {
+func (sdk mgSDK) listRoles(ctx context.Context, entityURL, entityEndpoint, id, domainID string, pm PageMetadata, token string) (RolesPage, errors.SDKError) {
 	endpoint := fmt.Sprintf("%s/%s/%s/%s", domainID, entityEndpoint, id, rolesEndpoint)
 	if entityEndpoint == domainsEndpoint {
 		endpoint = fmt.Sprintf("%s/%s/%s", entityEndpoint, id, rolesEndpoint)
@@ -41,7 +42,7 @@ func (sdk mitrasSDK) listRoles(entityURL, entityEndpoint, id, domainID string, p
 		return RolesPage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return RolesPage{}, sdkerr
 	}
@@ -54,12 +55,12 @@ func (sdk mitrasSDK) listRoles(entityURL, entityEndpoint, id, domainID string, p
 	return rp, nil
 }
 
-func (sdk mitrasSDK) viewRole(entityURL, entityEndpoint, id, roleID, domainID, token string) (Role, errors.SDKError) {
+func (sdk mgSDK) viewRole(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID, token string) (Role, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, id, rolesEndpoint, roleID)
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Role{}, sdkerr
 	}
@@ -72,7 +73,7 @@ func (sdk mitrasSDK) viewRole(entityURL, entityEndpoint, id, roleID, domainID, t
 	return role, nil
 }
 
-func (sdk mitrasSDK) updateRole(entityURL, entityEndpoint, id, roleID, newName, domainID string, token string) (Role, errors.SDKError) {
+func (sdk mgSDK) updateRole(ctx context.Context, entityURL, entityEndpoint, id, roleID, newName, domainID string, token string) (Role, errors.SDKError) {
 	ucr := updateRoleNameReq{Name: newName}
 	data, err := json.Marshal(ucr)
 	if err != nil {
@@ -83,7 +84,7 @@ func (sdk mitrasSDK) updateRole(entityURL, entityEndpoint, id, roleID, newName, 
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodPut, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPut, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Role{}, sdkerr
 	}
@@ -96,17 +97,17 @@ func (sdk mitrasSDK) updateRole(entityURL, entityEndpoint, id, roleID, newName, 
 	return role, nil
 }
 
-func (sdk mitrasSDK) deleteRole(entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
+func (sdk mgSDK) deleteRole(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, id, rolesEndpoint, roleID)
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID)
 	}
-	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 
 	return sdkerr
 }
 
-func (sdk mitrasSDK) addRoleActions(entityURL, entityEndpoint, id, roleID, domainID string, actions []string, token string) ([]string, errors.SDKError) {
+func (sdk mgSDK) addRoleActions(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, actions []string, token string) ([]string, errors.SDKError) {
 	acra := roleActionsReq{Actions: actions}
 	data, err := json.Marshal(acra)
 	if err != nil {
@@ -117,7 +118,7 @@ func (sdk mitrasSDK) addRoleActions(entityURL, entityEndpoint, id, roleID, domai
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return []string{}, sdkerr
 	}
@@ -130,12 +131,12 @@ func (sdk mitrasSDK) addRoleActions(entityURL, entityEndpoint, id, roleID, domai
 	return res.Actions, nil
 }
 
-func (sdk mitrasSDK) listRoleActions(entityURL, entityEndpoint, id, roleID, domainID string, token string) ([]string, errors.SDKError) {
+func (sdk mgSDK) listRoleActions(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, token string) ([]string, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint)
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -148,7 +149,7 @@ func (sdk mitrasSDK) listRoleActions(entityURL, entityEndpoint, id, roleID, doma
 	return res.Actions, nil
 }
 
-func (sdk mitrasSDK) removeRoleActions(entityURL, entityEndpoint, id, roleID, domainID string, actions []string, token string) errors.SDKError {
+func (sdk mgSDK) removeRoleActions(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, actions []string, token string) errors.SDKError {
 	rcra := roleActionsReq{Actions: actions}
 	data, err := json.Marshal(rcra)
 	if err != nil {
@@ -159,22 +160,22 @@ func (sdk mitrasSDK) removeRoleActions(entityURL, entityEndpoint, id, roleID, do
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint, "delete")
 	}
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusNoContent)
 
 	return sdkerr
 }
 
-func (sdk mitrasSDK) removeAllRoleActions(entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
+func (sdk mgSDK) removeAllRoleActions(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint, "delete-all")
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, actionsEndpoint, "delete-all")
 	}
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, nil, nil, http.StatusNoContent)
 
 	return sdkerr
 }
 
-func (sdk mitrasSDK) addRoleMembers(entityURL, entityEndpoint, id, roleID, domainID string, members []string, token string) ([]string, errors.SDKError) {
+func (sdk mgSDK) addRoleMembers(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, members []string, token string) ([]string, errors.SDKError) {
 	acrm := roleMembersReq{Members: members}
 	data, err := json.Marshal(acrm)
 	if err != nil {
@@ -185,7 +186,7 @@ func (sdk mitrasSDK) addRoleMembers(entityURL, entityEndpoint, id, roleID, domai
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return []string{}, sdkerr
 	}
@@ -198,7 +199,7 @@ func (sdk mitrasSDK) addRoleMembers(entityURL, entityEndpoint, id, roleID, domai
 	return res.Members, nil
 }
 
-func (sdk mitrasSDK) listRoleMembers(entityURL, entityEndpoint, id, roleID, domainID string, pm PageMetadata, token string) (RoleMembersPage, errors.SDKError) {
+func (sdk mgSDK) listRoleMembers(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, pm PageMetadata, token string) (RoleMembersPage, errors.SDKError) {
 	endpoint := fmt.Sprintf("%s/%s/%s/%s/%s/%s", domainID, entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint)
 	if entityEndpoint == domainsEndpoint {
 		endpoint = fmt.Sprintf("%s/%s/%s/%s/%s", entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint)
@@ -207,7 +208,7 @@ func (sdk mitrasSDK) listRoleMembers(entityURL, entityEndpoint, id, roleID, doma
 	if err != nil {
 		return RoleMembersPage{}, errors.NewSDKError(err)
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return RoleMembersPage{}, sdkerr
 	}
@@ -220,7 +221,7 @@ func (sdk mitrasSDK) listRoleMembers(entityURL, entityEndpoint, id, roleID, doma
 	return res, nil
 }
 
-func (sdk mitrasSDK) removeRoleMembers(entityURL, entityEndpoint, id, roleID, domainID string, members []string, token string) errors.SDKError {
+func (sdk mgSDK) removeRoleMembers(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID string, members []string, token string) errors.SDKError {
 	rcrm := roleMembersReq{Members: members}
 	data, err := json.Marshal(rcrm)
 	if err != nil {
@@ -231,27 +232,27 @@ func (sdk mitrasSDK) removeRoleMembers(entityURL, entityEndpoint, id, roleID, do
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint, "delete")
 	}
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusNoContent)
 
 	return sdkerr
 }
 
-func (sdk mitrasSDK) removeAllRoleMembers(entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
+func (sdk mgSDK) removeAllRoleMembers(ctx context.Context, entityURL, entityEndpoint, id, roleID, domainID, token string) errors.SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint, "delete-all")
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", entityURL, entityEndpoint, id, rolesEndpoint, roleID, membersEndpoint, "delete-all")
 	}
-	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, nil, nil, http.StatusNoContent)
 
 	return sdkerr
 }
 
-func (sdk mitrasSDK) listAvailableRoleActions(entityURL, entityEndpoint, domainID, token string) ([]string, errors.SDKError) {
+func (sdk mgSDK) listAvailableRoleActions(ctx context.Context, entityURL, entityEndpoint, domainID, token string) ([]string, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s", entityURL, domainID, entityEndpoint, rolesEndpoint, "available-actions")
 	if entityEndpoint == domainsEndpoint {
 		url = fmt.Sprintf("%s/%s/%s/%s", entityURL, entityEndpoint, rolesEndpoint, "available-actions")
 	}
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return nil, sdkerr
 	}
@@ -264,7 +265,7 @@ func (sdk mitrasSDK) listAvailableRoleActions(entityURL, entityEndpoint, domainI
 	return res.AvailableActions, nil
 }
 
-func (sdk mitrasSDK) listEntityMembers(entityURL, domainID, entityEndpoint, id, token string, pm PageMetadata) (EntityMembersPage, errors.SDKError) {
+func (sdk mgSDK) listEntityMembers(ctx context.Context, entityURL, domainID, entityEndpoint, id, token string, pm PageMetadata) (EntityMembersPage, errors.SDKError) {
 	ep := fmt.Sprintf("%s/%s/%s/%s/%s", domainID, entityEndpoint, id, rolesEndpoint, membersEndpoint)
 	if entityEndpoint == domainsEndpoint {
 		ep = fmt.Sprintf("%s/%s/%s/%s", entityEndpoint, id, rolesEndpoint, membersEndpoint)
@@ -274,7 +275,7 @@ func (sdk mitrasSDK) listEntityMembers(entityURL, domainID, entityEndpoint, id, 
 		return EntityMembersPage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return EntityMembersPage{}, sdkerr
 	}

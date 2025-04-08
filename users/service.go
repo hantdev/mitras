@@ -8,7 +8,7 @@ import (
 	"github.com/hantdev/mitras"
 	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasuth "github.com/hantdev/mitras/auth"
+	smqauth "github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
@@ -107,7 +107,7 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (*gr
 		return &grpcTokenV1.Token{}, errors.Wrap(svcerr.ErrLogin, err)
 	}
 
-	token, err := svc.token.Issue(ctx, &grpcTokenV1.IssueReq{UserId: dbUser.ID, Type: uint32(mitrasuth.AccessKey)})
+	token, err := svc.token.Issue(ctx, &grpcTokenV1.IssueReq{UserId: dbUser.ID, Type: uint32(smqauth.AccessKey)})
 	if err != nil {
 		return &grpcTokenV1.Token{}, errors.Wrap(errIssueToken, err)
 	}
@@ -288,7 +288,7 @@ func (svc service) GenerateResetToken(ctx context.Context, email, host string) e
 	}
 	issueReq := &grpcTokenV1.IssueReq{
 		UserId: user.ID,
-		Type:   uint32(mitrasuth.RecoveryKey),
+		Type:   uint32(smqauth.RecoveryKey),
 	}
 	token, err := svc.token.Issue(ctx, issueReq)
 	if err != nil {

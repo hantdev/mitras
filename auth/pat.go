@@ -347,8 +347,6 @@ func (pat *PAT) String() string {
 }
 
 // PATS specifies function which are required for Personal access Token implementation.
-//go:generate mockery --name PATS --output=./mocks --filename pats.go --quiet
-
 type PATS interface {
 	// Create function creates new PAT for given valid inputs.
 	CreatePAT(ctx context.Context, token, name, description string, duration time.Duration) (PAT, error)
@@ -397,8 +395,6 @@ type PATS interface {
 }
 
 // PATSRepository specifies PATS persistence API.
-//
-//go:generate mockery --name PATSRepository --output=./mocks --filename patsrepo.go --quiet
 type PATSRepository interface {
 	// Save persists the PAT
 	Save(ctx context.Context, pat PAT) (err error)
@@ -445,7 +441,6 @@ type PATSRepository interface {
 	RemoveAllScope(ctx context.Context, patID string) error
 }
 
-//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet
 type Cache interface {
 	Save(ctx context.Context, userID string, scopes []Scope) error
 

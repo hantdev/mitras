@@ -27,8 +27,6 @@ var _ Service = (*certsService)(nil)
 
 // Service specifies an API that must be fulfilled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
-//
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet 
 type Service interface {
 	// IssueCert issues certificate for given client id if access is granted with token
 	IssueCert(ctx context.Context, domainID, token, clientID, ttl string) (Cert, error)
@@ -67,7 +65,7 @@ type Revoke struct {
 func (cs *certsService) IssueCert(ctx context.Context, domainID, token, clientID, ttl string) (Cert, error) {
 	var err error
 
-	client, err := cs.sdk.Client(clientID, domainID, token)
+	client, err := cs.sdk.Client(ctx, clientID, domainID, token)
 	if err != nil {
 		return Cert{}, errors.Wrap(ErrFailedCertCreation, err)
 	}
@@ -91,7 +89,7 @@ func (cs *certsService) RevokeCert(ctx context.Context, domainID, token, clientI
 	var revoke Revoke
 	var err error
 
-	client, err := cs.sdk.Client(clientID, domainID, token)
+	client, err := cs.sdk.Client(ctx, clientID, domainID, token)
 	if err != nil {
 		return revoke, errors.Wrap(ErrFailedCertRevocation, err)
 	}

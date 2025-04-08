@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
-	"github.com/go-kit/kit/metrics"
 )
 
 var _ channels.Service = (*metricsMiddleware)(nil)
