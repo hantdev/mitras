@@ -3,10 +3,9 @@ package ws
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -73,10 +72,9 @@ func (svc *adapterService) Subscribe(ctx context.Context, clientKey, chanID, sub
 	}
 
 	subCfg := messaging.SubscriberConfig{
-		ID:       clientID,
-		ClientID: clientID,
-		Topic:    subject,
-		Handler:  c,
+		ID:      clientID,
+		Topic:   subject,
+		Handler: c,
 	}
 	if err := svc.pubsub.Subscribe(ctx, subCfg); err != nil {
 		return ErrFailedSubscription
@@ -90,9 +88,6 @@ func (svc *adapterService) Subscribe(ctx context.Context, clientKey, chanID, sub
 func (svc *adapterService) authorize(ctx context.Context, clientKey, chanID string, msgType connections.ConnType) (string, error) {
 	authnReq := &grpcClientsV1.AuthnReq{
 		ClientSecret: clientKey,
-	}
-	if strings.HasPrefix(clientKey, "Client") {
-		authnReq.ClientSecret = extractClientSecret(clientKey)
 	}
 	authnRes, err := svc.clients.Authenticate(ctx, authnReq)
 	if err != nil {

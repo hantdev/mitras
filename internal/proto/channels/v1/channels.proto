@@ -4,7 +4,7 @@ package channels.v1;
 
 import "common/v1/common.proto";
 
-option go_package = "github.com/hantdev/mitras/api/grpc/channels/v1";
+option go_package = "github.com/hantdev/mitras/internal/grpc/channels/v1";
 
 service ChannelsService {
   rpc Authorize(AuthzReq)

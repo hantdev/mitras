@@ -4,7 +4,7 @@ package groups.v1;
 
 import "common/v1/common.proto";
 
-option go_package = "github.com/hantdev/mitras/api/grpc/groups/v1";
+option go_package = "github.com/hantdev/mitras/internal/grpc/groups/v1";
 
 // GroupssService is a service that provides groups 
 // functionalities for Mitras services.

@@ -1,3 +1,3 @@
 // Package email contains the domain concept definitions needed to support
-// Mitras email functionality.
+// mitras email functionality.
 package email

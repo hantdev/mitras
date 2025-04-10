@@ -12,12 +12,12 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hantdev/hermina/pkg/session"
 	"github.com/hantdev/hermina/pkg/websockets"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
-	mitraslog "github.com/hantdev/mitras/logger"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	smqlog "github.com/hantdev/mitras/logger"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnMocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/messaging/mocks"
 	"github.com/hantdev/mitras/ws"
@@ -43,13 +43,13 @@ func newService(clients grpcClientsV1.ClientsServiceClient, channels grpcChannel
 }
 
 func newHTTPServer(svc ws.Service) *httptest.Server {
-	mux := api.MakeHandler(context.Background(), svc, mitraslog.NewMock(), instanceID)
+	mux := api.MakeHandler(context.Background(), svc, smqlog.NewMock(), instanceID)
 	return httptest.NewServer(mux)
 }
 
 func newProxyHTPPServer(svc session.Handler, targetServer *httptest.Server) (*httptest.Server, error) {
 	turl := strings.ReplaceAll(targetServer.URL, "http", "ws")
-	mp, err := websockets.NewProxy("", turl, mitraslog.NewMock(), svc)
+	mp, err := websockets.NewProxy("", turl, smqlog.NewMock(), svc)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +62,9 @@ func makeURL(tsURL, chanID, subtopic, clientKey string, header bool) (string, er
 
 	if chanID == "0" || chanID == "" {
 		if header {
-			return fmt.Sprintf("%s/c/%s/m", u, chanID), fmt.Errorf("invalid channel id")
+			return fmt.Sprintf("%s/channels/%s/messages", u, chanID), fmt.Errorf("invalid channel id")
 		}
-		return fmt.Sprintf("%s/c/%s/m?authorization=%s", u, chanID, clientKey), fmt.Errorf("invalid channel id")
+		return fmt.Sprintf("%s/channels/%s/messages?authorization=%s", u, chanID, clientKey), fmt.Errorf("invalid channel id")
 	}
 
 	subtopicPart := ""
@@ -72,10 +72,10 @@ func makeURL(tsURL, chanID, subtopic, clientKey string, header bool) (string, er
 		subtopicPart = fmt.Sprintf("/%s", subtopic)
 	}
 	if header {
-		return fmt.Sprintf("%s/c/%s/m%s", u, chanID, subtopicPart), nil
+		return fmt.Sprintf("%s/channels/%s/messages%s", u, chanID, subtopicPart), nil
 	}
 
-	return fmt.Sprintf("%s/c/%s/m%s?authorization=%s", u, chanID, subtopicPart, clientKey), nil
+	return fmt.Sprintf("%s/channels/%s/messages%s?authorization=%s", u, chanID, subtopicPart, clientKey), nil
 }
 
 func handshake(tsURL, chanID, subtopic, clientKey string, addHeader bool) (*websocket.Conn, *http.Response, error) {
@@ -97,14 +97,14 @@ func TestHandshake(t *testing.T) {
 	svc, pubsub := newService(clients, channels)
 	target := newHTTPServer(svc)
 	defer target.Close()
-	handler := ws.NewHandler(pubsub, mitraslog.NewMock(), authn, clients, channels)
+	handler := ws.NewHandler(pubsub, smqlog.NewMock(), authn, clients, channels)
 	ts, err := newProxyHTPPServer(handler, target)
 	require.Nil(t, err)
 	defer ts.Close()
 	pubsub.On("Subscribe", mock.Anything, mock.Anything).Return(nil)
 	pubsub.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	clients.On("Authenticate", mock.Anything, mock.Anything).Return(&grpcClientsV1.AuthnRes{Authenticated: true}, nil)
-	authn.On("Authenticate", mock.Anything, mock.Anything).Return(mitrasauthn.Session{}, nil)
+	authn.On("Authenticate", mock.Anything, mock.Anything).Return(smqauthn.Session{}, nil)
 	channels.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(&grpcChannelsV1.AuthzRes{Authorized: true}, nil)
 
 	cases := []struct {

@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/ws"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -37,8 +37,8 @@ func MakeHandler(ctx context.Context, svc ws.Service, l *slog.Logger, instanceID
 	logger = l
 
 	mux := chi.NewRouter()
-	mux.Get("/c/{chanID}/m", handshake(ctx, svc))
-	mux.Get("/c/{chanID}/m/*", handshake(ctx, svc))
+	mux.Get("/channels/{chanID}/messages", handshake(ctx, svc))
+	mux.Get("/channels/{chanID}/messages/*", handshake(ctx, svc))
 
 	mux.Get("/health", mitras.Health(service, instanceID))
 	mux.Handle("/metrics", promhttp.Handler())

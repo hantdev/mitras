@@ -3,13 +3,12 @@ package ws_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/connections"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -31,7 +30,16 @@ const (
 	protocol   = "ws"
 )
 
-var clientID = testsutil.GenerateUUID(&testing.T{})
+var (
+	msg = messaging.Message{
+		Channel:   chanID,
+		Publisher: id,
+		Subtopic:  "",
+		Protocol:  protocol,
+		Payload:   []byte(`[{"n":"current","t":-5,"v":1.2}]`),
+	}
+	clientID = testsutil.GenerateUUID(&testing.T{})
+)
 
 func newService() (ws.Service, *mocks.PubSub, *climocks.ClientsServiceClient, *chmocks.ChannelsServiceClient) {
 	pubsub := new(mocks.PubSub)
@@ -143,29 +151,15 @@ func TestSubscribe(t *testing.T) {
 			authZRes:  &grpcChannelsV1.AuthzRes{Authorized: false},
 			err:       svcerr.ErrAuthorization,
 		},
-		{
-			desc:      "subscribe to channel with valid clientKey prefixed with 'client_', chanID, subtopic",
-			clientKey: "Client " + clientKey,
-			chanID:    chanID,
-			subtopic:  subTopic,
-			authNRes:  &grpcClientsV1.AuthnRes{Id: clientID, Authenticated: true},
-			authZRes:  &grpcChannelsV1.AuthzRes{Authorized: true},
-			err:       nil,
-		},
 	}
 
 	for _, tc := range cases {
 		subConfig := messaging.SubscriberConfig{
-			ID:       clientID,
-			Topic:    "channels." + tc.chanID + "." + subTopic,
-			ClientID: clientID,
-			Handler:  c,
+			ID:      clientID,
+			Topic:   "channels." + tc.chanID + "." + subTopic,
+			Handler: c,
 		}
-		authReq := &grpcClientsV1.AuthnReq{ClientSecret: tc.clientKey}
-		if strings.HasPrefix(tc.clientKey, "Client") {
-			authReq.ClientSecret = strings.TrimPrefix(tc.clientKey, "Client ")
-		}
-		clientsCall := clients.On("Authenticate", mock.Anything, authReq).Return(tc.authNRes, tc.authNErr)
+		clientsCall := clients.On("Authenticate", mock.Anything, &grpcClientsV1.AuthnReq{ClientSecret: tc.clientKey}).Return(tc.authNRes, tc.authNErr)
 		channelsCall := channels.On("Authorize", mock.Anything, &grpcChannelsV1.AuthzReq{
 			ClientType: policies.ClientType,
 			ClientId:   tc.authNRes.GetId(),
