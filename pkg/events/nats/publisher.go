@@ -19,9 +19,10 @@ type pubEventStore struct {
 	url       string
 	conn      *nats.Conn
 	publisher messaging.Publisher
+	stream    string
 }
 
-func NewPublisher(ctx context.Context, url string) (events.Publisher, error) {
+func NewPublisher(ctx context.Context, url, stream string) (events.Publisher, error) {
 	conn, err := nats.Connect(url, nats.MaxReconnects(maxReconnects), nats.ReconnectBufSize(reconnectBufSize))
 	if err != nil {
 		return nil, err
@@ -43,12 +44,13 @@ func NewPublisher(ctx context.Context, url string) (events.Publisher, error) {
 		url:       url,
 		conn:      conn,
 		publisher: publisher,
+		stream:    stream,
 	}
 
 	return es, nil
 }
 
-func (es *pubEventStore) Publish(ctx context.Context, stream string, event events.Event) error {
+func (es *pubEventStore) Publish(ctx context.Context, event events.Event) error {
 	values, err := event.Encode()
 	if err != nil {
 		return err
@@ -64,7 +66,7 @@ func (es *pubEventStore) Publish(ctx context.Context, stream string, event event
 		Payload: data,
 	}
 
-	return es.publisher.Publish(ctx, stream, record)
+	return es.publisher.Publish(ctx, es.stream, record)
 }
 
 func (es *pubEventStore) Close() error {

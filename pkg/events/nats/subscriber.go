@@ -89,8 +89,7 @@ func (es *subEventStore) Subscribe(ctx context.Context, cfg events.SubscriberCon
 			ctx:     ctx,
 			logger:  es.logger,
 		},
-		DeliveryPolicy: cfg.DeliveryPolicy,
-		Ordered:        cfg.Ordered,
+		DeliveryPolicy: messaging.DeliverNewPolicy,
 	}
 
 	return es.pubsub.Subscribe(ctx, subCfg)
@@ -124,9 +123,8 @@ func (eh *eventHandler) Handle(msg *messaging.Message) error {
 		return err
 	}
 
-	err := eh.handler.Handle(eh.ctx, event)
-	if err != nil {
-		return fmt.Errorf("failed to handle nats event: %s", err)
+	if err := eh.handler.Handle(eh.ctx, event); err != nil {
+		eh.logger.Warn(fmt.Sprintf("failed to handle nats event: %s", err))
 	}
 
 	return nil
