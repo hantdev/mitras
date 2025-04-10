@@ -26,7 +26,13 @@ jobs:
 
       - name: Lint Protobuf Files
         run: |
-          protolint .
+          protolint . 
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.3
+          args: --config ./tools/config/golangci.yml
 
       - name: Build all Binaries
         run: |
@@ -54,7 +60,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
+          go-version: 1.22.x
           cache-dependency-path: "go.sum"
 
       - name: Check for changes in specific paths
@@ -64,7 +70,7 @@ jobs:
           base: main
           filters: |
             workflow:
-              - ".github/workflows/tests.yaml"
+              - ".github/workflows/tests.yml"
 
             auth:
               - "auth/**"
@@ -75,6 +81,15 @@ jobs:
               - "pkg/ulid/**"
               - "pkg/uuid/**"
 
+            bootstrap:
+              - "bootstrap/**"
+              - "cmd/bootstrap/**"
+              - "auth.pb.go"
+              - "auth_grpc.pb.go"
+              - "auth/**"
+              - "pkg/sdk/**"
+              - "pkg/events/**"
+
             certs:
               - "certs/**"
               - "cmd/certs/**"
@@ -83,36 +98,10 @@ jobs:
               - "auth/**"
               - "pkg/sdk/**"
 
-            channels:
-              - "channels/**"
-              - "cmd/channels/**"
-              - "auth.pb.go"
-              - "auth_grpc.pb.go"
-              - "auth/**"
-              - "pkg/sdk/**"
-              - "clients/api/grpc/**"
-              - "groups/api/grpc/**"
-              - "domains/api/grpc/**"
-              - "internal/grpc/**"
-
             cli:
               - "cli/**"
               - "cmd/cli/**"
               - "pkg/sdk/**"
-
-            clients:
-              - "clients/**"
-              - "cmd/clients/**"
-              - "auth.pb.go"
-              - "auth_grpc.pb.go"
-              - "auth/**"
-              - "pkg/ulid/**"
-              - "pkg/uuid/**"
-              - "pkg/events/**"
-              - "groups/api/grpc/**"
-              - "channels/api/grpc/**"
-              - "domains/api/grpc/**"
-              - "internal/grpc/**"
 
             coap:
               - "coap/**"
@@ -122,26 +111,26 @@ jobs:
               - "clients/**"
               - "pkg/messaging/**"
 
-            domains:
-              - "domains/**"
-              - "cmd/domains/**"
-              - "auth.pb.go"
-              - "auth_grpc.pb.go"
-              - "auth/**"
-              - "internal/grpc/**"
-
-            groups:
-              - "groups/**"
-              - "cmd/groups/**"
+            consumers:
+              - "consumers/**"
+              - "cmd/postgres-writer/**"
+              - "cmd/timescale-writer/**"
+              - "cmd/smpp-notifier/**"
+              - "cmd/smtp-notifier/**"
               - "auth.pb.go"
               - "auth_grpc.pb.go"
               - "auth/**"
               - "pkg/ulid/**"
               - "pkg/uuid/**"
-              - "clients/api/grpc/**"
-              - "channels/api/grpc/**"
-              - "domains/api/grpc/**"
-              - "internal/grpc/**"
+              - "pkg/messaging/**"
+
+            journal:
+              - "journal/**"
+              - "cmd/journal/**"
+              - "auth.pb.go"
+              - "auth_grpc.pb.go"
+              - "auth/**"
+              - "pkg/events/**"
 
             http:
               - "http/**"
@@ -155,13 +144,13 @@ jobs:
             internal:
               - "internal/**"
 
-            journal:
-              - "journal/**"
-              - "cmd/journal/**"
+            invitations:
+              - "invitations/**"
+              - "cmd/invitations/**"
               - "auth.pb.go"
               - "auth_grpc.pb.go"
               - "auth/**"
-              - "pkg/events/**"
+              - "pkg/sdk/**"
 
             logger:
               - "logger/**"
@@ -194,13 +183,17 @@ jobs:
               - "pkg/errors/**"
               - "pkg/groups/**"
               - "auth/**"
+              - "bootstrap/**"
               - "certs/**"
+              - "consumers/**"
               - "http/**"
               - "internal/*"
               - "internal/api/**"
               - "internal/apiutil/**"
               - "internal/groups/**"
               - "invitations/**"
+              - "provision/**"
+              - "readers/**"
               - "clients/**"
               - "users/**"
 
@@ -212,6 +205,31 @@ jobs:
 
             pkg-uuid:
               - "pkg/uuid/**"
+
+            provision:
+              - "provision/**"
+              - "cmd/provision/**"
+              - "logger/**"
+              - "pkg/sdk/**"
+
+            readers:
+              - "readers/**"
+              - "cmd/postgres-reader/**"
+              - "cmd/timescale-reader/**"
+              - "auth.pb.go"
+              - "auth_grpc.pb.go"
+              - "clients/**"
+              - "auth/**"
+
+            clients:
+              - "clients/**"
+              - "cmd/clients/**"
+              - "auth.pb.go"
+              - "auth_grpc.pb.go"
+              - "auth/**"
+              - "pkg/ulid/**"
+              - "pkg/uuid/**"
+              - "pkg/events/**"
 
             users:
               - "users/**"
@@ -235,7 +253,7 @@ jobs:
         run: |
           mkdir coverage
 
-      - name: Run journal tests
+      - name: Run Journal tests
         if: steps.changes.outputs.journal == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
           go test --race -v -count=1 -coverprofile=coverage/journal.out ./journal/...
@@ -245,10 +263,10 @@ jobs:
         run: |
           go test --race -v -count=1 -coverprofile=coverage/auth.out ./auth/...
 
-      - name: Run domains tests
-        if: steps.changes.outputs.domains == 'true' || steps.changes.outputs.workflow == 'true'
+      - name: Run bootstrap tests
+        if: steps.changes.outputs.bootstrap == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
-          go test --race -v -count=1 -coverprofile=coverage/domains.out ./domains/...
+          go test --race -v -count=1 -coverprofile=coverage/bootstrap.out ./bootstrap/...
 
       - name: Run certs tests
         if: steps.changes.outputs.certs == 'true' || steps.changes.outputs.workflow == 'true'
@@ -265,6 +283,11 @@ jobs:
         run: |
           go test --race -v -count=1 -coverprofile=coverage/coap.out ./coap/...
 
+      - name: Run consumers tests
+        if: steps.changes.outputs.consumers == 'true' || steps.changes.outputs.workflow == 'true'
+        run: |
+          go test --race -v -count=1 -coverprofile=coverage/consumers.out ./consumers/...
+
       - name: Run HTTP tests
         if: steps.changes.outputs.http == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
@@ -274,6 +297,11 @@ jobs:
         if: steps.changes.outputs.internal == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
           go test --race -v -count=1 -coverprofile=coverage/internal.out ./internal/...
+
+      - name: Run invitations tests
+        if: steps.changes.outputs.invitations == 'true' || steps.changes.outputs.workflow == 'true'
+        run: |
+          go test --race -v -count=1 -coverprofile=coverage/invitations.out ./invitations/...
 
       - name: Run logger tests
         if: steps.changes.outputs.logger == 'true' || steps.changes.outputs.workflow == 'true'
@@ -325,25 +353,25 @@ jobs:
         run: |
           go test --race -v -count=1 -coverprofile=coverage/pkg-uuid.out ./pkg/uuid/...
 
+      - name: Run provision tests
+        if: steps.changes.outputs.provision == 'true' || steps.changes.outputs.workflow == 'true'
+        run: |
+          go test --race -v -count=1 -coverprofile=coverage/provision.out ./provision/...
+
+      - name: Run readers tests
+        if: steps.changes.outputs.readers == 'true' || steps.changes.outputs.workflow == 'true'
+        run: |
+          go test --race -v -count=1 -coverprofile=coverage/readers.out ./readers/...
+
       - name: Run clients tests
         if: steps.changes.outputs.clients == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
           go test --race -v -count=1 -coverprofile=coverage/clients.out ./clients/...
 
-      - name: Run channels tests
-        if: steps.changes.outputs.channels == 'true' || steps.changes.outputs.workflow == 'true'
-        run: |
-          go test --race -v -count=1 -coverprofile=coverage/channels.out ./channels/...
-
       - name: Run users tests
         if: steps.changes.outputs.users == 'true' || steps.changes.outputs.workflow == 'true'
         run: |
           go test --race -v -count=1 -coverprofile=coverage/users.out ./users/...
-
-      - name: Run groups tests
-        if: steps.changes.outputs.groups == 'true' || steps.changes.outputs.workflow == 'true'
-        run: |
-          go test --race -v -count=1 -coverprofile=coverage/groups.out ./groups/...
 
       - name: Run WebSocket tests
         if: steps.changes.outputs.ws == 'true' || steps.changes.outputs.workflow == 'true'
@@ -355,5 +383,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/*.out
-          codecov_yml_path: tools/config/.codecov.yaml
+          codecov_yml_path: tools/config/codecov.yml
           verbose: true

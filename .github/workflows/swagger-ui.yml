@@ -16,8 +16,8 @@ jobs:
         id: swagger-ui-action
         uses: blokovi/swagger-ui-action@main
         with:
-          dir: "./apidocs/openapi"
-          pattern: "*.yaml"
+          dir: "./api/openapi"
+          pattern: "*.yml"
           debug: "true"
 
       - name: Deploy to GitHub Pages
