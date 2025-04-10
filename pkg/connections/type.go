@@ -32,11 +32,6 @@ func (c *ConnType) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func (c ConnType) MarshalJSON() ([]byte, error) {
-	cstr := c.String()
-	return json.Marshal(cstr)
-}
-
 func CheckConnType(c ConnType) error {
 	switch c {
 	case Publish:
@@ -56,17 +51,6 @@ func (c ConnType) String() string {
 		return "Subscribe"
 	default:
 		return fmt.Sprintf("Unknown connection type %d", c)
-	}
-}
-
-func (c ConnType) Permission() (string, error) {
-	switch c {
-	case Publish:
-		return "publish_permission", nil
-	case Subscribe:
-		return "subscribe_permission", nil
-	default:
-		return "", fmt.Errorf("Unknown connection type %d", c)
 	}
 }
 
