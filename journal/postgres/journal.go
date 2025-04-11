@@ -22,19 +22,8 @@ func NewRepository(db postgres.Database) journal.Repository {
 }
 
 func (repo *repository) Save(ctx context.Context, j journal.Journal) (err error) {
-	domain, ok := j.Attributes["domain"].(string)
-	if ok {
-		j.Domain = domain
-	}
-	if strings.HasPrefix(j.Operation, "domain.") {
-		domain, ok := j.Attributes["id"].(string)
-		if ok {
-			j.Domain = domain
-		}
-	}
-
-	q := `INSERT INTO journal (id, operation, occurred_at, attributes, metadata, domain)
-		VALUES (:id, :operation, :occurred_at, :attributes, :metadata, :domain);`
+	q := `INSERT INTO journal (id, operation, occurred_at, attributes, metadata)
+		VALUES (:id, :operation, :occurred_at, :attributes, :metadata);`
 
 	dbJournal, err := toDBJournal(j)
 	if err != nil {
@@ -51,7 +40,7 @@ func (repo *repository) Save(ctx context.Context, j journal.Journal) (err error)
 func (repo *repository) RetrieveAll(ctx context.Context, page journal.Page) (journal.JournalsPage, error) {
 	query := pageQuery(page)
 
-	sq := "operation, occurred_at, domain"
+	sq := "operation, occurred_at"
 	if page.WithAttributes {
 		sq += ", attributes"
 	}
@@ -125,7 +114,6 @@ func pageQuery(pm journal.Page) string {
 type dbJournal struct {
 	ID         string    `db:"id"`
 	Operation  string    `db:"operation"`
-	Domain     string    `db:"domain"`
 	OccurredAt time.Time `db:"occurred_at"`
 	Attributes []byte    `db:"attributes"`
 	Metadata   []byte    `db:"metadata"`
@@ -157,7 +145,6 @@ func toDBJournal(j journal.Journal) (dbJournal, error) {
 	return dbJournal{
 		ID:         j.ID,
 		Operation:  j.Operation,
-		Domain:     j.Domain,
 		OccurredAt: j.OccurredAt,
 		Attributes: attributes,
 		Metadata:   metadata,
@@ -181,7 +168,6 @@ func toJournal(dbj dbJournal) (journal.Journal, error) {
 
 	return journal.Journal{
 		Operation:  dbj.Operation,
-		Domain:     dbj.Domain,
 		OccurredAt: dbj.OccurredAt,
 		Attributes: attributes,
 		Metadata:   metadata,

@@ -11,12 +11,11 @@ import (
 	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/journal"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -38,8 +37,6 @@ func MakeHandler(svc journal.Service, authn smqauthn.Authentication, logger *slo
 	}
 
 	mux := chi.NewRouter()
-	idp := uuid.New()
-	mux.Use(api.RequestIDMiddleware(idp))
 
 	mux.With(api.AuthenticateMiddleware(authn, false)).Get("/journal/user/{userID}", otelhttp.NewHandler(kithttp.NewServer(
 		retrieveJournalsEndpoint(svc),
@@ -48,23 +45,12 @@ func MakeHandler(svc journal.Service, authn smqauthn.Authentication, logger *slo
 		opts...,
 	), "list_user_journals").ServeHTTP)
 
-	mux.Route("/{domainID}/journal", func(r chi.Router) {
-		r.Use(api.AuthenticateMiddleware(authn, true))
-
-		r.Get("/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
-			retrieveJournalsEndpoint(svc),
-			decodeRetrieveEntityJournalReq,
-			api.EncodeResponse,
-			opts...,
-		), "list__entity_journals").ServeHTTP)
-
-		r.Get("/client/{clientID}/telemetry", otelhttp.NewHandler(kithttp.NewServer(
-			retrieveClientTelemetryEndpoint(svc),
-			decodeRetrieveClientTelemetryReq,
-			api.EncodeResponse,
-			opts...,
-		), "view_client_telemetry").ServeHTTP)
-	})
+	mux.With(api.AuthenticateMiddleware(authn, true)).Get("/{domainID}/journal/{entityType}/{entityID}", otelhttp.NewHandler(kithttp.NewServer(
+		retrieveJournalsEndpoint(svc),
+		decodeRetrieveEntityJournalReq,
+		api.EncodeResponse,
+		opts...,
+	), "list__entity_journals").ServeHTTP)
 
 	mux.Get("/health", mitras.Health(svcName, instanceID))
 	mux.Handle("/metrics", promhttp.Handler())
@@ -170,12 +156,4 @@ func decodePageQuery(r *http.Request) (journal.Page, error) {
 		WithMetadata:   metadata,
 		Direction:      dir,
 	}, nil
-}
-
-func decodeRetrieveClientTelemetryReq(_ context.Context, r *http.Request) (interface{}, error) {
-	req := retrieveClientTelemetryReq{
-		clientID: chi.URLParam(r, "clientID"),
-	}
-
-	return req, nil
 }
