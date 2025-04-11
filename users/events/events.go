@@ -3,7 +3,6 @@ package events
 import (
 	"time"
 
-	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/events"
 	"github.com/hantdev/mitras/users"
 )
@@ -12,14 +11,7 @@ const (
 	userPrefix               = "user."
 	userCreate               = userPrefix + "create"
 	userUpdate               = userPrefix + "update"
-	userUpdateRole           = userPrefix + "update_role"
-	userUpdateTags           = userPrefix + "update_tags"
-	userUpdateSecret         = userPrefix + "update_secret"
-	userUpdateUsername       = userPrefix + "update_username"
-	userUpdateProfilePicture = userPrefix + "update_profile_picture"
-	userUpdateEmail          = userPrefix + "update_email"
-	userEnable               = userPrefix + "enable"
-	userDisable              = userPrefix + "disable"
+	userRemove               = userPrefix + "remove"
 	userView                 = userPrefix + "view"
 	profileView              = userPrefix + "view_profile"
 	userList                 = userPrefix + "list"
@@ -34,6 +26,8 @@ const (
 	oauthCallback            = userPrefix + "oauth_callback"
 	addClientPolicy          = userPrefix + "add_policy"
 	deleteUser               = userPrefix + "delete"
+	userUpdateUsername       = userPrefix + "update_username"
+	userUpdateProfilePicture = userPrefix + "update_profile_picture"
 )
 
 var (
@@ -41,10 +35,11 @@ var (
 	_ events.Event = (*updateUserEvent)(nil)
 	_ events.Event = (*updateProfilePictureEvent)(nil)
 	_ events.Event = (*updateUsernameEvent)(nil)
-	_ events.Event = (*changeUserStatusEvent)(nil)
+	_ events.Event = (*removeUserEvent)(nil)
 	_ events.Event = (*viewUserEvent)(nil)
 	_ events.Event = (*viewProfileEvent)(nil)
 	_ events.Event = (*listUserEvent)(nil)
+	_ events.Event = (*listUserByGroupEvent)(nil)
 	_ events.Event = (*searchUserEvent)(nil)
 	_ events.Event = (*identifyUserEvent)(nil)
 	_ events.Event = (*generateResetTokenEvent)(nil)
@@ -59,19 +54,14 @@ var (
 
 type createUserEvent struct {
 	users.User
-	authn.Session
-	requestID string
 }
 
 func (uce createUserEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   userCreate,
-		"id":          uce.ID,
-		"status":      uce.Status.String(),
-		"created_at":  uce.CreatedAt,
-		"token_type":  uce.Type.String(),
-		"super_admin": uce.SuperAdmin,
-		"request_id":  uce.requestID,
+		"operation":  userCreate,
+		"id":         uce.ID,
+		"status":     uce.Status.String(),
+		"created_at": uce.CreatedAt,
 	}
 
 	if uce.FirstName != "" {
@@ -99,18 +89,16 @@ func (uce createUserEvent) Encode() (map[string]interface{}, error) {
 type updateUserEvent struct {
 	users.User
 	operation string
-	authn.Session
-	requestID string
 }
 
 func (uce updateUserEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   uce.operation,
-		"updated_at":  uce.UpdatedAt,
-		"updated_by":  uce.UpdatedBy,
-		"token_type":  uce.Type.String(),
-		"super_admin": uce.SuperAdmin,
-		"request_id":  uce.requestID,
+		"operation":  userUpdate,
+		"updated_at": uce.UpdatedAt,
+		"updated_by": uce.UpdatedBy,
+	}
+	if uce.operation != "" {
+		val["operation"] = userUpdate + "_" + uce.operation
 	}
 
 	if uce.ID != "" {
@@ -146,18 +134,13 @@ func (uce updateUserEvent) Encode() (map[string]interface{}, error) {
 
 type updateUsernameEvent struct {
 	users.User
-	authn.Session
-	requestID string
 }
 
 func (une updateUsernameEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   userUpdateUsername,
-		"updated_at":  une.UpdatedAt,
-		"updated_by":  une.UpdatedBy,
-		"token_type":  une.Type.String(),
-		"super_admin": une.SuperAdmin,
-		"request_id":  une.requestID,
+		"operation":  userUpdateUsername,
+		"updated_at": une.UpdatedAt,
+		"updated_by": une.UpdatedBy,
 	}
 
 	if une.ID != "" {
@@ -178,18 +161,13 @@ func (une updateUsernameEvent) Encode() (map[string]interface{}, error) {
 
 type updateProfilePictureEvent struct {
 	users.User
-	authn.Session
-	requestID string
 }
 
 func (uppe updateProfilePictureEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   userUpdateProfilePicture,
-		"updated_at":  uppe.UpdatedAt,
-		"updated_by":  uppe.UpdatedBy,
-		"token_type":  uppe.Type.String(),
-		"super_admin": uppe.SuperAdmin,
-		"request_id":  uppe.requestID,
+		"operation":  userUpdateProfilePicture,
+		"updated_at": uppe.UpdatedAt,
+		"updated_by": uppe.UpdatedBy,
 	}
 
 	if uppe.ID != "" {
@@ -202,42 +180,31 @@ func (uppe updateProfilePictureEvent) Encode() (map[string]interface{}, error) {
 	return val, nil
 }
 
-type changeUserStatusEvent struct {
+type removeUserEvent struct {
 	id        string
-	operation string
 	status    string
 	updatedAt time.Time
 	updatedBy string
-	authn.Session
-	requestID string
 }
 
-func (rce changeUserStatusEvent) Encode() (map[string]interface{}, error) {
+func (rce removeUserEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":   rce.operation,
-		"id":          rce.id,
-		"status":      rce.status,
-		"updated_at":  rce.updatedAt,
-		"updated_by":  rce.updatedBy,
-		"token_type":  rce.Type.String(),
-		"super_admin": rce.SuperAdmin,
-		"request_id":  rce.requestID,
+		"operation":  userRemove,
+		"id":         rce.id,
+		"status":     rce.status,
+		"updated_at": rce.updatedAt,
+		"updated_by": rce.updatedBy,
 	}, nil
 }
 
 type viewUserEvent struct {
 	users.User
-	authn.Session
-	requestID string
 }
 
 func (vue viewUserEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   userView,
-		"id":          vue.ID,
-		"token_type":  vue.Type.String(),
-		"super_admin": vue.SuperAdmin,
-		"request_id":  vue.requestID,
+		"operation": userView,
+		"id":        vue.ID,
 	}
 
 	if vue.LastName != "" {
@@ -276,17 +243,12 @@ func (vue viewUserEvent) Encode() (map[string]interface{}, error) {
 
 type viewProfileEvent struct {
 	users.User
-	authn.Session
-	requestID string
 }
 
 func (vpe viewProfileEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   profileView,
-		"id":          vpe.ID,
-		"token_type":  vpe.Type.String(),
-		"super_admin": vpe.SuperAdmin,
-		"request_id":  vpe.requestID,
+		"operation": profileView,
+		"id":        vpe.ID,
 	}
 
 	if vpe.FirstName != "" {
@@ -322,19 +284,14 @@ func (vpe viewProfileEvent) Encode() (map[string]interface{}, error) {
 
 type listUserEvent struct {
 	users.Page
-	authn.Session
-	requestID string
 }
 
 func (lue listUserEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":   userList,
-		"total":       lue.Total,
-		"offset":      lue.Offset,
-		"limit":       lue.Limit,
-		"token_type":  lue.Type.String(),
-		"super_admin": lue.SuperAdmin,
-		"request_id":  lue.requestID,
+		"operation": userList,
+		"total":     lue.Total,
+		"offset":    lue.Offset,
+		"limit":     lue.Limit,
 	}
 
 	if lue.FirstName != "" {
@@ -374,18 +331,69 @@ func (lue listUserEvent) Encode() (map[string]interface{}, error) {
 	return val, nil
 }
 
+type listUserByGroupEvent struct {
+	users.Page
+	objectKind string
+	objectID   string
+}
+
+func (lcge listUserByGroupEvent) Encode() (map[string]interface{}, error) {
+	val := map[string]interface{}{
+		"operation":   userListByGroup,
+		"total":       lcge.Total,
+		"offset":      lcge.Offset,
+		"limit":       lcge.Limit,
+		"object_kind": lcge.objectKind,
+		"object_id":   lcge.objectID,
+	}
+
+	if lcge.Username != "" {
+		val["username"] = lcge.Username
+	}
+	if lcge.Order != "" {
+		val["order"] = lcge.Order
+	}
+	if lcge.Dir != "" {
+		val["dir"] = lcge.Dir
+	}
+	if lcge.Metadata != nil {
+		val["metadata"] = lcge.Metadata
+	}
+	if lcge.Domain != "" {
+		val["domain"] = lcge.Domain
+	}
+	if lcge.Tag != "" {
+		val["tag"] = lcge.Tag
+	}
+	if lcge.Permission != "" {
+		val["permission"] = lcge.Permission
+	}
+	if lcge.Status.String() != "" {
+		val["status"] = lcge.Status.String()
+	}
+	if lcge.FirstName != "" {
+		val["first_name"] = lcge.FirstName
+	}
+	if lcge.LastName != "" {
+		val["last_name"] = lcge.LastName
+	}
+	if lcge.Email != "" {
+		val["email"] = lcge.Email
+	}
+
+	return val, nil
+}
+
 type searchUserEvent struct {
 	users.Page
-	requestID string
 }
 
 func (sce searchUserEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":  userSearch,
-		"total":      sce.Total,
-		"offset":     sce.Offset,
-		"limit":      sce.Limit,
-		"request_id": sce.requestID,
+		"operation": userSearch,
+		"total":     sce.Total,
+		"offset":    sce.Offset,
+		"limit":     sce.Limit,
 	}
 	if sce.Username != "" {
 		val["username"] = sce.Username
@@ -407,128 +415,102 @@ func (sce searchUserEvent) Encode() (map[string]interface{}, error) {
 }
 
 type identifyUserEvent struct {
-	userID    string
-	requestID string
+	userID string
 }
 
 func (ise identifyUserEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  userIdentify,
-		"id":         ise.userID,
-		"request_id": ise.requestID,
+		"operation": userIdentify,
+		"id":        ise.userID,
 	}, nil
 }
 
 type generateResetTokenEvent struct {
-	email     string
-	host      string
-	requestID string
+	email string
+	host  string
 }
 
 func (grte generateResetTokenEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  generateResetToken,
-		"email":      grte.email,
-		"host":       grte.host,
-		"request_id": grte.requestID,
+		"operation": generateResetToken,
+		"email":     grte.email,
+		"host":      grte.host,
 	}, nil
 }
 
 type issueTokenEvent struct {
-	username  string
-	requestID string
+	username string
 }
 
 func (ite issueTokenEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  issueToken,
-		"username":   ite.username,
-		"request_id": ite.requestID,
+		"operation": issueToken,
+		"username":  ite.username,
 	}, nil
 }
 
-type refreshTokenEvent struct {
-	requestID string
-}
+type refreshTokenEvent struct{}
 
 func (rte refreshTokenEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  refreshToken,
-		"request_id": rte.requestID,
+		"operation": refreshToken,
 	}, nil
 }
 
-type resetSecretEvent struct {
-	requestID string
-}
+type resetSecretEvent struct{}
 
 func (rse resetSecretEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  resetSecret,
-		"request_id": rse.requestID,
+		"operation": resetSecret,
 	}, nil
 }
 
 type sendPasswordResetEvent struct {
-	host      string
-	email     string
-	user      string
-	requestID string
+	host  string
+	email string
+	user  string
 }
 
 func (spre sendPasswordResetEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  sendPasswordReset,
-		"host":       spre.host,
-		"email":      spre.email,
-		"user":       spre.user,
-		"request_id": spre.requestID,
+		"operation": sendPasswordReset,
+		"host":      spre.host,
+		"email":     spre.email,
+		"user":      spre.user,
 	}, nil
 }
 
 type oauthCallbackEvent struct {
-	userID    string
-	requestID string
+	userID string
 }
 
 func (oce oauthCallbackEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":  oauthCallback,
-		"user_id":    oce.userID,
-		"request_id": oce.requestID,
+		"operation": oauthCallback,
+		"user_id":   oce.userID,
 	}, nil
 }
 
 type deleteUserEvent struct {
 	id string
-	authn.Session
-	requestID string
 }
 
 func (dce deleteUserEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":   deleteUser,
-		"id":          dce.id,
-		"token_type":  dce.Type.String(),
-		"super_admin": dce.SuperAdmin,
-		"request_id":  dce.requestID,
+		"operation": deleteUser,
+		"id":        dce.id,
 	}, nil
 }
 
 type addUserPolicyEvent struct {
 	id   string
 	role string
-	authn.Session
-	requestID string
 }
 
 func (acpe addUserPolicyEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"operation":   addClientPolicy,
-		"id":          acpe.id,
-		"role":        acpe.role,
-		"token_type":  acpe.Type.String(),
-		"super_admin": acpe.SuperAdmin,
-		"request_id":  acpe.requestID,
+		"operation": addClientPolicy,
+		"id":        acpe.id,
+		"role":      acpe.role,
 	}, nil
 }

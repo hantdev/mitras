@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"time"
 
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
 )

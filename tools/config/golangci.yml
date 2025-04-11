@@ -20,17 +20,14 @@ linters-settings:
     no-extra-aliases: false
     alias:
       - pkg: github.com/hantdev/mitras/logger
-        alias: mitraslog
+        alias: smqlog
       - pkg: github.com/hantdev/mitras/pkg/errors/service
         alias: svcerr
       - pkg: github.com/hantdev/mitras/pkg/errors/repository
         alias: repoerr
       - pkg: github.com/hantdev/mitras/pkg/sdk/mocks
         alias: sdkmocks
-      - pkg: github.com/hantdev/mitras/api/http/util
-        alias: apiutil
-      - pkg: github.com/hantdev/mitras/api/http
-        alias: api
+
   gocritic:
     enabled-checks:
       - importShadow

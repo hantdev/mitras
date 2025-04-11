@@ -1,2 +1,2 @@
-// Package tools contains tools for Mitras
+// Package tools contains tools for mitras.
 package tools

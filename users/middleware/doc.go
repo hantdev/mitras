@@ -1,2 +1,2 @@
-// Package middleware provides middleware for Mitras Users service.
+// Package middleware provides middleware for mitras Users service.
 package middleware

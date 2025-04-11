@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/users"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +19,10 @@ const (
 	name    = "user"
 )
 
-var validID = testsutil.GenerateUUID(&testing.T{})
+var (
+	validID = testsutil.GenerateUUID(&testing.T{})
+	domain  = testsutil.GenerateUUID(&testing.T{})
+)
 
 func TestCreateUserReqValidate(t *testing.T) {
 	cases := []struct {
@@ -193,6 +196,43 @@ func TestSearchUsersReqValidate(t *testing.T) {
 			desc: "empty query",
 			req:  searchUsersReq{},
 			err:  apiutil.ErrEmptySearchQuery,
+		},
+	}
+	for _, c := range cases {
+		err := c.req.validate()
+		assert.Equal(t, c.err, err)
+	}
+}
+
+func TestListMembersByObjectReqValidate(t *testing.T) {
+	cases := []struct {
+		desc string
+		req  listMembersByObjectReq
+		err  error
+	}{
+		{
+			desc: "valid request",
+			req: listMembersByObjectReq{
+				objectKind: "group",
+				objectID:   validID,
+			},
+			err: nil,
+		},
+		{
+			desc: "empty object kind",
+			req: listMembersByObjectReq{
+				objectKind: "",
+				objectID:   validID,
+			},
+			err: apiutil.ErrMissingMemberKind,
+		},
+		{
+			desc: "empty object id",
+			req: listMembersByObjectReq{
+				objectKind: "group",
+				objectID:   "",
+			},
+			err: apiutil.ErrMissingID,
 		},
 	}
 	for _, c := range cases {
@@ -468,24 +508,24 @@ func TestLoginUserReqValidate(t *testing.T) {
 		{
 			desc: "valid request with identity",
 			req: loginUserReq{
-				Username: "example",
-				Password: secret,
+				Identity: "example",
+				Secret:   secret,
 			},
 			err: nil,
 		},
 		{
 			desc: "empty identity",
 			req: loginUserReq{
-				Username: "",
-				Password: secret,
+				Identity: "",
+				Secret:   secret,
 			},
 			err: apiutil.ErrMissingIdentity,
 		},
 		{
 			desc: "empty secret",
 			req: loginUserReq{
-				Password: "",
-				Username: "example",
+				Secret:   "",
+				Identity: "example",
 			},
 			err: apiutil.ErrMissingPass,
 		},
@@ -615,5 +655,201 @@ func TestResetTokenReqValidate(t *testing.T) {
 	for _, c := range cases {
 		err := c.req.validate()
 		assert.Equal(t, c.err, err)
+	}
+}
+
+func TestAssignUsersRequestValidate(t *testing.T) {
+	cases := []struct {
+		desc string
+		req  assignUsersReq
+		err  error
+	}{
+		{
+			desc: "valid request",
+			req: assignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{validID},
+				Relation: valid,
+			},
+			err: nil,
+		},
+		{
+			desc: "empty id",
+			req: assignUsersReq{
+				groupID:  "",
+				UserIDs:  []string{validID},
+				Relation: valid,
+			},
+			err: apiutil.ErrMissingID,
+		},
+		{
+			desc: "empty users",
+			req: assignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{},
+				Relation: valid,
+			},
+			err: apiutil.ErrEmptyList,
+		},
+		{
+			desc: "empty relation",
+			req: assignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{validID},
+				Relation: "",
+			},
+			err: apiutil.ErrMissingRelation,
+		},
+	}
+	for _, c := range cases {
+		err := c.req.validate()
+		assert.Equal(t, c.err, err, "%s: expected %s got %s\n", c.desc, c.err, err)
+	}
+}
+
+func TestUnassignUsersRequestValidate(t *testing.T) {
+	cases := []struct {
+		desc string
+		req  unassignUsersReq
+		err  error
+	}{
+		{
+			desc: "valid request",
+			req: unassignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{validID},
+				Relation: valid,
+			},
+			err: nil,
+		},
+		{
+			desc: "empty id",
+			req: unassignUsersReq{
+				groupID:  "",
+				UserIDs:  []string{validID},
+				Relation: valid,
+			},
+			err: apiutil.ErrMissingID,
+		},
+		{
+			desc: "empty users",
+			req: unassignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{},
+				Relation: valid,
+			},
+			err: apiutil.ErrEmptyList,
+		},
+		{
+			desc: "empty relation",
+			req: unassignUsersReq{
+				groupID:  validID,
+				UserIDs:  []string{validID},
+				Relation: "",
+			},
+			err: nil,
+		},
+	}
+	for _, c := range cases {
+		err := c.req.validate()
+		assert.Equal(t, c.err, err, "%s: expected %s got %s\n", c.desc, c.err, err)
+	}
+}
+
+func TestAssignGroupsRequestValidate(t *testing.T) {
+	cases := []struct {
+		desc string
+		req  assignGroupsReq
+		err  error
+	}{
+		{
+			desc: "valid request",
+			req: assignGroupsReq{
+				domainID: domain,
+				groupID:  validID,
+				GroupIDs: []string{validID},
+			},
+			err: nil,
+		},
+		{
+			desc: "empty group id",
+			req: assignGroupsReq{
+				domainID: domain,
+				groupID:  "",
+				GroupIDs: []string{validID},
+			},
+			err: apiutil.ErrMissingID,
+		},
+		{
+			desc: "empty user group ids",
+			req: assignGroupsReq{
+				domainID: domain,
+				groupID:  validID,
+				GroupIDs: []string{},
+			},
+			err: apiutil.ErrEmptyList,
+		},
+		{
+			desc: "empty domain id",
+			req: assignGroupsReq{
+				domainID: "",
+				groupID:  validID,
+				GroupIDs: []string{validID},
+			},
+			err: apiutil.ErrMissingDomainID,
+		},
+	}
+	for _, c := range cases {
+		err := c.req.validate()
+		assert.Equal(t, c.err, err, "%s: expected %s got %s\n", c.desc, c.err, err)
+	}
+}
+
+func TestUnassignGroupsRequestValidate(t *testing.T) {
+	cases := []struct {
+		desc string
+		req  unassignGroupsReq
+		err  error
+	}{
+		{
+			desc: "valid request",
+			req: unassignGroupsReq{
+				domainID: domain,
+				groupID:  validID,
+				GroupIDs: []string{validID},
+			},
+			err: nil,
+		},
+		{
+			desc: "empty group id",
+			req: unassignGroupsReq{
+				domainID: domain,
+				groupID:  "",
+				GroupIDs: []string{validID},
+			},
+			err: apiutil.ErrMissingID,
+		},
+		{
+			desc: "empty user group ids",
+			req: unassignGroupsReq{
+				domainID: domain,
+				groupID:  validID,
+				GroupIDs: []string{},
+			},
+			err: apiutil.ErrEmptyList,
+		},
+		{
+			desc: "empty domain id",
+			req: unassignGroupsReq{
+				domainID: "",
+				groupID:  validID,
+				GroupIDs: []string{valid},
+			},
+			err: apiutil.ErrMissingDomainID,
+		},
+	}
+	for _, c := range cases {
+		err := c.req.validate()
+		assert.Equal(t, c.err, err, "%s: expected %s got %s\n", c.desc, c.err, err)
 	}
 }

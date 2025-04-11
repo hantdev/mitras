@@ -5,7 +5,7 @@ import (
 	"net/mail"
 	"time"
 
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/postgres"
@@ -53,6 +53,7 @@ type UserRepository struct {
 	DB postgres.Database
 }
 
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines"
 type Repository interface {
 	// RetrieveByID retrieves user by their unique ID.
 	RetrieveByID(ctx context.Context, id string) (User, error)
@@ -131,6 +132,8 @@ type Page struct {
 
 // Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
+//
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
 type Service interface {
 	// Register creates new user. In case of the failed registration, a
 	// non-nil error value is returned.
@@ -144,6 +147,9 @@ type Service interface {
 
 	// ListUsers retrieves users list for a valid auth token.
 	ListUsers(ctx context.Context, session authn.Session, pm Page) (UsersPage, error)
+
+	// ListMembers retrieves everything that is assigned to a group/client identified by objectID.
+	ListMembers(ctx context.Context, session authn.Session, objectKind, objectID string, pm Page) (MembersPage, error)
 
 	// SearchUsers searches for users with provided filters for a valid auth token.
 	SearchUsers(ctx context.Context, pm Page) (UsersPage, error)

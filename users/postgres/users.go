@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/hantdev/mitras/api/http"
 	"github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	"github.com/hantdev/mitras/pkg/postgres"
