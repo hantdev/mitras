@@ -4,11 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/pkg/authn"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
+	"github.com/go-kit/kit/metrics"
 )
 
 var _ clients.Service = (*metricsMiddleware)(nil)
@@ -30,7 +29,7 @@ func MetricsMiddleware(svc clients.Service, counter metrics.Counter, latency met
 	}
 }
 
-func (ms *metricsMiddleware) CreateClients(ctx context.Context, session authn.Session, clients ...clients.Client) ([]clients.Client, []roles.RoleProvision, error) {
+func (ms *metricsMiddleware) CreateClients(ctx context.Context, session authn.Session, clients ...clients.Client) ([]clients.Client, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "register_clients").Add(1)
 		ms.latency.With("method", "register_clients").Observe(time.Since(begin).Seconds())
@@ -38,28 +37,20 @@ func (ms *metricsMiddleware) CreateClients(ctx context.Context, session authn.Se
 	return ms.svc.CreateClients(ctx, session, clients...)
 }
 
-func (ms *metricsMiddleware) View(ctx context.Context, session authn.Session, id string, withRoles bool) (clients.Client, error) {
+func (ms *metricsMiddleware) View(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "view_client").Add(1)
 		ms.latency.With("method", "view_client").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.View(ctx, session, id, withRoles)
+	return ms.svc.View(ctx, session, id)
 }
 
-func (ms *metricsMiddleware) ListClients(ctx context.Context, session authn.Session, pm clients.Page) (clients.ClientsPage, error) {
+func (ms *metricsMiddleware) ListClients(ctx context.Context, session authn.Session, reqUserID string, pm clients.Page) (clients.ClientsPage, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_clients").Add(1)
 		ms.latency.With("method", "list_clients").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ListClients(ctx, session, pm)
-}
-
-func (ms *metricsMiddleware) ListUserClients(ctx context.Context, session authn.Session, userID string, pm clients.Page) (clients.ClientsPage, error) {
-	defer func(begin time.Time) {
-		ms.counter.With("method", "list_user_clients").Add(1)
-		ms.latency.With("method", "list_user_clients").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return ms.svc.ListUserClients(ctx, session, userID, pm)
+	return ms.svc.ListClients(ctx, session, reqUserID, pm)
 }
 
 func (ms *metricsMiddleware) Update(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {

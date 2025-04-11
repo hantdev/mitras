@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 // Role represents Client role.

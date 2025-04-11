@@ -10,20 +10,18 @@ import (
 	"testing"
 
 	"github.com/0x6flab/namegenerator"
-	"github.com/go-chi/chi/v5"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
-	clientsapi "github.com/hantdev/mitras/clients/api/http"
+	httpapi "github.com/hantdev/mitras/clients/api/http"
 	"github.com/hantdev/mitras/clients/mocks"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/roles"
-	"github.com/hantdev/mitras/pkg/uuid"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -92,8 +90,7 @@ func newClientsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentic
 
 	logger := smqlog.NewMock()
 	mux := chi.NewRouter()
-	idp := uuid.NewMock()
-	clientsapi.MakeHandler(svc, authn, mux, logger, "", idp)
+	httpapi.MakeHandler(svc, authn, mux, logger, "")
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -225,7 +222,7 @@ func TestCreateClient(t *testing.T) {
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("CreateClients", mock.Anything, tc.authnRes, []clients.Client{tc.client}).Return([]clients.Client{tc.client}, []roles.RoleProvision{}, tc.err)
+			svcCall := svc.On("CreateClients", mock.Anything, tc.authnRes, tc.client).Return([]clients.Client{tc.client}, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -395,7 +392,7 @@ func TestCreateClients(t *testing.T) {
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("CreateClients", mock.Anything, tc.authnRes, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, []roles.RoleProvision{}, tc.err)
+			svcCall := svc.On("CreateClients", mock.Anything, tc.authnRes, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 
@@ -742,7 +739,7 @@ func TestListClients(t *testing.T) {
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("ListClients", mock.Anything, tc.authnRes, mock.Anything).Return(tc.listClientsResponse, tc.err)
+			svcCall := svc.On("ListClients", mock.Anything, tc.authnRes, "", mock.Anything).Return(tc.listClientsResponse, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 
@@ -823,7 +820,7 @@ func TestViewClient(t *testing.T) {
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("View", mock.Anything, tc.authnRes, tc.id, false).Return(clients.Client{}, tc.err)
+			svcCall := svc.On("View", mock.Anything, tc.authnRes, tc.id).Return(clients.Client{}, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -1555,7 +1552,7 @@ func TestSetClientParentGroupEndpoint(t *testing.T) {
 			id:          validID,
 			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
 			contentType: contentType,
-			status:      http.StatusOK,
+			status:      http.StatusAccepted,
 			err:         nil,
 		},
 		{

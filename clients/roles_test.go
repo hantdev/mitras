@@ -3,8 +3,8 @@ package clients_test
 import (
 	"testing"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/stretchr/testify/assert"
 )
 

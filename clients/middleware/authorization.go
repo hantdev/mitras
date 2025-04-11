@@ -3,31 +3,29 @@ package middleware
 import (
 	"context"
 
-	"github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/pkg/authn"
-	smqauthz "github.com/hantdev/mitras/pkg/authz"
+	"github.com/hantdev/mitras/pkg/authz"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
 	"github.com/hantdev/mitras/pkg/svcutil"
 )
 
 var (
-	errView                    = errors.New("not authorized to view thing")
-	errUpdate                  = errors.New("not authorized to update thing")
-	errUpdateTags              = errors.New("not authorized to update thing tags")
-	errUpdateSecret            = errors.New("not authorized to update thing secret")
-	errEnable                  = errors.New("not authorized to enable thing")
-	errDisable                 = errors.New("not authorized to disable thing")
-	errDelete                  = errors.New("not authorized to delete thing")
-	errSetParentGroup          = errors.New("not authorized to set parent group to thing")
-	errRemoveParentGroup       = errors.New("not authorized to remove parent group from thing")
-	errDomainCreateClients     = errors.New("not authorized to create thing in domain")
-	errGroupSetChildClients    = errors.New("not authorized to set child thing for group")
-	errGroupRemoveChildClients = errors.New("not authorized to remove child thing for group")
+	errView                    = errors.New("not authorized to view client")
+	errUpdate                  = errors.New("not authorized to update client")
+	errUpdateTags              = errors.New("not authorized to update client tags")
+	errUpdateSecret            = errors.New("not authorized to update client secret")
+	errEnable                  = errors.New("not authorized to enable client")
+	errDisable                 = errors.New("not authorized to disable client")
+	errDelete                  = errors.New("not authorized to delete client")
+	errSetParentGroup          = errors.New("not authorized to set parent group to client")
+	errRemoveParentGroup       = errors.New("not authorized to remove parent group from client")
+	errDomainCreateClients     = errors.New("not authorized to create client in domain")
+	errGroupSetChildClients    = errors.New("not authorized to set child client for group")
+	errGroupRemoveChildClients = errors.New("not authorized to remove child client for group")
 )
 
 var _ clients.Service = (*authorizationMiddleware)(nil)
@@ -35,16 +33,16 @@ var _ clients.Service = (*authorizationMiddleware)(nil)
 type authorizationMiddleware struct {
 	svc    clients.Service
 	repo   clients.Repository
-	authz  smqauthz.Authorization
+	authz  authz.Authorization
 	opp    svcutil.OperationPerm
 	extOpp svcutil.ExternalOperationPerm
 	rmMW.RoleManagerAuthorizationMiddleware
 }
 
 // AuthorizationMiddleware adds authorization to the clients service.
-func AuthorizationMiddleware(entityType string, svc clients.Service, authz smqauthz.Authorization, repo clients.Repository, thingsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission, extOpPerm map[svcutil.ExternalOperation]svcutil.Permission) (clients.Service, error) {
+func AuthorizationMiddleware(entityType string, svc clients.Service, authz authz.Authorization, repo clients.Repository, clientsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission, extOpPerm map[svcutil.ExternalOperation]svcutil.Permission) (clients.Service, error) {
 	opp := clients.NewOperationPerm()
-	if err := opp.AddOperationPermissionMap(thingsOpPerm); err != nil {
+	if err := opp.AddOperationPermissionMap(clientsOpPerm); err != nil {
 		return nil, err
 	}
 	if err := opp.Validate(); err != nil {
@@ -71,48 +69,22 @@ func AuthorizationMiddleware(entityType string, svc clients.Service, authz smqau
 	}, nil
 }
 
-func (am *authorizationMiddleware) CreateClients(ctx context.Context, session authn.Session, client ...clients.Client) ([]clients.Client, []roles.RoleProvision, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.CreateOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return []clients.Client{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.extAuthorize(ctx, clients.DomainOpCreateClient, smqauthz.PolicyReq{
+func (am *authorizationMiddleware) CreateClients(ctx context.Context, session authn.Session, client ...clients.Client) ([]clients.Client, error) {
+	if err := am.extAuthorize(ctx, clients.DomainOpCreateClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
 		ObjectType:  policies.DomainType,
 		Object:      session.DomainID,
 	}); err != nil {
-		return []clients.Client{}, []roles.RoleProvision{}, errors.Wrap(err, errDomainCreateClients)
+		return []clients.Client{}, errors.Wrap(err, errDomainCreateClients)
 	}
 
 	return am.svc.CreateClients(ctx, session, client...)
 }
 
-func (am *authorizationMiddleware) View(ctx context.Context, session authn.Session, id string, withRoles bool) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ReadOp,
-			EntityID:         id,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpViewClient, smqauthz.PolicyReq{
+func (am *authorizationMiddleware) View(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
+	if err := am.authorize(ctx, clients.OpViewClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -121,66 +93,19 @@ func (am *authorizationMiddleware) View(ctx context.Context, session authn.Sessi
 	}); err != nil {
 		return clients.Client{}, errors.Wrap(err, errView)
 	}
-	return am.svc.View(ctx, session, id, withRoles)
+	return am.svc.View(ctx, session, id)
 }
 
-func (am *authorizationMiddleware) ListClients(ctx context.Context, session authn.Session, pm clients.Page) (clients.ClientsPage, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ListOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return clients.ClientsPage{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.checkSuperAdmin(ctx, session.UserID); err == nil {
+func (am *authorizationMiddleware) ListClients(ctx context.Context, session authn.Session, reqUserID string, pm clients.Page) (clients.ClientsPage, error) {
+	if err := am.checkSuperAdmin(ctx, session.UserID); err != nil {
 		session.SuperAdmin = true
 	}
 
-	return am.svc.ListClients(ctx, session, pm)
-}
-
-func (am *authorizationMiddleware) ListUserClients(ctx context.Context, session authn.Session, userID string, pm clients.Page) (clients.ClientsPage, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ListOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return clients.ClientsPage{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.checkSuperAdmin(ctx, session.UserID); err != nil {
-		return clients.ClientsPage{}, err
-	}
-
-	return am.svc.ListUserClients(ctx, session, userID, pm)
+	return am.svc.ListClients(ctx, session, reqUserID, pm)
 }
 
 func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         client.ID,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpUpdateClient, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -194,20 +119,7 @@ func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Ses
 }
 
 func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         client.ID,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpUpdateClientTags, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClientTags, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -221,20 +133,7 @@ func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn
 }
 
 func (am *authorizationMiddleware) UpdateSecret(ctx context.Context, session authn.Session, id, key string) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpUpdateClientSecret, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClientSecret, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -247,20 +146,7 @@ func (am *authorizationMiddleware) UpdateSecret(ctx context.Context, session aut
 }
 
 func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpEnableClient, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpEnableClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -274,20 +160,7 @@ func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Ses
 }
 
 func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return clients.Client{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpDisableClient, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpDisableClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -300,19 +173,7 @@ func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Se
 }
 
 func (am *authorizationMiddleware) Delete(ctx context.Context, session authn.Session, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.DeleteOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-	if err := am.authorize(ctx, clients.OpDeleteClient, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpDeleteClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -326,20 +187,7 @@ func (am *authorizationMiddleware) Delete(ctx context.Context, session authn.Ses
 }
 
 func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session authn.Session, parentGroupID string, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpSetParentGroup, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpSetParentGroup, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -349,7 +197,7 @@ func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session a
 		return errors.Wrap(err, errSetParentGroup)
 	}
 
-	if err := am.extAuthorize(ctx, clients.GroupOpSetChildClient, smqauthz.PolicyReq{
+	if err := am.extAuthorize(ctx, clients.GroupOpSetChildClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -362,20 +210,7 @@ func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session a
 }
 
 func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, session authn.Session, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ClientsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.DeleteOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, clients.OpRemoveParentGroup, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpRemoveParentGroup, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -385,18 +220,18 @@ func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, sessio
 		return errors.Wrap(err, errRemoveParentGroup)
 	}
 
-	th, err := am.repo.RetrieveByID(ctx, id)
+	cli, err := am.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 
-	if th.ParentGroup != "" {
-		if err := am.extAuthorize(ctx, clients.GroupOpSetChildClient, smqauthz.PolicyReq{
+	if cli.ParentGroup != "" {
+		if err := am.extAuthorize(ctx, clients.GroupOpSetChildClient, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
 			ObjectType:  policies.GroupType,
-			Object:      th.ParentGroup,
+			Object:      cli.ParentGroup,
 		}); err != nil {
 			return errors.Wrap(err, errGroupRemoveChildClients)
 		}
@@ -405,7 +240,7 @@ func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, sessio
 	return nil
 }
 
-func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Operation, req smqauthz.PolicyReq) error {
+func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Operation, req authz.PolicyReq) error {
 	perm, err := am.opp.GetPermission(op)
 	if err != nil {
 		return err
@@ -420,12 +255,11 @@ func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Ope
 	return nil
 }
 
-func (am *authorizationMiddleware) extAuthorize(ctx context.Context, extOp svcutil.ExternalOperation, req smqauthz.PolicyReq) error {
+func (am *authorizationMiddleware) extAuthorize(ctx context.Context, extOp svcutil.ExternalOperation, req authz.PolicyReq) error {
 	perm, err := am.extOpp.GetPermission(extOp)
 	if err != nil {
 		return err
 	}
-
 	req.Permission = perm.String()
 
 	if err := am.authz.Authorize(ctx, req); err != nil {
@@ -436,7 +270,7 @@ func (am *authorizationMiddleware) extAuthorize(ctx context.Context, extOp svcut
 }
 
 func (am *authorizationMiddleware) checkSuperAdmin(ctx context.Context, userID string) error {
-	if err := am.authz.Authorize(ctx, smqauthz.PolicyReq{
+	if err := am.authz.Authorize(ctx, authz.PolicyReq{
 		SubjectType: policies.UserType,
 		Subject:     userID,
 		Permission:  policies.AdminPermission,

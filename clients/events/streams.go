@@ -3,34 +3,14 @@ package events
 import (
 	"context"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/events"
 	"github.com/hantdev/mitras/pkg/events/store"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmEvents "github.com/hantdev/mitras/pkg/roles/rolemanager/events"
 )
 
-const (
-	mitrasPrefix       = "mitras."
-	createStream       = mitrasPrefix + clientCreate
-	updateStream       = mitrasPrefix + clientUpdate
-	updateTagsStream   = mitrasPrefix + clientUpdateTags
-	updateSecretStream = mitrasPrefix + clientUpdateSecret
-	enableStream       = mitrasPrefix + clientEnable
-	disableStream      = mitrasPrefix + clientDisable
-	removeStream       = mitrasPrefix + clientRemove
-	viewStream         = mitrasPrefix + clientView
-	viewPermsStream    = mitrasPrefix + clientViewPerms
-	listStream         = mitrasPrefix + clientList
-	listByUserStream   = mitrasPrefix + clientListByUser
-	listByGroupStream  = mitrasPrefix + clientListByGroup
-	identifyStream     = mitrasPrefix + clientIdentify
-	authorizeStream    = mitrasPrefix + clientAuthorize
-	setParentStream    = mitrasPrefix + clientSetParent
-	removeParentStream = mitrasPrefix + clientRemoveParent
-)
+const streamID = "mitras.clients"
 
 var _ clients.Service = (*eventStore)(nil)
 
@@ -43,7 +23,7 @@ type eventStore struct {
 // NewEventStoreMiddleware returns wrapper around clients service that sends
 // events to event store.
 func NewEventStoreMiddleware(ctx context.Context, svc clients.Service, url string) (clients.Service, error) {
-	publisher, err := store.NewPublisher(ctx, url)
+	publisher, err := store.NewPublisher(ctx, url, streamID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,25 +36,22 @@ func NewEventStoreMiddleware(ctx context.Context, svc clients.Service, url strin
 	}, nil
 }
 
-func (es *eventStore) CreateClients(ctx context.Context, session authn.Session, clients ...clients.Client) ([]clients.Client, []roles.RoleProvision, error) {
-	clis, rps, err := es.svc.CreateClients(ctx, session, clients...)
+func (es *eventStore) CreateClients(ctx context.Context, session authn.Session, clients ...clients.Client) ([]clients.Client, error) {
+	clis, err := es.svc.CreateClients(ctx, session, clients...)
 	if err != nil {
-		return clis, rps, err
+		return clis, err
 	}
 
 	for _, cli := range clis {
 		event := createClientEvent{
-			Client:           cli,
-			rolesProvisioned: rps,
-			Session:          session,
-			requestID:        middleware.GetReqID(ctx),
+			cli,
 		}
-		if err := es.Publish(ctx, createStream, event); err != nil {
-			return clis, rps, err
+		if err := es.Publish(ctx, event); err != nil {
+			return clis, err
 		}
 	}
 
-	return clis, rps, nil
+	return clis, nil
 }
 
 func (es *eventStore) Update(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
@@ -83,7 +60,7 @@ func (es *eventStore) Update(ctx context.Context, session authn.Session, client 
 		return cli, err
 	}
 
-	return es.update(ctx, session, clientUpdate, updateStream, cli)
+	return es.update(ctx, "", cli)
 }
 
 func (es *eventStore) UpdateTags(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
@@ -92,7 +69,7 @@ func (es *eventStore) UpdateTags(ctx context.Context, session authn.Session, cli
 		return cli, err
 	}
 
-	return es.update(ctx, session, clientUpdateTags, updateTagsStream, cli)
+	return es.update(ctx, "tags", cli)
 }
 
 func (es *eventStore) UpdateSecret(ctx context.Context, session authn.Session, id, key string) (clients.Client, error) {
@@ -101,71 +78,47 @@ func (es *eventStore) UpdateSecret(ctx context.Context, session authn.Session, i
 		return cli, err
 	}
 
-	return es.update(ctx, session, clientUpdateSecret, updateSecretStream, cli)
+	return es.update(ctx, "secret", cli)
 }
 
-func (es *eventStore) update(ctx context.Context, session authn.Session, operation, stream string, client clients.Client) (clients.Client, error) {
+func (es *eventStore) update(ctx context.Context, operation string, client clients.Client) (clients.Client, error) {
 	event := updateClientEvent{
-		Client:    client,
-		operation: operation,
-		Session:   session,
-		requestID: middleware.GetReqID(ctx),
+		client, operation,
 	}
 
-	if err := es.Publish(ctx, stream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return client, err
 	}
 
 	return client, nil
 }
 
-func (es *eventStore) View(ctx context.Context, session authn.Session, id string, withRoles bool) (clients.Client, error) {
-	cli, err := es.svc.View(ctx, session, id, withRoles)
+func (es *eventStore) View(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
+	cli, err := es.svc.View(ctx, session, id)
 	if err != nil {
 		return cli, err
 	}
 
 	event := viewClientEvent{
-		Client:    cli,
-		Session:   session,
-		requestID: middleware.GetReqID(ctx),
+		cli,
 	}
-	if err := es.Publish(ctx, viewStream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return cli, err
 	}
 
 	return cli, nil
 }
 
-func (es *eventStore) ListClients(ctx context.Context, session authn.Session, pm clients.Page) (clients.ClientsPage, error) {
-	cp, err := es.svc.ListClients(ctx, session, pm)
+func (es *eventStore) ListClients(ctx context.Context, session authn.Session, reqUserID string, pm clients.Page) (clients.ClientsPage, error) {
+	cp, err := es.svc.ListClients(ctx, session, reqUserID, pm)
 	if err != nil {
 		return cp, err
 	}
 	event := listClientEvent{
+		reqUserID,
 		pm,
-		session,
-		middleware.GetReqID(ctx),
 	}
-	if err := es.Publish(ctx, listStream, event); err != nil {
-		return cp, err
-	}
-
-	return cp, nil
-}
-
-func (es *eventStore) ListUserClients(ctx context.Context, session authn.Session, userID string, pm clients.Page) (clients.ClientsPage, error) {
-	cp, err := es.svc.ListUserClients(ctx, session, userID, pm)
-	if err != nil {
-		return cp, err
-	}
-	event := listUserClientEvent{
-		userID,
-		pm,
-		session,
-		middleware.GetReqID(ctx),
-	}
-	if err := es.Publish(ctx, listByUserStream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return cp, err
 	}
 
@@ -178,7 +131,7 @@ func (es *eventStore) Enable(ctx context.Context, session authn.Session, id stri
 		return cli, err
 	}
 
-	return es.changeStatus(ctx, session, clientEnable, enableStream, cli)
+	return es.changeStatus(ctx, cli)
 }
 
 func (es *eventStore) Disable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
@@ -187,20 +140,17 @@ func (es *eventStore) Disable(ctx context.Context, session authn.Session, id str
 		return cli, err
 	}
 
-	return es.changeStatus(ctx, session, clientDisable, disableStream, cli)
+	return es.changeStatus(ctx, cli)
 }
 
-func (es *eventStore) changeStatus(ctx context.Context, session authn.Session, operation, stream string, cli clients.Client) (clients.Client, error) {
-	event := changeClientStatusEvent{
+func (es *eventStore) changeStatus(ctx context.Context, cli clients.Client) (clients.Client, error) {
+	event := changeStatusClientEvent{
 		id:        cli.ID,
-		operation: operation,
 		updatedAt: cli.UpdatedAt,
 		updatedBy: cli.UpdatedBy,
 		status:    cli.Status.String(),
-		Session:   session,
-		requestID: middleware.GetReqID(ctx),
 	}
-	if err := es.Publish(ctx, stream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return cli, err
 	}
 
@@ -212,13 +162,9 @@ func (es *eventStore) Delete(ctx context.Context, session authn.Session, id stri
 		return err
 	}
 
-	event := removeClientEvent{
-		id:        id,
-		Session:   session,
-		requestID: middleware.GetReqID(ctx),
-	}
+	event := removeClientEvent{id}
 
-	if err := es.Publish(ctx, removeStream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return err
 	}
 
@@ -230,14 +176,9 @@ func (es *eventStore) SetParentGroup(ctx context.Context, session authn.Session,
 		return err
 	}
 
-	event := setParentGroupEvent{
-		parentGroupID: parentGroupID,
-		id:            id,
-		Session:       session,
-		requestID:     middleware.GetReqID(ctx),
-	}
+	event := setParentGroupEvent{parentGroupID: parentGroupID, id: id}
 
-	if err := es.Publish(ctx, setParentStream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return err
 	}
 
@@ -249,13 +190,9 @@ func (es *eventStore) RemoveParentGroup(ctx context.Context, session authn.Sessi
 		return err
 	}
 
-	event := removeParentGroupEvent{
-		id:        id,
-		Session:   session,
-		requestID: middleware.GetReqID(ctx),
-	}
+	event := removeParentGroupEvent{id: id}
 
-	if err := es.Publish(ctx, removeParentStream, event); err != nil {
+	if err := es.Publish(ctx, event); err != nil {
 		return err
 	}
 

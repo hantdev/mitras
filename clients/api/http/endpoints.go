@@ -3,13 +3,13 @@ package http
 import (
 	"context"
 
-	"github.com/go-kit/kit/endpoint"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	"github.com/go-kit/kit/endpoint"
 )
 
 func createClientEndpoint(svc clients.Service) endpoint.Endpoint {
@@ -24,13 +24,13 @@ func createClientEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		clients, _, err := svc.CreateClients(ctx, session, req.client)
+		client, err := svc.CreateClients(ctx, session, req.client)
 		if err != nil {
 			return nil, err
 		}
 
 		return createClientRes{
-			Client:  clients[0],
+			Client:  client[0],
 			created: true,
 		}, nil
 	}
@@ -48,18 +48,18 @@ func createClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		clients, _, err := svc.CreateClients(ctx, session, req.Clients...)
+		page, err := svc.CreateClients(ctx, session, req.Clients...)
 		if err != nil {
 			return nil, err
 		}
 
 		res := clientsPageRes{
 			clientsPageMetaRes: clientsPageMetaRes{
-				Total: uint64(len(clients)),
+				Total: uint64(len(page)),
 			},
 			Clients: []viewClientRes{},
 		}
-		for _, c := range clients {
+		for _, c := range page {
 			res.Clients = append(res.Clients, viewClientRes{Client: c})
 		}
 
@@ -79,7 +79,7 @@ func viewClientEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		c, err := svc.View(ctx, session, req.id, req.roles)
+		c, err := svc.View(ctx, session, req.id)
 		if err != nil {
 			return nil, err
 		}
@@ -100,16 +100,20 @@ func listClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		var page clients.ClientsPage
-		var err error
-		switch req.userID != "" {
-		case true:
-			page, err = svc.ListUserClients(ctx, session, req.userID, req.Page)
-		default:
-			page, err = svc.ListClients(ctx, session, req.Page)
+		pm := clients.Page{
+			Status:     req.status,
+			Offset:     req.offset,
+			Limit:      req.limit,
+			Name:       req.name,
+			Tag:        req.tag,
+			Permission: req.permission,
+			Metadata:   req.metadata,
+			ListPerms:  req.listPerms,
+			Id:         req.id,
 		}
+		page, err := svc.ListClients(ctx, session, req.userID, pm)
 		if err != nil {
-			return clientsPageRes{}, err
+			return nil, err
 		}
 
 		res := clientsPageRes{

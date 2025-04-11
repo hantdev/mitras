@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	"github.com/hantdev/mitras/clients"
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	gpmocks "github.com/hantdev/mitras/groups/mocks"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
@@ -37,20 +37,6 @@ var (
 		Metadata:    validTMetadata,
 		Status:      clients.EnabledStatus,
 	}
-	clientWithRoles = clients.Client{
-		ID:          ID,
-		Name:        "clientname",
-		Tags:        []string{"tag1", "tag2"},
-		Credentials: clients.Credentials{Identity: "clientidentity", Secret: secret},
-		Metadata:    validTMetadata,
-		Status:      clients.EnabledStatus,
-		Roles: []roles.MemberRoleActions{
-			{
-				RoleID:   "test_role_id",
-				RoleName: "test_role_name",
-			},
-		},
-	}
 	validToken = "token"
 	validID    = "d4ebb847-5d0e-4e46-bdd9-b6aceaaa3a22"
 	wrongID    = testsutil.GenerateUUID(&testing.T{})
@@ -72,11 +58,7 @@ func newService() clients.Service {
 	repo = new(climocks.Repository)
 	chgRPCClient = new(chmocks.ChannelsServiceClient)
 	gpgRPCClient = new(gpmocks.GroupsServiceClient)
-	availableActions := []roles.Action{}
-	builtInRoles := map[roles.BuiltInRoleName][]roles.Action{
-		clients.BuiltInRoleAdmin: availableActions,
-	}
-	tsv, _ := clients.NewService(repo, pService, cache, chgRPCClient, gpgRPCClient, idProvider, sidProvider, availableActions, builtInRoles)
+	tsv, _ := clients.NewService(repo, pService, cache, chgRPCClient, gpgRPCClient, idProvider, sidProvider)
 	return tsv
 }
 
@@ -290,29 +272,27 @@ func TestCreateClients(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("Save", context.Background(), mock.Anything).Return([]clients.Client{tc.client}, tc.saveErr)
-			policyCall := pService.On("AddPolicies", context.Background(), mock.Anything).Return(tc.addPolicyErr)
-			policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePolicyErr)
-			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.RoleProvision{}, tc.addRoleErr)
-			repoCall2 := repo.On("Delete", context.Background(), mock.Anything).Return(tc.deleteErr)
-			expected, _, err := svc.CreateClients(context.Background(), smqauthn.Session{}, tc.client)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			if err == nil {
-				tc.client.ID = expected[0].ID
-				tc.client.CreatedAt = expected[0].CreatedAt
-				tc.client.UpdatedAt = expected[0].UpdatedAt
-				tc.client.Credentials.Secret = expected[0].Credentials.Secret
-				tc.client.Domain = expected[0].Domain
-				tc.client.UpdatedBy = expected[0].UpdatedBy
-				assert.Equal(t, tc.client, expected[0], fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.client, expected[0]))
-			}
-			repoCall.Unset()
-			policyCall.Unset()
-			policyCall1.Unset()
-			repoCall1.Unset()
-			repoCall2.Unset()
-		})
+		repoCall := repo.On("Save", context.Background(), mock.Anything).Return([]clients.Client{tc.client}, tc.saveErr)
+		policyCall := pService.On("AddPolicies", context.Background(), mock.Anything).Return(tc.addPolicyErr)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePolicyErr)
+		repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.Role{}, tc.addRoleErr)
+		repoCall2 := repo.On("Delete", context.Background(), mock.Anything).Return(tc.deleteErr)
+		expected, err := svc.CreateClients(context.Background(), smqauthn.Session{}, tc.client)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		if err == nil {
+			tc.client.ID = expected[0].ID
+			tc.client.CreatedAt = expected[0].CreatedAt
+			tc.client.UpdatedAt = expected[0].UpdatedAt
+			tc.client.Credentials.Secret = expected[0].Credentials.Secret
+			tc.client.Domain = expected[0].Domain
+			tc.client.UpdatedBy = expected[0].UpdatedBy
+			assert.Equal(t, tc.client, expected[0], fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.client, expected[0]))
+		}
+		repoCall.Unset()
+		policyCall.Unset()
+		policyCall1.Unset()
+		repoCall1.Unset()
+		repoCall2.Unset()
 	}
 }
 
@@ -322,70 +302,43 @@ func TestViewClient(t *testing.T) {
 	cases := []struct {
 		desc        string
 		clientID    string
-		withRoles   bool
 		response    clients.Client
 		retrieveErr error
 		err         error
 	}{
 		{
-			desc:      "view client successfully",
-			response:  client,
-			withRoles: false,
-			clientID:  client.ID,
-			err:       nil,
+			desc:     "view client successfully",
+			response: client,
+			clientID: client.ID,
+			err:      nil,
 		},
 		{
-			desc:      "view client successfully with roles",
-			response:  clientWithRoles,
-			withRoles: true,
-			clientID:  clientWithRoles.ID,
-			err:       nil,
-		},
-		{
-			desc:      "view client with an invalid token",
-			response:  clients.Client{},
-			withRoles: false,
-			clientID:  "",
-			err:       svcerr.ErrAuthorization,
+			desc:     "view client with an invalid token",
+			response: clients.Client{},
+			clientID: "",
+			err:      svcerr.ErrAuthorization,
 		},
 		{
 			desc:        "view client with valid token and invalid client id",
 			response:    clients.Client{},
-			withRoles:   false,
 			clientID:    wrongID,
 			retrieveErr: svcerr.ErrNotFound,
 			err:         svcerr.ErrNotFound,
 		},
 		{
-			desc:      "view client with an invalid token and invalid client id",
-			response:  clients.Client{},
-			withRoles: false,
-			clientID:  wrongID,
-			err:       svcerr.ErrAuthorization,
+			desc:     "view client with an invalid token and invalid client id",
+			response: clients.Client{},
+			clientID: wrongID,
+			err:      svcerr.ErrAuthorization,
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.response, tc.err)
-			repoCall1 := repo.On("RetrieveByIDWithRoles", context.Background(), tc.clientID, mock.Anything).Return(tc.response, tc.err)
-			rClient, err := svc.View(context.Background(), smqauthn.Session{}, tc.clientID, tc.withRoles)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-
-			switch tc.withRoles {
-			case true:
-				assert.NotEmpty(t, rClient.Roles)
-				ok := repo.AssertCalled(t, "RetrieveByIDWithRoles", context.Background(), tc.clientID, mock.Anything)
-				assert.True(t, ok, fmt.Sprintf("RetrieveByIDWithRoles was not called on %s", tc.desc))
-			default:
-				ok := repo.AssertCalled(t, "RetrieveByID", context.Background(), tc.clientID)
-				assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
-			}
-
-			assert.Equal(t, tc.response, rClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, rClient))
-			repoCall.Unset()
-			repoCall1.Unset()
-		})
+		repoCall1 := repo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.response, tc.err)
+		rClient, err := svc.View(context.Background(), smqauthn.Session{}, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.response, rClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, rClient))
+		repoCall1.Unset()
 	}
 }
 
@@ -395,6 +348,7 @@ func TestListClients(t *testing.T) {
 	adminID := testsutil.GenerateUUID(t)
 	domainID := testsutil.GenerateUUID(t)
 	nonAdminID := testsutil.GenerateUUID(t)
+	client.Permissions = []string{"read", "edit"}
 
 	cases := []struct {
 		desc                    string
@@ -418,8 +372,9 @@ func TestListClients(t *testing.T) {
 			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
 			},
 			listObjectsResponse: policysvc.PolicyPage{Policies: []string{client.ID, client.ID}},
 			retrieveAllResponse: clients.ClientsPage{
@@ -430,6 +385,7 @@ func TestListClients(t *testing.T) {
 				},
 				Clients: []clients.Client{client, client},
 			},
+			listPermissionsResponse: client.Permissions,
 			response: clients.ClientsPage{
 				Page: clients.Page{
 					Total:  2,
@@ -446,8 +402,9 @@ func TestListClients(t *testing.T) {
 			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
 			},
 			listObjectsResponse: policysvc.PolicyPage{Policies: []string{client.ID, client.ID}},
 			retrieveAllResponse: clients.ClientsPage{},
@@ -456,13 +413,38 @@ func TestListClients(t *testing.T) {
 			err:                 svcerr.ErrNotFound,
 		},
 		{
+			desc:     "list all clients as non admin with failed to list permissions",
+			userKind: "non-admin",
+			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
+			id:       nonAdminID,
+			page: clients.Page{
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
+			},
+			listObjectsResponse: policysvc.PolicyPage{Policies: []string{client.ID, client.ID}},
+			retrieveAllResponse: clients.ClientsPage{
+				Page: clients.Page{
+					Total:  2,
+					Offset: 0,
+					Limit:  100,
+				},
+				Clients: []clients.Client{client, client},
+			},
+			listPermissionsResponse: []string{},
+			response:                clients.ClientsPage{},
+			listPermissionsErr:      svcerr.ErrNotFound,
+			err:                     svcerr.ErrNotFound,
+		},
+		{
 			desc:     "list all clients as non admin with failed super admin",
 			userKind: "non-admin",
 			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
 			id:       nonAdminID,
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
 			},
 			response:            clients.ClientsPage{},
 			listObjectsResponse: policysvc.PolicyPage{},
@@ -473,10 +455,10 @@ func TestListClients(t *testing.T) {
 			userKind: "non-admin",
 			id:       nonAdminID,
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
 			},
-			retrieveAllErr:      repoerr.ErrNotFound,
 			response:            clients.ClientsPage{},
 			listObjectsResponse: policysvc.PolicyPage{},
 			listObjectsErr:      svcerr.ErrNotFound,
@@ -485,15 +467,15 @@ func TestListClients(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			retrieveAllCall := repo.On("RetrieveAll", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-			retrieveUserClientsCall := repo.On("RetrieveUserClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-			page, err := svc.ListClients(context.Background(), tc.session, tc.page)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
-			retrieveAllCall.Unset()
-			retrieveUserClientsCall.Unset()
-		})
+		listAllObjectsCall := pService.On("ListAllObjects", mock.Anything, mock.Anything).Return(tc.listObjectsResponse, tc.listObjectsErr)
+		retrieveAllCall := repo.On("SearchClients", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
+		listPermissionsCall := pService.On("ListPermissions", mock.Anything, mock.Anything, mock.Anything).Return(tc.listPermissionsResponse, tc.listPermissionsErr)
+		page, err := svc.ListClients(context.Background(), tc.session, tc.id, tc.page)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
+		listAllObjectsCall.Unset()
+		retrieveAllCall.Unset()
+		listPermissionsCall.Unset()
 	}
 
 	cases2 := []struct {
@@ -518,9 +500,10 @@ func TestListClients(t *testing.T) {
 			id:       adminID,
 			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
+				Domain:    domainID,
 			},
 			listObjectsResponse: policysvc.PolicyPage{Policies: []string{client.ID, client.ID}},
 			retrieveAllResponse: clients.ClientsPage{
@@ -531,6 +514,7 @@ func TestListClients(t *testing.T) {
 				},
 				Clients: []clients.Client{client, client},
 			},
+			listPermissionsResponse: client.Permissions,
 			response: clients.ClientsPage{
 				Page: clients.Page{
 					Total:  2,
@@ -547,9 +531,10 @@ func TestListClients(t *testing.T) {
 			id:       adminID,
 			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
+				Domain:    domainID,
 			},
 			listObjectsResponse: policysvc.PolicyPage{},
 			retrieveAllResponse: clients.ClientsPage{},
@@ -557,14 +542,39 @@ func TestListClients(t *testing.T) {
 			err:                 svcerr.ErrNotFound,
 		},
 		{
+			desc:     "list all clients as admin with failed to list permissions",
+			userKind: "admin",
+			id:       adminID,
+			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
+			page: clients.Page{
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
+				Domain:    domainID,
+			},
+			listObjectsResponse: policysvc.PolicyPage{},
+			retrieveAllResponse: clients.ClientsPage{
+				Page: clients.Page{
+					Total:  2,
+					Offset: 0,
+					Limit:  100,
+				},
+				Clients: []clients.Client{client, client},
+			},
+			listPermissionsResponse: []string{},
+			listPermissionsErr:      svcerr.ErrNotFound,
+			err:                     svcerr.ErrNotFound,
+		},
+		{
 			desc:     "list all clients as admin with failed to list clients",
 			userKind: "admin",
 			id:       adminID,
 			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
 			page: clients.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
+				Offset:    0,
+				Limit:     100,
+				ListPerms: true,
+				Domain:    domainID,
 			},
 			retrieveAllResponse: clients.ClientsPage{},
 			retrieveAllErr:      repoerr.ErrNotFound,
@@ -573,13 +583,27 @@ func TestListClients(t *testing.T) {
 	}
 
 	for _, tc := range cases2 {
-		t.Run(tc.desc, func(t *testing.T) {
-			retrieveAllCall := repo.On("RetrieveAll", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-			page, err := svc.ListClients(context.Background(), tc.session, tc.page)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
-			retrieveAllCall.Unset()
-		})
+		listAllObjectsCall := pService.On("ListAllObjects", context.Background(), policysvc.Policy{
+			SubjectType: policysvc.UserType,
+			Subject:     tc.session.DomainID + "_" + adminID,
+			Permission:  "",
+			ObjectType:  policysvc.ClientType,
+		}).Return(tc.listObjectsResponse, tc.listObjectsErr)
+		listAllObjectsCall2 := pService.On("ListAllObjects", context.Background(), policysvc.Policy{
+			SubjectType: policysvc.UserType,
+			Subject:     tc.session.UserID,
+			Permission:  "",
+			ObjectType:  policysvc.ClientType,
+		}).Return(tc.listObjectsResponse, tc.listObjectsErr)
+		retrieveAllCall := repo.On("SearchClients", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
+		listPermissionsCall := pService.On("ListPermissions", mock.Anything, mock.Anything, mock.Anything).Return(tc.listPermissionsResponse, tc.listPermissionsErr)
+		page, err := svc.ListClients(context.Background(), tc.session, tc.id, tc.page)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
+		listAllObjectsCall.Unset()
+		listAllObjectsCall2.Unset()
+		retrieveAllCall.Unset()
+		listPermissionsCall.Unset()
 	}
 }
 
@@ -624,13 +648,11 @@ func TestUpdateClient(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall1 := repo.On("Update", context.Background(), mock.Anything).Return(tc.updateResponse, tc.updateErr)
-			updatedClient, err := svc.Update(context.Background(), tc.session, tc.client)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.updateResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateResponse, updatedClient))
-			repoCall1.Unset()
-		})
+		repoCall1 := repo.On("Update", context.Background(), mock.Anything).Return(tc.updateResponse, tc.updateErr)
+		updatedClient, err := svc.Update(context.Background(), tc.session, tc.client)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.updateResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateResponse, updatedClient))
+		repoCall1.Unset()
 	}
 }
 
@@ -665,13 +687,11 @@ func TestUpdateTags(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall1 := repo.On("UpdateTags", context.Background(), mock.Anything).Return(tc.updateResponse, tc.updateErr)
-			updatedClient, err := svc.UpdateTags(context.Background(), tc.session, tc.client)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.updateResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateResponse, updatedClient))
-			repoCall1.Unset()
-		})
+		repoCall1 := repo.On("UpdateTags", context.Background(), mock.Anything).Return(tc.updateResponse, tc.updateErr)
+		updatedClient, err := svc.UpdateTags(context.Background(), tc.session, tc.client)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.updateResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateResponse, updatedClient))
+		repoCall1.Unset()
 	}
 }
 
@@ -713,13 +733,11 @@ func TestUpdateSecret(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("UpdateSecret", context.Background(), mock.Anything).Return(tc.updateSecretResponse, tc.updateErr)
-			updatedClient, err := svc.UpdateSecret(context.Background(), tc.session, tc.client.ID, tc.newSecret)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.updateSecretResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateSecretResponse, updatedClient))
-			repoCall.Unset()
-		})
+		repoCall := repo.On("UpdateSecret", context.Background(), mock.Anything).Return(tc.updateSecretResponse, tc.updateErr)
+		updatedClient, err := svc.UpdateSecret(context.Background(), tc.session, tc.client.ID, tc.newSecret)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.Equal(t, tc.updateSecretResponse, updatedClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.updateSecretResponse, updatedClient))
+		repoCall.Unset()
 	}
 }
 
@@ -784,14 +802,12 @@ func TestEnable(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.retrieveByIDResponse, tc.retrieveIDErr)
-			repoCall1 := repo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.changeStatusResponse, tc.changeStatusErr)
-			_, err := svc.Enable(context.Background(), tc.session, tc.id)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			repoCall.Unset()
-			repoCall1.Unset()
-		})
+		repoCall := repo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.retrieveByIDResponse, tc.retrieveIDErr)
+		repoCall1 := repo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.changeStatusResponse, tc.changeStatusErr)
+		_, err := svc.Enable(context.Background(), tc.session, tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		repoCall1.Unset()
 	}
 }
 
@@ -867,16 +883,14 @@ func TestDisable(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.retrieveByIDResponse, tc.retrieveIDErr)
-			repoCall1 := repo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.changeStatusResponse, tc.changeStatusErr)
-			repoCall2 := cache.On("Remove", mock.Anything, mock.Anything).Return(tc.removeErr)
-			_, err := svc.Disable(context.Background(), tc.session, tc.id)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			repoCall.Unset()
-			repoCall1.Unset()
-			repoCall2.Unset()
-		})
+		repoCall := repo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.retrieveByIDResponse, tc.retrieveIDErr)
+		repoCall1 := repo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.changeStatusResponse, tc.changeStatusErr)
+		repoCall2 := cache.On("Remove", mock.Anything, mock.Anything).Return(tc.removeErr)
+		_, err := svc.Disable(context.Background(), tc.session, tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		repoCall1.Unset()
+		repoCall2.Unset()
 	}
 }
 
@@ -950,26 +964,24 @@ func TestDelete(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("DoesClientHaveConnections", context.Background(), mock.Anything).Return(tc.checkConnectionsRes, tc.checkConnectionsErr)
-			channelsCall := chgRPCClient.On("RemoveClientConnections", context.Background(), &grpcChannelsV1.RemoveClientConnectionsReq{ClientId: tc.clientID}).Return(&grpcChannelsV1.RemoveClientConnectionsRes{}, tc.removeConnectionsErr)
-			repoCall1 := cache.On("Remove", mock.Anything, tc.clientID).Return(tc.removeErr)
-			repoCall2 := repo.On("ChangeStatus", context.Background(), clients.Client{ID: tc.clientID, Status: clients.DeletedStatus}).Return(client, tc.changeStatusErr)
-			repoCall3 := repo.On("RetrieveEntitiesRolesActionsMembers", context.Background(), []string{tc.clientID}).Return([]roles.EntityActionRole{}, []roles.EntityMemberRole{}, nil)
-			policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
-			policyCall2 := pService.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
-			repoCall4 := repo.On("Delete", context.Background(), []string{tc.clientID}).Return(tc.deleteErr)
-			err := svc.Delete(context.Background(), smqauthn.Session{}, tc.clientID)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			repoCall.Unset()
-			repoCall1.Unset()
-			policyCall1.Unset()
-			repoCall2.Unset()
-			channelsCall.Unset()
-			repoCall3.Unset()
-			repoCall4.Unset()
-			policyCall2.Unset()
-		})
+		repoCall := repo.On("DoesClientHaveConnections", context.Background(), mock.Anything).Return(tc.checkConnectionsRes, tc.checkConnectionsErr)
+		channelsCall := chgRPCClient.On("RemoveClientConnections", context.Background(), &grpcChannelsV1.RemoveClientConnectionsReq{ClientId: tc.clientID}).Return(&grpcChannelsV1.RemoveClientConnectionsRes{}, tc.removeConnectionsErr)
+		repoCall1 := cache.On("Remove", mock.Anything, tc.clientID).Return(tc.removeErr)
+		repoCall2 := repo.On("ChangeStatus", context.Background(), clients.Client{ID: tc.clientID, Status: clients.DeletedStatus}).Return(client, tc.changeStatusErr)
+		repoCall3 := repo.On("RetrieveEntitiesRolesActionsMembers", context.Background(), []string{tc.clientID}).Return([]roles.EntityActionRole{}, []roles.EntityMemberRole{}, nil)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
+		policyCall2 := pService.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
+		repoCall4 := repo.On("Delete", context.Background(), tc.clientID).Return(tc.deleteErr)
+		err := svc.Delete(context.Background(), smqauthn.Session{}, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		repoCall1.Unset()
+		policyCall1.Unset()
+		repoCall2.Unset()
+		channelsCall.Unset()
+		repoCall3.Unset()
+		repoCall4.Unset()
+		policyCall2.Unset()
 	}
 }
 
@@ -1127,30 +1139,28 @@ func TestSetParentGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			pols := []policysvc.Policy{
-				{
-					Domain:      tc.session.DomainID,
-					SubjectType: policysvc.GroupType,
-					Subject:     tc.parentGroupID,
-					Relation:    policysvc.ParentGroupRelation,
-					ObjectType:  policysvc.ClientType,
-					Object:      tc.clientID,
-				},
-			}
-			repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
-			groupsCall := gpgRPCClient.On("RetrieveEntity", context.Background(), &grpcCommonV1.RetrieveEntityReq{Id: tc.parentGroupID}).Return(tc.retrieveEntityResp, tc.retrieveEntityErr)
-			policyCall := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
-			policyCall1 := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
-			repoCall2 := repo.On("SetParentGroup", context.Background(), mock.Anything).Return(tc.setParentGroupErr)
-			err := svc.SetParentGroup(context.Background(), tc.session, tc.parentGroupID, tc.clientID)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			repoCall.Unset()
-			groupsCall.Unset()
-			policyCall.Unset()
-			repoCall2.Unset()
-			policyCall1.Unset()
-		})
+		pols := []policysvc.Policy{
+			{
+				Domain:      tc.session.DomainID,
+				SubjectType: policysvc.GroupType,
+				Subject:     tc.parentGroupID,
+				Relation:    policysvc.ParentGroupRelation,
+				ObjectType:  policysvc.ClientType,
+				Object:      tc.clientID,
+			},
+		}
+		repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
+		groupsCall := gpgRPCClient.On("RetrieveEntity", context.Background(), &grpcCommonV1.RetrieveEntityReq{Id: tc.parentGroupID}).Return(tc.retrieveEntityResp, tc.retrieveEntityErr)
+		policyCall := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
+		repoCall2 := repo.On("SetParentGroup", context.Background(), mock.Anything).Return(tc.setParentGroupErr)
+		err := svc.SetParentGroup(context.Background(), tc.session, tc.parentGroupID, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		groupsCall.Unset()
+		policyCall.Unset()
+		repoCall2.Unset()
+		policyCall1.Unset()
 	}
 }
 
@@ -1214,27 +1224,25 @@ func TestRemoveParentGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			pols := []policysvc.Policy{
-				{
-					Domain:      tc.session.DomainID,
-					SubjectType: policysvc.GroupType,
-					Subject:     tc.retrieveByIDResp.ParentGroup,
-					Relation:    policysvc.ParentGroupRelation,
-					ObjectType:  policysvc.ClientType,
-					Object:      tc.clientID,
-				},
-			}
-			repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
-			policyCall := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
-			policyCall1 := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
-			repoCall2 := repo.On("RemoveParentGroup", context.Background(), mock.Anything).Return(tc.removeParentGroupErr)
-			err := svc.RemoveParentGroup(context.Background(), tc.session, tc.clientID)
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			repoCall.Unset()
-			policyCall.Unset()
-			repoCall2.Unset()
-			policyCall1.Unset()
-		})
+		pols := []policysvc.Policy{
+			{
+				Domain:      tc.session.DomainID,
+				SubjectType: policysvc.GroupType,
+				Subject:     tc.retrieveByIDResp.ParentGroup,
+				Relation:    policysvc.ParentGroupRelation,
+				ObjectType:  policysvc.ClientType,
+				Object:      tc.clientID,
+			},
+		}
+		repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
+		policyCall := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
+		policyCall1 := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
+		repoCall2 := repo.On("RemoveParentGroup", context.Background(), mock.Anything).Return(tc.removeParentGroupErr)
+		err := svc.RemoveParentGroup(context.Background(), tc.session, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		policyCall.Unset()
+		repoCall2.Unset()
+		policyCall1.Unset()
 	}
 }

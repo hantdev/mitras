@@ -1,9 +1,9 @@
 package http
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type createClientReq struct {
@@ -44,8 +44,7 @@ func (req createClientsReq) validate() error {
 }
 
 type viewClientReq struct {
-	id    string
-	roles bool
+	id string
 }
 
 func (req viewClientReq) validate() error {
@@ -69,16 +68,30 @@ func (req viewClientPermsReq) validate() error {
 }
 
 type listClientsReq struct {
-	clients.Page
-	userID string
+	status     clients.Status
+	offset     uint64
+	limit      uint64
+	name       string
+	tag        string
+	permission string
+	visibility string
+	userID     string
+	listPerms  bool
+	metadata   clients.Metadata
+	id         string
 }
 
 func (req listClientsReq) validate() error {
-	if req.Limit > api.MaxLimitSize || req.Limit < 1 {
+	if req.limit > api.MaxLimitSize || req.limit < 1 {
 		return apiutil.ErrLimitSize
 	}
-
-	if len(req.Name) > api.MaxNameSize {
+	if req.visibility != "" &&
+		req.visibility != api.AllVisibility &&
+		req.visibility != api.MyVisibility &&
+		req.visibility != api.SharedVisibility {
+		return apiutil.ErrInvalidVisibilityType
+	}
+	if len(req.name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
 

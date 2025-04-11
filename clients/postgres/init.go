@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	gpostgres "github.com/hantdev/mitras/groups/postgres"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	rolesPostgres "github.com/hantdev/mitras/pkg/roles/repo/postgres"
@@ -57,13 +56,6 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 	}
 
 	clientsMigration.Migrations = append(clientsMigration.Migrations, clientsRolesMigration.Migrations...)
-
-	groupsMigration, err := gpostgres.Migration()
-	if err != nil {
-		return &migrate.MemoryMigrationSource{}, err
-	}
-
-	clientsMigration.Migrations = append(clientsMigration.Migrations, groupsMigration.Migrations...)
 
 	return clientsMigration, nil
 }

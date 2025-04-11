@@ -194,7 +194,7 @@ func TestStatusUnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestClientMarshalJSON(t *testing.T) {
+func TestUserMarshalJSON(t *testing.T) {
 	cases := []struct {
 		desc     string
 		expected []byte
