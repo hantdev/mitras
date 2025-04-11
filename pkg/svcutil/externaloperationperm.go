@@ -1,4 +1,3 @@
-// Description: This file contains the external operation permission struct and its methods.
 package svcutil
 
 import "fmt"
