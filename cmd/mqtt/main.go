@@ -16,12 +16,11 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/eclipse/paho.mqtt.golang/packets"
-	hermina "github.com/hantdev/hermina"
-	herminamqtt "github.com/hantdev/hermina/pkg/mqtt"
+	mgate "github.com/hantdev/hermina"
+	mgatemqtt "github.com/hantdev/hermina/pkg/mqtt"
 	"github.com/hantdev/hermina/pkg/mqtt/websocket"
 	"github.com/hantdev/hermina/pkg/session"
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/mqtt"
 	"github.com/hantdev/mitras/mqtt/events"
 	mqtttracing "github.com/hantdev/mitras/mqtt/tracing"
@@ -30,7 +29,6 @@ import (
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/messaging/brokers"
 	brokerstracing "github.com/hantdev/mitras/pkg/messaging/brokers/tracing"
-	msgevents "github.com/hantdev/mitras/pkg/messaging/events"
 	"github.com/hantdev/mitras/pkg/messaging/handler"
 	mqttpub "github.com/hantdev/mitras/pkg/messaging/mqtt"
 	"github.com/hantdev/mitras/pkg/server"
@@ -40,7 +38,7 @@ import (
 
 const (
 	svcName           = "mqtt"
-	envPrefixClients  = "MITRAS_CLIENTS_GRPC_"
+	envPrefixClients  = "MITRAS_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MITRAS_CHANNELS_GRPC_"
 	wsPathPrefix      = "/mqtt"
 )
@@ -50,8 +48,6 @@ type config struct {
 	MQTTPort              string        `env:"MITRAS_MQTT_ADAPTER_MQTT_PORT"                    envDefault:"1883"`
 	MQTTTargetHost        string        `env:"MITRAS_MQTT_ADAPTER_MQTT_TARGET_HOST"             envDefault:"localhost"`
 	MQTTTargetPort        string        `env:"MITRAS_MQTT_ADAPTER_MQTT_TARGET_PORT"             envDefault:"1883"`
-	MQTTTargetUsername    string        `env:"MITRAS_MQTT_ADAPTER_MQTT_TARGET_USERNAME"         envDefault:""`
-	MQTTTargetPassword    string        `env:"MITRAS_MQTT_ADAPTER_MQTT_TARGET_PASSWORD"         envDefault:""`
 	MQTTForwarderTimeout  time.Duration `env:"MITRAS_MQTT_ADAPTER_FORWARDER_TIMEOUT"            envDefault:"30s"`
 	MQTTTargetHealthCheck string        `env:"MITRAS_MQTT_ADAPTER_MQTT_TARGET_HEALTH_CHECK"     envDefault:""`
 	MQTTQoS               uint8         `env:"MITRAS_MQTT_ADAPTER_MQTT_QOS"                     envDefault:"1"`
@@ -62,7 +58,7 @@ type config struct {
 	Instance              string        `env:"MITRAS_MQTT_ADAPTER_INSTANCE"                     envDefault:""`
 	JaegerURL             url.URL       `env:"MITRAS_JAEGER_URL"                                envDefault:"http://localhost:4318/v1/traces"`
 	BrokerURL             string        `env:"MITRAS_MESSAGE_BROKER_URL"                        envDefault:"nats://localhost:4222"`
-	SendTelemetry         bool          `env:"MITRAS_SEND_TELEMETRY"                            envDefault:"false"`
+	SendTelemetry         bool          `env:"MITRAS_SEND_TELEMETRY"                            envDefault:"true"`
 	InstanceID            string        `env:"MITRAS_MQTT_ADAPTER_INSTANCE_ID"                  envDefault:""`
 	ESURL                 string        `env:"MITRAS_ES_URL"                                    envDefault:"nats://localhost:4222"`
 	TraceRatio            float64       `env:"MITRAS_JAEGER_TRACE_RATIO"                        envDefault:"1.0"`
@@ -77,13 +73,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -133,20 +129,13 @@ func main() {
 	defer bsub.Close()
 	bsub = brokerstracing.NewPubSub(serverConfig, tracer, bsub)
 
-	mpub, err := mqttpub.NewPublisher(fmt.Sprintf("mqtt://%s:%s", cfg.MQTTTargetHost, cfg.MQTTTargetPort), cfg.MQTTTargetUsername, cfg.MQTTTargetPassword, cfg.MQTTQoS, cfg.MQTTForwarderTimeout)
+	mpub, err := mqttpub.NewPublisher(fmt.Sprintf("mqtt://%s:%s", cfg.MQTTTargetHost, cfg.MQTTTargetPort), cfg.MQTTQoS, cfg.MQTTForwarderTimeout)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create MQTT publisher: %s", err))
 		exitCode = 1
 		return
 	}
 	defer mpub.Close()
-
-	mpub, err = msgevents.NewPublisherMiddleware(ctx, mpub, cfg.ESURL)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create event store middleware: %s", err))
-		exitCode = 1
-		return
-	}
 
 	fwd := mqtt.NewForwarder(brokers.SubjectAllChannels, logger)
 	fwd = mqtttracing.New(serverConfig, tracer, fwd, brokers.SubjectAllChannels)
@@ -165,9 +154,9 @@ func main() {
 	defer np.Close()
 	np = brokerstracing.NewPublisher(serverConfig, tracer, np)
 
-	np, err = msgevents.NewPublisherMiddleware(ctx, np, cfg.ESURL)
+	es, err := events.NewEventStore(ctx, cfg.ESURL, cfg.Instance)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create event store middleware: %s", err))
+		logger.Error(fmt.Sprintf("failed to create %s event store : %s", svcName, err))
 		exitCode = 1
 		return
 	}
@@ -204,21 +193,10 @@ func main() {
 	defer channelsHandler.Close()
 	logger.Info("Channels service gRPC client successfully connected to channels gRPC server " + channelsHandler.Secure())
 
-	h := mqtt.NewHandler(np, logger, clientsClient, channelsClient)
-
-	h, err = events.NewEventStoreMiddleware(ctx, h, cfg.ESURL, cfg.Instance)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create event store middleware: %s", err))
-		exitCode = 1
-		return
-	}
-
+	h := mqtt.NewHandler(np, es, logger, clientsClient, channelsClient)
 	h = handler.NewTracing(tracer, h)
 
-	interceptor := interceptor{
-		username: cfg.MQTTTargetUsername,
-		password: cfg.MQTTTargetPassword,
-	}
+	var interceptor session.Interceptor
 	logger.Info(fmt.Sprintf("Starting MQTT proxy on port %s", cfg.MQTTPort))
 	g.Go(func() error {
 		return proxyMQTT(ctx, cfg, logger, h, interceptor)
@@ -239,11 +217,11 @@ func main() {
 }
 
 func proxyMQTT(ctx context.Context, cfg config, logger *slog.Logger, sessionHandler session.Handler, interceptor session.Interceptor) error {
-	config := hermina.Config{
+	config := mgate.Config{
 		Address: fmt.Sprintf(":%s", cfg.MQTTPort),
 		Target:  fmt.Sprintf("%s:%s", cfg.MQTTTargetHost, cfg.MQTTTargetPort),
 	}
-	mproxy := herminamqtt.New(config, sessionHandler, interceptor, logger)
+	mproxy := mgatemqtt.New(config, sessionHandler, interceptor, logger)
 
 	errCh := make(chan error)
 	go func() {
@@ -260,9 +238,9 @@ func proxyMQTT(ctx context.Context, cfg config, logger *slog.Logger, sessionHand
 }
 
 func proxyWS(ctx context.Context, cfg config, logger *slog.Logger, sessionHandler session.Handler, interceptor session.Interceptor) error {
-	config := hermina.Config{
+	config := mgate.Config{
 		Address:    fmt.Sprintf("%s:%s", "", cfg.HTTPPort),
-		Target:     fmt.Sprintf("ws://%s:%s%s", cfg.HTTPTargetHost, cfg.HTTPTargetPort, cfg.HTTPTargetPath),
+		Target:     fmt.Sprintf("ws://%s:%s%s", cfg.HTTPTargetHost, cfg.HTTPTargetPort, wsPathPrefix),
 		PathPrefix: wsPathPrefix,
 	}
 
@@ -313,28 +291,4 @@ func stopSignalHandler(ctx context.Context, cancel context.CancelFunc, logger *s
 	case <-ctx.Done():
 		return nil
 	}
-}
-
-type interceptor struct {
-	username string
-	password string
-}
-
-// This interceptor adds the correct credentials to upstream MQTT broker since the downstream clients
-// are authenticated to the MQTT adapter but not upstream MQTT broker.
-func (ic interceptor) Intercept(ctx context.Context, pkt packets.ControlPacket, dir session.Direction) (packets.ControlPacket, error) {
-	if connectPkt, ok := pkt.(*packets.ConnectPacket); ok {
-		if ic.username != "" {
-			connectPkt.Username = ic.username
-			connectPkt.UsernameFlag = true
-		}
-		if ic.password != "" {
-			connectPkt.Password = []byte(ic.password)
-			connectPkt.PasswordFlag = true
-		}
-
-		return connectPkt, nil
-	}
-
-	return pkt, nil
 }

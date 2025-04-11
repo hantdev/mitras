@@ -13,23 +13,19 @@ import (
 	"github.com/authzed/grpcutil"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
 	"github.com/hantdev/mitras/domains"
 	domainsSvc "github.com/hantdev/mitras/domains"
 	domainsgrpcapi "github.com/hantdev/mitras/domains/api/grpc"
 	httpapi "github.com/hantdev/mitras/domains/api/http"
-	cache "github.com/hantdev/mitras/domains/cache"
 	"github.com/hantdev/mitras/domains/events"
 	dmw "github.com/hantdev/mitras/domains/middleware"
 	dpostgres "github.com/hantdev/mitras/domains/postgres"
-	"github.com/hantdev/mitras/domains/private"
 	dtracing "github.com/hantdev/mitras/domains/tracing"
-	redisclient "github.com/hantdev/mitras/internal/clients/redis"
-	mitraslog "github.com/hantdev/mitras/logger"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
 	"github.com/hantdev/mitras/pkg/authz"
 	authsvcAuthz "github.com/hantdev/mitras/pkg/authz/authsvc"
-	domainsAuthz "github.com/hantdev/mitras/pkg/domains/psvc"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	"github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -44,6 +40,7 @@ import (
 	"github.com/hantdev/mitras/pkg/sid"
 	spicedbdecoder "github.com/hantdev/mitras/pkg/spicedb"
 	"github.com/hantdev/mitras/pkg/uuid"
+	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -63,18 +60,16 @@ const (
 )
 
 type config struct {
-	LogLevel            string        `env:"MITRAS_DOMAINS_LOG_LEVEL"            envDefault:"info"`
-	JaegerURL           url.URL       `env:"MITRAS_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry       bool          `env:"MITRAS_SEND_TELEMETRY"               envDefault:"false"`
-	CacheURL            string        `env:"MITRAS_DOMAINS_CACHE_URL"            envDefault:"redis://localhost:6379/0"`
-	CacheKeyDuration    time.Duration `env:"MITRAS_DOMAINS_CACHE_KEY_DURATION"   envDefault:"10m"`
-	InstanceID          string        `env:"MITRAS_DOMAINS_INSTANCE_ID"          envDefault:""`
-	SpicedbHost         string        `env:"MITRAS_SPICEDB_HOST"                 envDefault:"localhost"`
-	SpicedbPort         string        `env:"MITRAS_SPICEDB_PORT"                 envDefault:"50051"`
-	SpicedbSchemaFile   string        `env:"MITRAS_SPICEDB_SCHEMA_FILE"          envDefault:"schema.zed"`
-	SpicedbPreSharedKey string        `env:"MITRAS_SPICEDB_PRE_SHARED_KEY"       envDefault:"12345678"`
-	TraceRatio          float64       `env:"MITRAS_JAEGER_TRACE_RATIO"           envDefault:"1.0"`
-	ESURL               string        `env:"MITRAS_ES_URL"                       envDefault:"nats://localhost:4222"`
+	LogLevel            string  `env:"MITRAS_DOMAINS_LOG_LEVEL"            envDefault:"info"`
+	JaegerURL           url.URL `env:"MITRAS_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
+	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"               envDefault:"true"`
+	InstanceID          string  `env:"MITRAS_DOMAINS_INSTANCE_ID"          envDefault:""`
+	SpicedbHost         string  `env:"MITRAS_SPICEDB_HOST"                 envDefault:"localhost"`
+	SpicedbPort         string  `env:"MITRAS_SPICEDB_PORT"                 envDefault:"50051"`
+	SpicedbSchemaFile   string  `env:"MITRAS_SPICEDB_SCHEMA_FILE"          envDefault:"schema.zed"`
+	SpicedbPreSharedKey string  `env:"MITRAS_SPICEDB_PRE_SHARED_KEY"       envDefault:"12345678"`
+	TraceRatio          float64 `env:"MITRAS_JAEGER_TRACE_RATIO"           envDefault:"1.0"`
+	ESURL               string  `env:"MITRAS_ES_URL"                       envDefault:"nats://localhost:4222"`
 }
 
 func main() {
@@ -86,13 +81,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err.Error())
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -153,23 +148,7 @@ func main() {
 	defer authnHandler.Close()
 	logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
 
-	database := postgres.NewDatabase(db, dbConfig, tracer)
-	domainsRepo := dpostgres.NewRepository(database)
-
-	cacheclient, err := redisclient.Connect(cfg.CacheURL)
-	if err != nil {
-		logger.Error(err.Error())
-		exitCode = 1
-		return
-	}
-	defer cacheclient.Close()
-	cache := cache.NewDomainsCache(cacheclient, cfg.CacheKeyDuration)
-
-	psvc := private.New(domainsRepo, cache)
-
-	domAuthz := domainsAuthz.NewAuthorization(psvc)
-
-	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, clientConfig, domAuthz)
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, clientConfig)
 	if err != nil {
 		logger.Error(fmt.Sprintf("authz failed to connect to auth gRPC server : %s", err.Error()))
 		exitCode = 1
@@ -186,7 +165,7 @@ func main() {
 	}
 	logger.Info("Policy client successfully connected to spicedb gRPC server")
 
-	svc, err := newDomainService(ctx, domainsRepo, cache, tracer, cfg, authz, policyService, logger)
+	svc, err := newDomainService(ctx, db, tracer, cfg, dbConfig, authz, policyService, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create %s service: %s", svcName, err.Error()))
 		exitCode = 1
@@ -201,7 +180,7 @@ func main() {
 	}
 	registerDomainsServiceServer := func(srv *grpc.Server) {
 		reflection.Register(srv)
-		grpcDomainsV1.RegisterDomainsServiceServer(srv, domainsgrpcapi.NewDomainsServer(psvc))
+		grpcDomainsV1.RegisterDomainsServiceServer(srv, domainsgrpcapi.NewDomainsServer(svc))
 	}
 
 	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerDomainsServiceServer, logger)
@@ -217,8 +196,7 @@ func main() {
 		return
 	}
 	mux := chi.NewMux()
-	idp := uuid.New()
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, idp), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -233,7 +211,10 @@ func main() {
 	}
 }
 
-func newDomainService(ctx context.Context, domainsRepo domainsSvc.Repository, cache domainsSvc.Cache, tracer trace.Tracer, cfg config, authz authz.Authorization, policiessvc policies.Service, logger *slog.Logger) (domains.Service, error) {
+func newDomainService(ctx context.Context, db *sqlx.DB, tracer trace.Tracer, cfg config, dbConfig pgclient.Config, authz authz.Authorization, policiessvc policies.Service, logger *slog.Logger) (domains.Service, error) {
+	database := postgres.NewDatabase(db, dbConfig, tracer)
+	domainsRepo := dpostgres.New(database)
+
 	idProvider := uuid.New()
 	sidProvider, err := sid.New()
 	if err != nil {
@@ -245,7 +226,7 @@ func newDomainService(ctx context.Context, domainsRepo domainsSvc.Repository, ca
 		return nil, err
 	}
 
-	svc, err := domainsSvc.New(domainsRepo, cache, policiessvc, idProvider, sidProvider, availableActions, builtInRoles)
+	svc, err := domainsSvc.New(domainsRepo, policiessvc, idProvider, sidProvider, availableActions, builtInRoles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init domain service: %w", err)
 	}

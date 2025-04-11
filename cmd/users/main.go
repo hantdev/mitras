@@ -15,14 +15,13 @@ import (
 	"github.com/authzed/grpcutil"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/internal/email"
-	mitraslog "github.com/hantdev/mitras/logger"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	authsvcAuthz "github.com/hantdev/mitras/pkg/authz/authsvc"
-	domainsAuthz "github.com/hantdev/mitras/pkg/domains/grpcclient"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/oauth2"
@@ -36,7 +35,7 @@ import (
 	httpserver "github.com/hantdev/mitras/pkg/server/http"
 	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/hantdev/mitras/users"
-	httpapi "github.com/hantdev/mitras/users/api"
+	"github.com/hantdev/mitras/users/api"
 	"github.com/hantdev/mitras/users/emailer"
 	"github.com/hantdev/mitras/users/events"
 	"github.com/hantdev/mitras/users/hasher"
@@ -71,7 +70,7 @@ type config struct {
 	PassRegexText       string        `env:"MITRAS_USERS_PASS_REGEX"          envDefault:"^.{8,}$"`
 	ResetURL            string        `env:"MITRAS_TOKEN_RESET_ENDPOINT"      envDefault:"/reset-request"`
 	JaegerURL           url.URL       `env:"MITRAS_JAEGER_URL"                envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry       bool          `env:"MITRAS_SEND_TELEMETRY"            envDefault:"false"`
+	SendTelemetry       bool          `env:"MITRAS_SEND_TELEMETRY"            envDefault:"true"`
 	InstanceID          string        `env:"MITRAS_USERS_INSTANCE_ID"         envDefault:""`
 	ESURL               string        `env:"MITRAS_ES_URL"                    envDefault:"nats://localhost:4222"`
 	TraceRatio          float64       `env:"MITRAS_JAEGER_TRACE_RATIO"        envDefault:"1.0"`
@@ -100,13 +99,13 @@ func main() {
 	}
 	cfg.PassRegex = passRegex
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -177,21 +176,7 @@ func main() {
 	defer authnHandler.Close()
 	logger.Info("AuthN successfully connected to auth gRPC server " + authnHandler.Secure())
 
-	domsGrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
-		exitCode = 1
-		return
-	}
-	domAuthz, domainsClient, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
-	if err != nil {
-		logger.Error(err.Error())
-		exitCode = 1
-		return
-	}
-	defer domainsHandler.Close()
-
-	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, domAuthz)
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig)
 	if err != nil {
 		logger.Error("failed to create authz " + err.Error())
 		exitCode = 1
@@ -199,6 +184,22 @@ func main() {
 	}
 	defer authzHandler.Close()
 	logger.Info("AuthZ successfully connected to auth gRPC server " + authzHandler.Secure())
+
+	domainsClientConfig := grpcclient.Config{}
+	if err := env.ParseWithOptions(&domainsClientConfig, env.Options{Prefix: envPrefixDomains}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
+		exitCode = 1
+		return
+	}
+
+	domainsClient, domainsHandler, err := grpcclient.SetupDomainsClient(ctx, domainsClientConfig)
+	if err != nil {
+		logger.Error("failed to setup domain gRPC clients " + err.Error())
+		exitCode = 1
+		return
+	}
+	defer domainsHandler.Close()
+	logger.Info("DomainsService gRPC client successfully connected to domains gRPC server " + domainsHandler.Secure())
 
 	policyService, err := newPolicyService(cfg, logger)
 	if err != nil {
@@ -231,8 +232,7 @@ func main() {
 	oauthProvider := googleoauth.NewProvider(oauthConfig, cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL)
 
 	mux := chi.NewRouter()
-	idp := uuid.New()
-	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(csvc, authn, tokenClient, cfg.SelfRegister, mux, logger, cfg.InstanceID, cfg.PassRegex, idp, oauthProvider), logger)
+	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(csvc, authn, tokenClient, cfg.SelfRegister, mux, logger, cfg.InstanceID, cfg.PassRegex, oauthProvider), logger)
 
 	g.Go(func() error {
 		return httpSrv.Start()
@@ -247,7 +247,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, authz mitrasauthz.Authorization, token grpcTokenV1.TokenServiceClient, policyService policies.Service, domainsClient grpcDomainsV1.DomainsServiceClient, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, c config, ec email.Config, logger *slog.Logger) (users.Service, error) {
+func newService(ctx context.Context, authz smqauthz.Authorization, token grpcTokenV1.TokenServiceClient, policyService policies.Service, domainsClient grpcDomainsV1.DomainsServiceClient, db *sqlx.DB, dbConfig pgclient.Config, tracer trace.Tracer, c config, ec email.Config, logger *slog.Logger) (users.Service, error) {
 	database := pg.NewDatabase(db, dbConfig, tracer)
 	idp := uuid.New()
 	hsr := hasher.New()
@@ -327,8 +327,8 @@ func createAdmin(ctx context.Context, c config, repo users.Repository, hsr users
 	return user.ID, nil
 }
 
-func createAdminPolicy(ctx context.Context, userID string, authz mitrasauthz.Authorization, policyService policies.Service) error {
-	if err := authz.Authorize(ctx, mitrasauthz.PolicyReq{
+func createAdminPolicy(ctx context.Context, userID string, authz smqauthz.Authorization, policyService policies.Service) error {
+	if err := authz.Authorize(ctx, smqauthz.PolicyReq{
 		SubjectType: policies.UserType,
 		Subject:     userID,
 		Permission:  policies.AdministratorRelation,

@@ -13,10 +13,6 @@ import (
 	"github.com/authzed/grpcutil"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
-	dpostgres "github.com/hantdev/mitras/domains/postgres"
 	"github.com/hantdev/mitras/groups"
 	gpsvc "github.com/hantdev/mitras/groups"
 	grpcapi "github.com/hantdev/mitras/groups/api/grpc"
@@ -26,12 +22,13 @@ import (
 	"github.com/hantdev/mitras/groups/postgres"
 	pgroups "github.com/hantdev/mitras/groups/private"
 	"github.com/hantdev/mitras/groups/tracing"
-	mitraslog "github.com/hantdev/mitras/logger"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/internal/grpc/groups/v1"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	authsvcAuthz "github.com/hantdev/mitras/pkg/authz/authsvc"
-	dconsumer "github.com/hantdev/mitras/pkg/domains/events/consumer"
-	domainsAuthz "github.com/hantdev/mitras/pkg/domains/grpcclient"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -62,7 +59,7 @@ const (
 	envPrefixAuth     = "MITRAS_AUTH_GRPC_"
 	envPrefixDomains  = "MITRAS_DOMAINS_GRPC_"
 	envPrefixChannels = "MITRAS_CHANNELS_GRPC_"
-	envPrefixClients  = "MITRAS_CLIENTS_GRPC_"
+	envPrefixClients  = "MITRAS_CLIENTS_AUTH_GRPC_"
 	defDB             = "groups"
 	defSvcHTTPPort    = "9004"
 	defSvcgRPCPort    = "7004"
@@ -72,9 +69,8 @@ type config struct {
 	LogLevel            string  `env:"MITRAS_GROUPS_LOG_LEVEL"          envDefault:"info"`
 	InstanceID          string  `env:"MITRAS_GROUPS_INSTANCE_ID"        envDefault:""`
 	JaegerURL           url.URL `env:"MITRAS_JAEGER_URL"                envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"            envDefault:"false"`
+	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"            envDefault:"true"`
 	ESURL               string  `env:"MITRAS_ES_URL"                    envDefault:"nats://localhost:4222"`
-	ESConsumerName      string  `env:"MITRAS_GROUPS_EVENT_CONSUMER"     envDefault:"groups"`
 	TraceRatio          float64 `env:"MITRAS_JAEGER_TRACE_RATIO"        envDefault:"1.0"`
 	SpicedbHost         string  `env:"MITRAS_SPICEDB_HOST"              envDefault:"localhost"`
 	SpicedbPort         string  `env:"MITRAS_SPICEDB_PORT"              envDefault:"50051"`
@@ -91,13 +87,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err.Error())
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -156,21 +152,7 @@ func main() {
 	defer authnHandler.Close()
 	logger.Info("Authn successfully connected to auth gRPC server " + authnHandler.Secure())
 
-	domsGrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
-		exitCode = 1
-		return
-	}
-	domAuthz, _, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
-	if err != nil {
-		logger.Error(err.Error())
-		exitCode = 1
-		return
-	}
-	defer domainsHandler.Close()
-
-	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig, domAuthz)
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientConfig)
 	if err != nil {
 		logger.Error("failed to create authz " + err.Error())
 		exitCode = 1
@@ -224,15 +206,6 @@ func main() {
 		return
 	}
 
-	ddatabase := pg.NewDatabase(db, dbConfig, tracer)
-	drepo := dpostgres.NewRepository(ddatabase)
-
-	if err := dconsumer.DomainsEventsSubscribe(ctx, drepo, cfg.ESURL, cfg.ESConsumerName, logger); err != nil {
-		logger.Error(fmt.Sprintf("failed to create domains event store : %s", err))
-		exitCode = 1
-		return
-	}
-
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err.Error()))
@@ -241,8 +214,7 @@ func main() {
 	}
 
 	mux := chi.NewRouter()
-	idp := uuid.New()
-	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, idp), logger)
+	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID), logger)
 
 	grpcServerConfig := server.Config{}
 	if err := env.ParseWithOptions(&grpcServerConfig, env.Options{Prefix: envPrefixgRPC}); err != nil {
@@ -274,7 +246,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, authz mitrasauthz.Authorization, policy policies.Service, db *sqlx.DB, dbConfig pgclient.Config, channels grpcChannelsV1.ChannelsServiceClient, clients grpcClientsV1.ClientsServiceClient, tracer trace.Tracer, logger *slog.Logger, c config) (groups.Service, pgroups.Service, error) {
+func newService(ctx context.Context, authz smqauthz.Authorization, policy policies.Service, db *sqlx.DB, dbConfig pgclient.Config, channels grpcChannelsV1.ChannelsServiceClient, clients grpcClientsV1.ClientsServiceClient, tracer trace.Tracer, logger *slog.Logger, c config) (groups.Service, pgroups.Service, error) {
 	database := pg.NewDatabase(db, dbConfig, tracer)
 	idp := uuid.New()
 	sid, err := sid.New()
