@@ -11,9 +11,7 @@ import (
 	groups "github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
-	"github.com/hantdev/mitras/pkg/policies"
 	"github.com/hantdev/mitras/pkg/postgres"
-	"github.com/hantdev/mitras/pkg/roles"
 	rolesPostgres "github.com/hantdev/mitras/pkg/roles/repo/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -41,7 +39,7 @@ type groupRepository struct {
 // New instantiates a PostgreSQL implementation of group
 // repository.
 func New(db postgres.Database) groups.Repository {
-	roleRepo := rolesPostgres.NewRepository(db, policies.GroupType, rolesTableNamePrefix, entityTableName, entityIDColumnName)
+	roleRepo := rolesPostgres.NewRepository(db, rolesTableNamePrefix, entityTableName, entityIDColumnName)
 
 	return &groupRepository{
 		db:         db,
@@ -160,164 +158,6 @@ func (repo groupRepository) RetrieveByID(ctx context.Context, id string) (groups
 	if err := row.StructScan(&dbg); err != nil {
 		return groups.Group{}, errors.Wrap(repoerr.ErrViewEntity, err)
 	}
-	return toGroup(dbg)
-}
-
-func (repo groupRepository) RetrieveByIDWithRoles(ctx context.Context, id, memberID string) (groups.Group, error) {
-	query := `
-	WITH selected_group AS (
-    SELECT
-        g.id,
-        g.parent_id,
-        g.domain_id,
-        g.path AS parent_group_path
-    FROM
-        groups g
-    WHERE
-        g.id = :id
-    LIMIT 1
-	),
-	selected_group_roles AS (
-		SELECT
-			sg.id AS group_id,
-			grm.member_id AS member_id,
-			gr.id AS role_id,
-			gr.name AS role_name,
-			jsonb_agg(DISTINCT gra.action) AS actions,
-			g.path AS access_provider_path,
-			gr.entity_id AS access_provider_id,
-			CASE
-				WHEN gr.entity_id = sg.id THEN 'direct'
-				WHEN gr.entity_id = sg.parent_id THEN 'direct_group'
-				ELSE 'indirect_group'
-			END AS access_type
-		FROM
-			groups g
-		JOIN
-			groups_roles gr ON gr.entity_id = g.id
-		JOIN
-			groups_role_members grm ON gr.id = grm.role_id
-		JOIN
-			groups_role_actions gra ON gr.id = gra.role_id
-		JOIN
-			selected_group sg ON g.path @> sg.parent_group_path
-		WHERE
-			grm.member_id = :member_id
-			AND (
-				(gr.entity_id = sg.id)
-				OR (gr.entity_id <> sg.id AND gra.action LIKE 'subgroup%%')
-			)
-		GROUP BY
-			sg.id, gr.entity_id, gr.id, gr.name, g.path, grm.member_id, sg.parent_id
-	),
-	selected_domain_roles AS (
-		SELECT
-			sg.id AS group_id,
-			drm.member_id AS member_id,
-			dr.id AS role_id,
-			dr.name AS role_name,
-			jsonb_agg(DISTINCT all_actions.action) AS actions,
-			''::::ltree access_provider_path,
-			'domain' AS access_type,
-			dr.entity_id AS access_provider_id
-		FROM
-			domains d
-		JOIN
-			selected_group sg ON sg.domain_id = d.id
-		JOIN
-			domains_roles dr ON dr.entity_id = d.id
-		JOIN
-			domains_role_members drm ON dr.id = drm.role_id
-		JOIN
-			domains_role_actions dra ON dr.id = dra.role_id
-		JOIN
-			domains_role_actions all_actions ON dr.id = all_actions.role_id
-		WHERE
-			drm.member_id = :member_id
-			AND dra.action LIKE 'group%%'
-		GROUP BY
-			sg.id, dr.entity_id, dr.id, dr.name, drm.member_id
-	),
-	all_roles AS (
-		SELECT
-			sgr.group_id,
-			sgr.member_id,
-			sgr.role_id AS role_id,
-			sgr.role_name AS role_name,
-			sgr.actions AS actions,
-			sgr.access_type AS access_type,
-			sgr.access_provider_path AS access_provider_path,
-			sgr.access_provider_id AS access_provider_id
-		FROM
-			selected_group_roles sgr
-		UNION
-		SELECT
-			sdr.group_id,
-			sdr.member_id,
-			sdr.role_id AS role_id,
-			sdr.role_name AS role_name,
-			sdr.actions AS actions,
-			sdr.access_type AS access_type,
-			sdr.access_provider_path AS access_provider_path,
-			sdr.access_provider_id AS access_provider_id
-		FROM
-			selected_domain_roles sdr
-	),
-	final_roles AS (
-		SELECT
-			ar.group_id,
-			ar.member_id,
-			jsonb_agg(
-				jsonb_build_object(
-					'role_id', ar.role_id,
-					'role_name', ar.role_name,
-					'actions', ar.actions,
-					'access_type', ar.access_type,
-					'access_provider_path', ar.access_provider_path,
-					'access_provider_id', ar.access_provider_id
-				)
-			) AS roles
-		FROM all_roles ar
-		GROUP BY
-			ar.group_id, ar.member_id
-	)
-	SELECT
-		g.id,
-		g.parent_id,
-		g.domain_id,
-		g.name,
-		g.description,
-		g.path,
-		g.metadata,
-		g.created_at,
-		g.updated_at,
-		g.updated_by,
-		g.status,
-		fr.member_id,
-		fr.roles
-	FROM groups g
-		JOIN final_roles fr ON fr.group_id = g.id
-	`
-
-	parameters := map[string]interface{}{
-		"id":        id,
-		"member_id": memberID,
-	}
-	row, err := repo.db.NamedQueryContext(ctx, query, parameters)
-	if err != nil {
-		return groups.Group{}, errors.Wrap(repoerr.ErrViewEntity, err)
-	}
-	defer row.Close()
-
-	dbg := dbGroup{}
-	if !row.Next() {
-		return groups.Group{}, errors.Wrap(repoerr.ErrNotFound, err)
-	}
-
-	if err := row.StructScan(&dbg); err != nil {
-		return groups.Group{}, errors.Wrap(repoerr.ErrViewEntity, err)
-	}
-
 	return toGroup(dbg)
 }
 
@@ -878,172 +718,106 @@ func (repo groupRepository) retrieveGroups(ctx context.Context, domainID, userID
 
 func (repo groupRepository) userGroupsBaseQuery(domainID, userID string) string {
 	return fmt.Sprintf(`
-WITH direct_groups AS (
-SELECT
-	g.*,
-	gr.entity_id AS entity_id,
-	grm.member_id AS member_id,
-	gr.id AS role_id,
-	gr."name" AS role_name,
-	array_agg(gra."action") AS actions
-FROM
-	groups_role_members grm
-JOIN
-	groups_role_actions gra ON gra.role_id = grm.role_id
-JOIN
-	groups_roles gr ON gr.id = grm.role_id
-JOIN
-	"groups" g ON g.id = gr.entity_id
-WHERE
-	grm.member_id = '%s'
-	AND g.domain_id = '%s'
-GROUP BY
-	gr.entity_id, grm.member_id, gr.id, gr."name", g."path", g.id
-),
-direct_groups_with_subgroup AS (
+	WITH direct_groups AS (
 	SELECT
-		*
-	FROM direct_groups
-	WHERE EXISTS (
-		SELECT 1
-			FROM unnest(direct_groups.actions) AS action
-		WHERE action LIKE 'subgroup_%%'
-	)
-),
-indirect_child_groups AS (
-	SELECT
-		DISTINCT  indirect_child_groups.id as child_id,
-		indirect_child_groups.*,
-		dgws.id as access_provider_id,
-		dgws.role_id as access_provider_role_id,
-		dgws.role_name as access_provider_role_name,
-		dgws.actions as access_provider_role_actions
+		g.*,
+		gr.entity_id AS entity_id,
+		grm.member_id AS member_id,
+		gr.id AS role_id,
+		gr."name" AS role_name,
+		array_agg(gra."action") AS actions
 	FROM
-		direct_groups_with_subgroup dgws
+		groups_role_members grm
 	JOIN
-		groups indirect_child_groups ON indirect_child_groups.path <@ dgws.path  -- Finds all children of entity_id based on ltree path
+		groups_role_actions gra ON gra.role_id = grm.role_id
+	JOIN
+		groups_roles gr ON gr.id = grm.role_id
+	JOIN
+		"groups" g ON g.id = gr.entity_id
 	WHERE
-		indirect_child_groups.domain_id = '%s'
-		AND
-		NOT EXISTS (  -- Ensures that the indirect_child_groups.id is not already in the direct_groups_with_subgroup table
-			SELECT 1
-			FROM direct_groups_with_subgroup dgws
-			WHERE dgws.id = indirect_child_groups.id
+		grm.member_id = '%s'
+		AND g.domain_id = '%s'
+	GROUP BY
+		gr.entity_id, grm.member_id, gr.id, gr."name", g."path", g.id
+	),
+	direct_groups_with_subgroup AS (
+		SELECT
+			*
+		FROM direct_groups
+		WHERE EXISTS (
+    		SELECT 1
+    			FROM unnest(direct_groups.actions) AS action
+    		WHERE action LIKE 'subgroup_%%'
 		)
-),
-direct_indirect_groups as (
-	SELECT
-		id,
-		parent_id,
-		domain_id,
-		"name",
-		description,
-		metadata,
-		created_at,
-		updated_at,
-		updated_by,
-		status,
-		"path",
-		role_id,
-		role_name,
-		actions,
-		'direct' AS access_type,
-		'' AS access_provider_id,
-		'' AS access_provider_role_id,
-		'' AS access_provider_role_name,
-		array[]::::text[] AS access_provider_role_actions
-	FROM
-		direct_groups
-	UNION
-	SELECT
-		id,
-		parent_id,
-		domain_id,
-		"name",
-		description,
-		metadata,
-		created_at,
-		updated_at,
-		updated_by,
-		status,
-		"path",
-		'' AS role_id,
-		'' AS role_name,
-		array[]::::text[] AS actions,
-		'indirect' AS access_type,
-		access_provider_id,
-		access_provider_role_id,
-		access_provider_role_name,
-		access_provider_role_actions
-	FROM
-		indirect_child_groups
-),
-final_groups AS (
-	SELECT
-		dig.id,
-		dig.parent_id,
-		dig.domain_id,
-		dig."name",
-		dig.description,
-		dig.metadata,
-		dig.created_at,
-		dig.updated_at,
-		dig.updated_by,
-		dig.status,
-		dig."path",
-		dig.role_id,
-		dig.role_name,
-		dig.actions,
-		dig.access_type,
-		dig.access_provider_id,
-		dig.access_provider_role_id,
-		dig.access_provider_role_name,
-		dig.access_provider_role_actions
-	FROM
-		direct_indirect_groups as dig
-	UNION
-	SELECT
-		dg.id,
-		dg.parent_id,
-		dg.domain_id,
-		dg."name",
-		dg.description,
-		dg.metadata,
-		dg.created_at,
-		dg.updated_at,
-		dg.updated_by,
-		dg.status,
-		dg."path",
-		'' AS role_id,
-		'' AS role_name,
-		array[]::::text[] AS actions,
-		'domain' AS access_type,
-		d.id AS access_provider_id,
-		dr.id AS access_provider_role_id,
-		dr."name" AS access_provider_role_name,
-		array_agg(dra."action") as actions
-	FROM
-		domains_role_members drm
-	JOIN
-		domains_role_actions dra ON dra.role_id = drm.role_id
-	JOIN
-		domains_roles dr ON dr.id = drm.role_id
-	JOIN
-		domains d ON d.id = dr.entity_id
-	JOIN
-		"groups" dg ON dg.domain_id = d.id
-	WHERE
-		drm.member_id = '%s' -- user_id
-	 	AND d.id = '%s' -- domain_id
-	 	AND dra."action" LIKE 'group_%%'
-	 	AND NOT EXISTS (  -- Ensures that the direct and indirect groups are not in included.
-			SELECT 1 FROM direct_indirect_groups dig
-			WHERE dig.id = dg.id
-		)
-	 GROUP BY
-		dg.id, d.id, dr.id
-)
-		`, userID, domainID, domainID, userID, domainID)
+	),
+	indirect_child_groups AS (
+		SELECT
+			DISTINCT  indirect_child_groups.id as child_id,
+			indirect_child_groups.*,
+			dgws.id as access_provider_id,
+			dgws.role_id as access_provider_role_id,
+			dgws.role_name as access_provider_role_name,
+			dgws.actions as access_provider_role_actions
+		FROM
+			direct_groups_with_subgroup dgws
+		JOIN
+			groups indirect_child_groups ON indirect_child_groups.path <@ dgws.path  -- Finds all children of entity_id based on ltree path
+		WHERE
+			indirect_child_groups.domain_id = '%s'
+			AND
+			NOT EXISTS (  -- Ensures that the indirect_child_groups.id is not already in the direct_groups_with_subgroup table
+				SELECT 1
+				FROM direct_groups_with_subgroup dgws
+				WHERE dgws.id = indirect_child_groups.id
+			)
+	),
+	final_groups as (
+		SELECT
+			id,
+			parent_id,
+			domain_id,
+			"name",
+			description,
+			metadata,
+			created_at,
+			updated_at,
+			updated_by,
+			status,
+			"path",
+			role_id,
+			role_name,
+			actions,
+			'direct' AS access_type,
+			'' AS access_provider_id,
+			'' AS access_provider_role_id,
+			'' AS access_provider_role_name,
+			array[]::::text[] AS access_provider_role_actions
+		FROM
+			direct_groups
+		UNION
+		SELECT
+			id,
+			parent_id,
+			domain_id,
+			"name",
+			description,
+			metadata,
+			created_at,
+			updated_at,
+			updated_by,
+			status,
+			"path",
+			'' AS role_id,
+			'' AS role_name,
+			array[]::::text[] AS actions,
+			'indirect' AS access_type,
+			access_provider_id,
+			access_provider_role_id,
+			access_provider_role_name,
+			access_provider_role_actions
+		FROM
+			indirect_child_groups
+	)`, userID, domainID, domainID)
 }
 
 func buildQuery(gm groups.PageMeta, ids ...string) string {
@@ -1056,7 +830,7 @@ func buildQuery(gm groups.PageMeta, ids ...string) string {
 		queries = append(queries, "g.name ILIKE '%' || :name || '%'")
 	}
 	if gm.ID != "" {
-		queries = append(queries, "g.id = :id")
+		queries = append(queries, "g.id ILIKE '%' || :id || '%'")
 	}
 	if gm.Status != groups.AllStatus {
 		queries = append(queries, "g.status = :status")
@@ -1079,9 +853,6 @@ func buildQuery(gm groups.PageMeta, ids ...string) string {
 	if len(gm.Metadata) > 0 {
 		queries = append(queries, "g.metadata @> :metadata")
 	}
-	if gm.RootGroup {
-		queries = append(queries, "g.parent_id IS NULL")
-	}
 	if len(queries) > 0 {
 		return fmt.Sprintf("WHERE %s", strings.Join(queries, " AND "))
 	}
@@ -1090,28 +861,26 @@ func buildQuery(gm groups.PageMeta, ids ...string) string {
 }
 
 type dbGroup struct {
-	ID                        string          `db:"id"`
-	ParentID                  *string         `db:"parent_id,omitempty"`
-	DomainID                  string          `db:"domain_id,omitempty"`
-	Name                      string          `db:"name"`
-	Description               string          `db:"description,omitempty"`
-	Level                     int             `db:"level"`
-	Path                      string          `db:"path,omitempty"`
-	Metadata                  []byte          `db:"metadata,omitempty"`
-	CreatedAt                 time.Time       `db:"created_at"`
-	UpdatedAt                 sql.NullTime    `db:"updated_at,omitempty"`
-	UpdatedBy                 *string         `db:"updated_by,omitempty"`
-	Status                    groups.Status   `db:"status"`
-	RoleID                    string          `db:"role_id"`
-	RoleName                  string          `db:"role_name"`
-	Actions                   pq.StringArray  `db:"actions"`
-	AccessType                string          `db:"access_type"`
-	AccessProviderId          string          `db:"access_provider_id"`
-	AccessProviderRoleId      string          `db:"access_provider_role_id"`
-	AccessProviderRoleName    string          `db:"access_provider_role_name"`
-	AccessProviderRoleActions pq.StringArray  `db:"access_provider_role_actions"`
-	MemberID                  string          `db:"member_id,omitempty"`
-	Roles                     json.RawMessage `db:"roles,omitempty"`
+	ID                        string         `db:"id"`
+	ParentID                  *string        `db:"parent_id,omitempty"`
+	DomainID                  string         `db:"domain_id,omitempty"`
+	Name                      string         `db:"name"`
+	Description               string         `db:"description,omitempty"`
+	Level                     int            `db:"level"`
+	Path                      string         `db:"path,omitempty"`
+	Metadata                  []byte         `db:"metadata,omitempty"`
+	CreatedAt                 time.Time      `db:"created_at"`
+	UpdatedAt                 sql.NullTime   `db:"updated_at,omitempty"`
+	UpdatedBy                 *string        `db:"updated_by,omitempty"`
+	Status                    groups.Status  `db:"status"`
+	RoleID                    string         `db:"role_id"`
+	RoleName                  string         `db:"role_name"`
+	Actions                   pq.StringArray `db:"actions"`
+	AccessType                string         `db:"access_type"`
+	AccessProviderId          string         `db:"access_provider_id"`
+	AccessProviderRoleId      string         `db:"access_provider_role_id"`
+	AccessProviderRoleName    string         `db:"access_provider_role_name"`
+	AccessProviderRoleActions pq.StringArray `db:"access_provider_role_actions"`
 }
 
 func toDBGroup(g groups.Group) (dbGroup, error) {
@@ -1170,13 +939,6 @@ func toGroup(g dbGroup) (groups.Group, error) {
 		updatedBy = *g.UpdatedBy
 	}
 
-	var roles []roles.MemberRoleActions
-	if g.Roles != nil {
-		if err := json.Unmarshal(g.Roles, &roles); err != nil {
-			return groups.Group{}, errors.Wrap(errors.ErrMalformedEntity, err)
-		}
-	}
-
 	return groups.Group{
 		ID:                        g.ID,
 		Name:                      g.Name,
@@ -1198,7 +960,6 @@ func toGroup(g dbGroup) (groups.Group, error) {
 		AccessProviderRoleId:      g.AccessProviderRoleId,
 		AccessProviderRoleName:    g.AccessProviderRoleName,
 		AccessProviderRoleActions: g.AccessProviderRoleActions,
-		Roles:                     roles,
 	}, nil
 }
 

@@ -141,9 +141,9 @@ func NewRolesOperationPermissionMap() map[svcutil.Operation]svcutil.Permission {
 
 const (
 	// External Permissions for the domain.
-	domainCreateGroupPermission = "group_create_permission"
-	domainListGroupPermission   = "membership"
-	userListGroupsPermission    = "membership"
+	domainCreateGroupPermission = "channel_create_permission"
+	domainListGroupPermission   = "membership_permission"
+	userListGroupsPermission    = "membership_permission"
 	clientListGroupPermission   = "read_permission"
 	chanelListGroupPermission   = "read_permission"
 )

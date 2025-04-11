@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/hantdev/mitras"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -44,13 +44,13 @@ func NewService(repo Repository, policy policies.Service, idp mitras.IDProvider,
 	}, nil
 }
 
-func (svc service) CreateGroup(ctx context.Context, session smqauthn.Session, g Group) (retGr Group, retRps []roles.RoleProvision, retErr error) {
+func (svc service) CreateGroup(ctx context.Context, session smqauthn.Session, g Group) (gr Group, retErr error) {
 	groupID, err := svc.idProvider.ID()
 	if err != nil {
-		return Group{}, []roles.RoleProvision{}, err
+		return Group{}, err
 	}
 	if g.Status != EnabledStatus && g.Status != DisabledStatus {
-		return Group{}, []roles.RoleProvision{}, svcerr.ErrInvalidStatus
+		return Group{}, svcerr.ErrInvalidStatus
 	}
 
 	g.ID = groupID
@@ -59,7 +59,7 @@ func (svc service) CreateGroup(ctx context.Context, session smqauthn.Session, g 
 
 	saved, err := svc.repo.Save(ctx, g)
 	if err != nil {
-		return Group{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
+		return Group{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
 
 	defer func() {
@@ -87,30 +87,21 @@ func (svc service) CreateGroup(ctx context.Context, session smqauthn.Session, g 
 			Subject:     saved.Parent,
 			Relation:    policies.ParentGroupRelation,
 			ObjectType:  policies.GroupType,
-			ObjectKind:  policies.NewGroupKind,
 			Object:      saved.ID,
 		})
 	}
 	newBuiltInRoleMembers := map[roles.BuiltInRoleName][]roles.Member{
 		BuiltInRoleAdmin: {roles.Member(session.UserID)},
 	}
-	nrps, err := svc.AddNewEntitiesRoles(ctx, session.DomainID, session.UserID, []string{saved.ID}, oprs, newBuiltInRoleMembers)
-	if err != nil {
-		return Group{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrAddPolicies, err)
+	if _, err := svc.AddNewEntitiesRoles(ctx, session.DomainID, session.UserID, []string{saved.ID}, oprs, newBuiltInRoleMembers); err != nil {
+		return Group{}, errors.Wrap(svcerr.ErrAddPolicies, err)
 	}
 
-	return saved, nrps, nil
+	return saved, nil
 }
 
-func (svc service) ViewGroup(ctx context.Context, session smqauthn.Session, id string, withRoles bool) (Group, error) {
-	var group Group
-	var err error
-	switch withRoles {
-	case true:
-		group, err = svc.repo.RetrieveByIDWithRoles(ctx, id, session.UserID)
-	default:
-		group, err = svc.repo.RetrieveByID(ctx, id)
-	}
+func (svc service) ViewGroup(ctx context.Context, session smqauthn.Session, id string) (Group, error) {
+	group, err := svc.repo.RetrieveByIDAndUser(ctx, session.DomainID, session.UserID, id)
 	if err != nil {
 		return Group{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}

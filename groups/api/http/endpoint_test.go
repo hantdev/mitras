@@ -11,18 +11,16 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/groups/mocks"
+	smqapi "github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/roles"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -53,9 +51,8 @@ func newGroupsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentica
 	authn := new(authnmocks.Authentication)
 	svc := new(mocks.Service)
 	mux := chi.NewRouter()
-	idp := uuid.NewMock()
 	logger := smqlog.NewMock()
-	mux = MakeHandler(svc, authn, mux, logger, "", idp)
+	mux = MakeHandler(svc, authn, mux, logger, "")
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -207,7 +204,7 @@ func TestCreateGroupEndpoint(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
-			svcCall := svc.On("CreateGroup", mock.Anything, tc.session, tc.req.Group).Return(tc.svcResp, []roles.RoleProvision{}, tc.svcErr)
+			svcCall := svc.On("CreateGroup", mock.Anything, tc.session, tc.req.Group).Return(tc.svcResp, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -233,7 +230,6 @@ func TestViewGroupEndpoint(t *testing.T) {
 		token    string
 		id       string
 		domainID string
-		roles    bool
 		session  smqauthn.Session
 		svcResp  groups.Group
 		svcErr   error
@@ -246,7 +242,6 @@ func TestViewGroupEndpoint(t *testing.T) {
 			desc:     "view group successfully",
 			token:    validToken,
 			domainID: validID,
-			roles:    false,
 			id:       validID,
 			svcResp:  validGroupResp,
 			svcErr:   nil,
@@ -259,7 +254,6 @@ func TestViewGroupEndpoint(t *testing.T) {
 			token:    invalidToken,
 			session:  smqauthn.Session{},
 			domainID: validID,
-			roles:    false,
 			id:       validID,
 			svcResp:  validGroupResp,
 			svcErr:   nil,
@@ -272,7 +266,6 @@ func TestViewGroupEndpoint(t *testing.T) {
 			token:    "",
 			session:  smqauthn.Session{},
 			domainID: validID,
-			roles:    false,
 			id:       validID,
 			status:   http.StatusUnauthorized,
 			err:      apiutil.ErrBearerToken,
@@ -289,7 +282,6 @@ func TestViewGroupEndpoint(t *testing.T) {
 			token:    validToken,
 			id:       validID,
 			domainID: validID,
-			roles:    false,
 			svcResp:  validGroupResp,
 			svcErr:   svcerr.ErrAuthorization,
 			status:   http.StatusForbidden,
@@ -302,14 +294,14 @@ func TestViewGroupEndpoint(t *testing.T) {
 			req := testRequest{
 				client: gs.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/groups/%s?roles=%v", gs.URL, tc.domainID, tc.id, tc.roles),
+				url:    fmt.Sprintf("%s/%s/groups/%s", gs.URL, tc.domainID, tc.id),
 				token:  tc.token,
 			}
 			if tc.token == validToken {
 				tc.session = smqauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
-			svcCall := svc.On("ViewGroup", mock.Anything, tc.session, tc.id, tc.roles).Return(tc.svcResp, tc.svcErr)
+			svcCall := svc.On("ViewGroup", mock.Anything, tc.session, tc.id).Return(tc.svcResp, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -768,7 +760,7 @@ func TestListGroups(t *testing.T) {
 			desc:     "list groups with limit greater than max",
 			token:    validToken,
 			domainID: validID,
-			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			query:    fmt.Sprintf("limit=%d", smqapi.MaxLimitSize+1),
 			status:   http.StatusBadRequest,
 			err:      apiutil.ErrValidation,
 		},
@@ -1071,21 +1063,12 @@ func TestRetrieveGroupHierarchyEndpoint(t *testing.T) {
 	gs, svc, authn := newGroupsServer()
 	defer gs.Close()
 
-	retrieveHierarchyRes := groups.HierarchyPage{
+	retrieveHierarchRes := groups.HierarchyPage{
 		Groups: []groups.Group{validGroupResp},
 		HierarchyPageMeta: groups.HierarchyPageMeta{
 			Level:     1,
 			Direction: -1,
 			Tree:      false,
-		},
-	}
-
-	treeHierarchyRes := groups.HierarchyPage{
-		Groups: []groups.Group{validGroupResp},
-		HierarchyPageMeta: groups.HierarchyPageMeta{
-			Level:     1,
-			Direction: -1,
-			Tree:      true,
 		},
 	}
 
@@ -1114,23 +1097,7 @@ func TestRetrieveGroupHierarchyEndpoint(t *testing.T) {
 				Direction: -1,
 				Tree:      false,
 			},
-			svcRes: retrieveHierarchyRes,
-			svcErr: nil,
-			status: http.StatusOK,
-			err:    nil,
-		},
-		{
-			desc:     "retrieve group hierarchy successfully with tree",
-			token:    validToken,
-			domainID: validID,
-			groupID:  validID,
-			query:    "level=1&dir=-1&tree=true",
-			pageMeta: groups.HierarchyPageMeta{
-				Level:     1,
-				Direction: -1,
-				Tree:      true,
-			},
-			svcRes: treeHierarchyRes,
+			svcRes: retrieveHierarchRes,
 			svcErr: nil,
 			status: http.StatusOK,
 			err:    nil,
@@ -1268,7 +1235,7 @@ func TestAddParentGroupEndpoint(t *testing.T) {
 			parentID:    validID,
 			contentType: contentType,
 			svcErr:      nil,
-			status:      http.StatusOK,
+			status:      http.StatusNoContent,
 			err:         nil,
 		},
 		{
@@ -1501,7 +1468,7 @@ func TestAddChildrenGroupsEndpoint(t *testing.T) {
 			childrenIDs: []string{validID},
 			contentType: contentType,
 			svcErr:      nil,
-			status:      http.StatusOK,
+			status:      http.StatusNoContent,
 			err:         nil,
 		},
 		{

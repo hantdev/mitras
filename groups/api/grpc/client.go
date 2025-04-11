@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/internal/grpc/groups/v1"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"google.golang.org/grpc"

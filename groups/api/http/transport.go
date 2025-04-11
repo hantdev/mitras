@@ -6,9 +6,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	roleManagerHttp "github.com/hantdev/mitras/pkg/roles/rolemanager/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -16,7 +16,7 @@ import (
 )
 
 // MakeHandler returns a HTTP handler for Groups API endpoints.
-func MakeHandler(svc groups.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, idp mitras.IDProvider) *chi.Mux {
+func MakeHandler(svc groups.Service, authn authn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string) *chi.Mux {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -24,8 +24,6 @@ func MakeHandler(svc groups.Service, authn authn.Authentication, mux *chi.Mux, l
 
 	mux.Route("/{domainID}/groups", func(r chi.Router) {
 		r.Use(api.AuthenticateMiddleware(authn, true))
-		r.Use(api.RequestIDMiddleware(idp))
-
 		r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
 			CreateGroupEndpoint(svc),
 			DecodeGroupCreate,

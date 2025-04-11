@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -24,7 +24,7 @@ func CreateGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 			return createGroupRes{created: false}, svcerr.ErrAuthentication
 		}
 
-		group, _, err := svc.CreateGroup(ctx, session, req.Group)
+		group, err := svc.CreateGroup(ctx, session, req.Group)
 		if err != nil {
 			return createGroupRes{created: false}, err
 		}
@@ -45,7 +45,7 @@ func ViewGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 			return viewGroupRes{}, svcerr.ErrAuthentication
 		}
 
-		group, err := svc.ViewGroup(ctx, session, req.id, req.roles)
+		group, err := svc.ViewGroup(ctx, session, req.id)
 		if err != nil {
 			return viewGroupRes{}, err
 		}
@@ -197,9 +197,6 @@ func retrieveGroupHierarchyEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err != nil {
 			return retrieveGroupHierarchyRes{}, err
 		}
-		if req.HierarchyPageMeta.Tree {
-			return buildGroupsResponseTree(hp), nil
-		}
 
 		groups := []viewGroupRes{}
 		for _, g := range hp.Groups {
@@ -341,43 +338,4 @@ func toViewGroupRes(group groups.Group) viewGroupRes {
 		Group: group,
 	}
 	return view
-}
-
-func buildGroupsResponseTree(page groups.HierarchyPage) retrieveGroupHierarchyRes {
-	groupsMap := map[string]*groups.Group{}
-	parentsMap := map[string][]*groups.Group{}
-	for i := range page.Groups {
-		if _, ok := groupsMap[page.Groups[i].ID]; !ok {
-			groupsMap[page.Groups[i].ID] = &page.Groups[i]
-			parentsMap[page.Groups[i].ID] = make([]*groups.Group, 0)
-		}
-	}
-
-	for _, group := range groupsMap {
-		if children, ok := parentsMap[group.Parent]; ok {
-			children = append(children, group)
-			parentsMap[group.Parent] = children
-		}
-	}
-
-	res := retrieveGroupHierarchyRes{
-		Level:     page.Level,
-		Direction: page.Direction,
-		Groups:    []viewGroupRes{},
-	}
-
-	for _, group := range groupsMap {
-		if children, ok := parentsMap[group.ID]; ok {
-			group.Children = children
-		}
-	}
-
-	for _, group := range groupsMap {
-		view := toViewGroupRes(*group)
-		if children, ok := parentsMap[group.Parent]; len(children) == 0 || !ok {
-			res.Groups = append(res.Groups, view)
-		}
-	}
-
-	return res
 }

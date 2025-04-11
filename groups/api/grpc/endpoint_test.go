@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
 	"github.com/hantdev/mitras/groups"
 	grpcapi "github.com/hantdev/mitras/groups/api/grpc"
 	prmocks "github.com/hantdev/mitras/groups/private/mocks"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/internal/grpc/groups/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
