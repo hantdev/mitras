@@ -27,7 +27,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 			client.Status = clients.EnabledStatus.String()
-			client, err := sdk.CreateClient(cmd.Context(), client, args[1], args[2])
+			client, err := sdk.CreateClient(client, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -61,7 +61,7 @@ var cmdClients = []cobra.Command{
 				Metadata: metadata,
 			}
 			if args[0] == all {
-				l, err := sdk.Clients(cmd.Context(), pageMetadata, args[1], args[2])
+				l, err := sdk.Clients(pageMetadata, args[1], args[2])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -69,7 +69,7 @@ var cmdClients = []cobra.Command{
 				logJSONCmd(*cmd, l)
 				return
 			}
-			t, err := sdk.Client(cmd.Context(), args[0], args[1], args[2])
+			t, err := sdk.Client(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -89,7 +89,7 @@ var cmdClients = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			if err := sdk.DeleteClient(cmd.Context(), args[0], args[1], args[2]); err != nil {
+			if err := sdk.DeleteClient(args[0], args[1], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -117,7 +117,7 @@ var cmdClients = []cobra.Command{
 					return
 				}
 				client.ID = args[1]
-				client, err := sdk.UpdateClientTags(cmd.Context(), client, args[3], args[4])
+				client, err := sdk.UpdateClientTags(client, args[3], args[4])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -128,7 +128,7 @@ var cmdClients = []cobra.Command{
 			}
 
 			if args[0] == "secret" {
-				client, err := sdk.UpdateClientSecret(cmd.Context(), args[1], args[2], args[3], args[4])
+				client, err := sdk.UpdateClientSecret(args[1], args[2], args[3], args[4])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -143,7 +143,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 			client.ID = args[0]
-			client, err := sdk.UpdateClient(cmd.Context(), client, args[2], args[3])
+			client, err := sdk.UpdateClient(client, args[2], args[3])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -164,7 +164,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			client, err := sdk.EnableClient(cmd.Context(), args[0], args[1], args[2])
+			client, err := sdk.EnableClient(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -185,7 +185,7 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			client, err := sdk.DisableClient(cmd.Context(), args[0], args[1], args[2])
+			client, err := sdk.DisableClient(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -195,29 +195,22 @@ var cmdClients = []cobra.Command{
 		},
 	},
 	{
-		Use:   "connect <client_id> <channel_id> <conn_types_json_list> <domain_id> <user_auth_token>",
-		Short: "Connect client",
-		Long: "Connect client to the channel\n" +
+		Use:   "share <client_id> <user_id> <relation> <domain_id> <user_auth_token>",
+		Short: "Share client with a user",
+		Long: "Share client with a user\n" +
 			"Usage:\n" +
-			"\tmitras-cli clients connect <client_id> <channel_id> <conn_types_json_list> $DOMAINID $USERTOKEN\n",
+			"\tmitras-cli clients share <client_id> <user_id> <relation> $DOMAINID $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 5 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			var conn_types []string
-			err := json.Unmarshal([]byte(args[2]), &conn_types)
+			req := smqsdk.UsersRelationRequest{
+				Relation: args[2],
+				UserIDs:  []string{args[1]},
+			}
+			err := sdk.ShareClient(args[0], req, args[3], args[4])
 			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			connIDs := smqsdk.Connection{
-				ChannelIDs: []string{args[1]},
-				ClientIDs:  []string{args[0]},
-				Types:      conn_types,
-			}
-			if err := sdk.Connect(cmd.Context(), connIDs, args[3], args[4]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -226,35 +219,99 @@ var cmdClients = []cobra.Command{
 		},
 	},
 	{
-		Use:   "disconnect <client_id> <channel_id> <conn_types_json_list> <domain_id> <user_auth_token>",
-		Short: "Disconnect client",
-		Long: "Disconnect client to the channel\n" +
+		Use:   "unshare <client_id> <user_id> <relation> <domain_id> <user_auth_token>",
+		Short: "Unshare client with a user",
+		Long: "Unshare client with a user\n" +
 			"Usage:\n" +
-			"\tmitras-cli clients disconnect <client_id> <channel_id> <conn_types_json_list> $DOMAINID $USERTOKEN\n",
+			"\tmitras-cli clients share  <client_id> <user_id> <relation> $DOMAINID $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 5 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-
-			var conn_types []string
-			err := json.Unmarshal([]byte(args[2]), &conn_types)
+			req := smqsdk.UsersRelationRequest{
+				Relation: args[2],
+				UserIDs:  []string{args[1]},
+			}
+			err := sdk.UnshareClient(args[0], req, args[3], args[4])
 			if err != nil {
 				logErrorCmd(*cmd, err)
+				return
+			}
+
+			logOKCmd(*cmd)
+		},
+	},
+	{
+		Use:   "connect <client_id> <channel_id> <domain_id> <user_auth_token>",
+		Short: "Connect client",
+		Long: "Connect client to the channel\n" +
+			"Usage:\n" +
+			"\tmitras-cli clients connect <client_id> <channel_id> $DOMAINID $USERTOKEN\n",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 4 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+
+			connIDs := smqsdk.Connection{
+				ChannelIDs: []string{args[1]},
+				ClientIDs:  []string{args[0]},
+			}
+			if err := sdk.Connect(connIDs, args[2], args[3]); err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			logOKCmd(*cmd)
+		},
+	},
+	{
+		Use:   "disconnect <client_id> <channel_id> <domain_id> <user_auth_token>",
+		Short: "Disconnect client",
+		Long: "Disconnect client to the channel\n" +
+			"Usage:\n" +
+			"\tmitras-cli clients disconnect <client_id> <channel_id> $DOMAINID $USERTOKEN\n",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 4 {
+				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
 			connIDs := smqsdk.Connection{
 				ClientIDs:  []string{args[0]},
 				ChannelIDs: []string{args[1]},
-				Types:      conn_types,
 			}
-			if err := sdk.Disconnect(cmd.Context(), connIDs, args[3], args[4]); err != nil {
+			if err := sdk.Disconnect(connIDs, args[2], args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
 			logOKCmd(*cmd)
+		},
+	},
+	{
+		Use:   "connections <client_id> <domain_id> <user_auth_token>",
+		Short: "Connected list",
+		Long: "List of Channels connected to Client\n" +
+			"Usage:\n" +
+			"\tmitras-cli connections <client_id> $DOMAINID $USERTOKEN\n",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 3 {
+				logUsageCmd(*cmd, cmd.Use)
+				return
+			}
+			pm := smqsdk.PageMetadata{
+				Offset: Offset,
+				Limit:  Limit,
+			}
+			cl, err := sdk.ChannelsByClient(args[0], pm, args[1], args[2])
+			if err != nil {
+				logErrorCmd(*cmd, err)
+				return
+			}
+
+			logJSONCmd(*cmd, cl)
 		},
 	},
 	{
@@ -272,7 +329,7 @@ var cmdClients = []cobra.Command{
 				Offset: Offset,
 				Limit:  Limit,
 			}
-			ul, err := sdk.ListClientMembers(cmd.Context(), args[0], args[1], pm, args[2])
+			ul, err := sdk.ListClientUsers(args[0], pm, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -283,368 +340,13 @@ var cmdClients = []cobra.Command{
 	},
 }
 
-var cmdClientsRoles = []cobra.Command{
-	{
-		Use:   "create <JSON_role> <client_id> <domain_id> <user_auth_token>",
-		Short: "Create client role",
-		Long: "Create role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles create <JSON_role> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles create '{\"role_name\":\"admin\",\"optional_actions\":[\"read\",\"update\"]}' 4ef09eff-d500-4d56-b04f-d23a512d6f2a 39f97daf-d6b6-40f4-b229-2697be8006ef $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			var roleReq smqsdk.RoleReq
-			if err := json.Unmarshal([]byte(args[0]), &roleReq); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			r, err := sdk.CreateClientRole(cmd.Context(), args[1], args[2], roleReq, args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "get [all | <role_id>] <client_id>, <domain_id> <user_auth_token>",
-		Short: "Get client roles",
-		Long: "Get client roles\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles get all <client_id> <domain_id> <user_auth_token> - lists all roles\n" +
-			"\tmitras-cli clients roles get all <client_id> <domain_id> <user_auth_token> --offset <offset> --limit <limit> - lists all roles with provided offset and limit\n" +
-			"\tmitras-cli clients roles get <role_id> <client_id> <domain_id> <user_auth_token> - shows role by role id and domain id\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			pageMetadata := smqsdk.PageMetadata{
-				Offset: Offset,
-				Limit:  Limit,
-			}
-			if args[0] == all {
-				rs, err := sdk.ClientRoles(cmd.Context(), args[1], args[2], pageMetadata, args[3])
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, rs)
-				return
-			}
-			r, err := sdk.ClientRole(cmd.Context(), args[1], args[0], args[2], args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "update <new_name> <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Update client role name",
-		Long: "Update client role name\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles update <new_name> <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles update new_name 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 5 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			r, err := sdk.UpdateClientRole(cmd.Context(), args[2], args[1], args[0], args[3], args[4])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "delete <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Delete client role",
-		Long: "Delete client role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles delete <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles delete 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			if err := sdk.DeleteClientRole(cmd.Context(), args[1], args[0], args[2], args[3]); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logOKCmd(*cmd)
-		},
-	},
-}
-
-var cmdClientsActions = []cobra.Command{
-	{
-		Use:   "add <JSON_actions> <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Add actions to role",
-		Long: "Add actions to role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles actions add <JSON_actions> <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles actions add '{\"actions\":[\"read\",\"write\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 5 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			actions := struct {
-				Actions []string `json:"actions"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &actions); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			acts, err := sdk.AddClientRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, acts)
-		},
-	},
-
-	{
-		Use:   "list <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "List actions of role",
-		Long: "List actions of role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles actions list <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles actions list 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			l, err := sdk.ClientRoleActions(cmd.Context(), args[1], args[0], args[2], args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, l)
-		},
-	},
-
-	{
-		Use:   "delete [all | <JSON_actions>] <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Delete actions from role",
-		Long: "Delete actions from role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles actions delete <JSON_actions> <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"\tmitras-cli clients roles actions delete all <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles actions delete '{\"actions\":[\"read\",\"write\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 5 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == all {
-				if err := sdk.RemoveAllClientRoleActions(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logOKCmd(*cmd)
-				return
-			}
-			actions := struct {
-				Actions []string `json:"actions"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &actions); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			if err := sdk.RemoveClientRoleActions(cmd.Context(), args[2], args[1], args[3], actions.Actions, args[4]); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logOKCmd(*cmd)
-		},
-	},
-
-	{
-		Use:   "available-actions <domain_id> <user_auth_token>",
-		Short: "List available actions",
-		Long: "List available actions\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles actions available-actions <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles actions available-actions 39f97daf-d6b6-40f4-b229-2697be8006ef $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			acts, err := sdk.AvailableClientRoleActions(cmd.Context(), args[0], args[1])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, acts)
-		},
-	},
-}
-
-var cmdClientMembers = []cobra.Command{
-	{
-		Use:   "add <JSON_members> <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Add members to role",
-		Long: "Add members to role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles members add <JSON_members> <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles members add '{\"members\":[\"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\", \"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 5 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			members := struct {
-				Members []string `json:"members"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &members); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			memb, err := sdk.AddClientRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, memb)
-		},
-	},
-
-	{
-		Use:   "list <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "List members of role",
-		Long: "List members of role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles members list <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles members list 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			pageMetadata := smqsdk.PageMetadata{
-				Offset: Offset,
-				Limit:  Limit,
-			}
-
-			l, err := sdk.ClientRoleMembers(cmd.Context(), args[1], args[0], args[2], pageMetadata, args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, l)
-		},
-	},
-
-	{
-		Use:   "delete [all | <JSON_members>] <role_id> <client_id> <domain_id> <user_auth_token>",
-		Short: "Delete members from role",
-		Long: "Delete members from role\n" +
-			"Usage:\n" +
-			"\tmitras-cli clients roles members delete <JSON_members> <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"\tmitras-cli clients roles members delete all <role_id> <client_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli clients roles members delete all 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n" +
-			"\tmitras-cli clients roles members delete '{\"members\":[\"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\", \"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 5 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == all {
-				if err := sdk.RemoveAllClientRoleMembers(cmd.Context(), args[2], args[1], args[3], args[4]); err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logOKCmd(*cmd)
-				return
-			}
-
-			members := struct {
-				Members []string `json:"members"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &members); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			if err := sdk.RemoveClientRoleMembers(cmd.Context(), args[2], args[1], args[3], members.Members, args[4]); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logOKCmd(*cmd)
-		},
-	},
-}
-
 // NewClientsCmd returns clients command.
 func NewClientsCmd() *cobra.Command {
-	actionsCmd := cobra.Command{
-		Use:   "actions [add | list | delete | available-actions]",
-		Short: "Actions management",
-		Long:  "Actions management: add, list, delete actions and list available actions",
-	}
-	for i := range cmdClientsActions {
-		actionsCmd.AddCommand(&cmdClientsActions[i])
-	}
-
-	membersCmd := cobra.Command{
-		Use:   "members [add | list | delete]",
-		Short: "Members management",
-		Long:  "Members management: add, list, delete members",
-	}
-	for i := range cmdClientMembers {
-		membersCmd.AddCommand(&cmdClientMembers[i])
-	}
-
-	rolesCmd := cobra.Command{
-		Use:   "roles [create | get | update | delete | actions | members]",
-		Short: "Roles management",
-		Long:  "Roles management: create, update, retrieve roles and assign/unassign members to roles",
-	}
-
-	rolesCmd.AddCommand(&actionsCmd)
-	rolesCmd.AddCommand(&membersCmd)
-
-	for i := range cmdClientsRoles {
-		rolesCmd.AddCommand(&cmdClientsRoles[i])
-	}
-
 	cmd := cobra.Command{
 		Use:   "clients [create | get | update | delete | share | connect | disconnect | connections | not-connected | users ]",
 		Short: "Clients management",
 		Long:  `Clients management: create, get, update, delete or share Client, connect or disconnect Client from Channel and get the list of Channels connected or disconnected from a Client`,
 	}
-	cmd.AddCommand(&rolesCmd)
 
 	for i := range cmdClients {
 		cmd.AddCommand(&cmdClients[i])

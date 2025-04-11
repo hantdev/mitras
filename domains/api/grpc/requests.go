@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type deleteUserPoliciesReq struct {
@@ -9,18 +9,6 @@ type deleteUserPoliciesReq struct {
 }
 
 func (req deleteUserPoliciesReq) validate() error {
-	if req.ID == "" {
-		return apiutil.ErrMissingID
-	}
-
-	return nil
-}
-
-type retrieveEntityReq struct {
-	ID string
-}
-
-func (req retrieveEntityReq) validate() error {
 	if req.ID == "" {
 		return apiutil.ErrMissingID
 	}

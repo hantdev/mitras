@@ -3,15 +3,15 @@ package grpc
 import (
 	"context"
 
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	smqauth "github.com/hantdev/mitras/auth"
 	clients "github.com/hantdev/mitras/clients/private"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

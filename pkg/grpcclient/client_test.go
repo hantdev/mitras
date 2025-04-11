@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	tokengrpcapi "github.com/hantdev/mitras/auth/api/grpc/token"
 	"github.com/hantdev/mitras/auth/mocks"
 	clientsgrpcapi "github.com/hantdev/mitras/clients/api/grpc"
 	climocks "github.com/hantdev/mitras/clients/private/mocks"
 	domainsgrpcapi "github.com/hantdev/mitras/domains/api/grpc"
-	domainsMocks "github.com/hantdev/mitras/domains/private/mocks"
-	mitraslog "github.com/hantdev/mitras/logger"
+	domainsMocks "github.com/hantdev/mitras/domains/mocks"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	"github.com/hantdev/mitras/pkg/server"
@@ -30,7 +30,7 @@ func TestSetupToken(t *testing.T) {
 	registerAuthServiceServer := func(srv *grpc.Server) {
 		grpcTokenV1.RegisterTokenServiceServer(srv, tokengrpcapi.NewTokenServer(new(mocks.Service)))
 	}
-	gs := grpcserver.NewServer(ctx, cancel, "auth", server.Config{Port: "12345"}, registerAuthServiceServer, mitraslog.NewMock())
+	gs := grpcserver.NewServer(ctx, cancel, "auth", server.Config{Port: "12345"}, registerAuthServiceServer, smqlog.NewMock())
 	go func() {
 		err := gs.Start()
 		assert.Nil(t, err, fmt.Sprintf(`"Unexpected error creating server %s"`, err))
@@ -82,7 +82,7 @@ func TestSetupClientsClient(t *testing.T) {
 	registerClientsServiceServer := func(srv *grpc.Server) {
 		grpcClientsV1.RegisterClientsServiceServer(srv, clientsgrpcapi.NewServer(new(climocks.Service)))
 	}
-	gs := grpcserver.NewServer(ctx, cancel, "clients", server.Config{Port: "12345"}, registerClientsServiceServer, mitraslog.NewMock())
+	gs := grpcserver.NewServer(ctx, cancel, "clients", server.Config{Port: "12345"}, registerClientsServiceServer, smqlog.NewMock())
 	go func() {
 		err := gs.Start()
 		assert.Nil(t, err, fmt.Sprintf(`"Unexpected error creating server %s"`, err))
@@ -126,7 +126,7 @@ func TestSetupDomainsClient(t *testing.T) {
 	registerDomainsServiceServer := func(srv *grpc.Server) {
 		grpcDomainsV1.RegisterDomainsServiceServer(srv, domainsgrpcapi.NewDomainsServer(new(domainsMocks.Service)))
 	}
-	gs := grpcserver.NewServer(ctx, cancel, "domains", server.Config{Port: "12345"}, registerDomainsServiceServer, mitraslog.NewMock())
+	gs := grpcserver.NewServer(ctx, cancel, "domains", server.Config{Port: "12345"}, registerDomainsServiceServer, smqlog.NewMock())
 	go func() {
 		err := gs.Start()
 		assert.Nil(t, err, fmt.Sprintf("Unexpected error creating server %s", err))

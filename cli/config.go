@@ -17,11 +17,12 @@ import (
 const (
 	defURL             string = "http://localhost"
 	defUsersURL        string = defURL + ":9002"
-	defCLientsURL      string = defURL + ":9006"
-	defDomainsURL      string = defURL + ":9003"
-	defChannelsURL     string = defURL + ":9005"
-	defGroupsURL       string = defURL + ":9004"
+	defCLientsURL      string = defURL + ":9000"
+	defReaderURL       string = defURL + ":9011"
+	defBootstrapURL    string = defURL + ":9013"
+	defDomainsURL      string = defURL + ":8189"
 	defCertsURL        string = defURL + ":9019"
+	defInvitationsURL  string = defURL + ":9020"
 	defHTTPURL         string = defURL + ":8008"
 	defJournalURL      string = defURL + ":9021"
 	defTLSVerification bool   = false
@@ -34,11 +35,12 @@ const (
 type remotes struct {
 	ClientsURL      string `toml:"clients_url"`
 	UsersURL        string `toml:"users_url"`
+	ReaderURL       string `toml:"reader_url"`
 	DomainsURL      string `toml:"domains_url"`
-	ChannelsURL     string `toml:"channels_url"`
-	GroupsURL       string `toml:"groups_url"`
 	HTTPAdapterURL  string `toml:"http_adapter_url"`
+	BootstrapURL    string `toml:"bootstrap_url"`
 	CertsURL        string `toml:"certs_url"`
+	InvitationsURL  string `toml:"invitations_url"`
 	JournalURL      string `toml:"journal_url"`
 	HostURL         string `toml:"host_url"`
 	TLSVerification bool   `toml:"tls_verification"`
@@ -104,11 +106,12 @@ func ParseConfig(sdkConf smqsdk.Config) (smqsdk.Config, error) {
 			Remotes: remotes{
 				ClientsURL:      defCLientsURL,
 				UsersURL:        defUsersURL,
+				ReaderURL:       defReaderURL,
 				DomainsURL:      defDomainsURL,
-				ChannelsURL:     defChannelsURL,
-				GroupsURL:       defGroupsURL,
 				HTTPAdapterURL:  defHTTPURL,
+				BootstrapURL:    defBootstrapURL,
 				CertsURL:        defCertsURL,
+				InvitationsURL:  defInvitationsURL,
 				JournalURL:      defJournalURL,
 				HostURL:         defURL,
 				TLSVerification: defTLSVerification,
@@ -173,24 +176,28 @@ func ParseConfig(sdkConf smqsdk.Config) (smqsdk.Config, error) {
 		sdkConf.UsersURL = config.Remotes.UsersURL
 	}
 
+	if sdkConf.ReaderURL == "" && config.Remotes.ReaderURL != "" {
+		sdkConf.ReaderURL = config.Remotes.ReaderURL
+	}
+
 	if sdkConf.DomainsURL == "" && config.Remotes.DomainsURL != "" {
 		sdkConf.DomainsURL = config.Remotes.DomainsURL
-	}
-
-	if sdkConf.ChannelsURL == "" && config.Remotes.ChannelsURL != "" {
-		sdkConf.ChannelsURL = config.Remotes.ChannelsURL
-	}
-
-	if sdkConf.GroupsURL == "" && config.Remotes.GroupsURL != "" {
-		sdkConf.GroupsURL = config.Remotes.GroupsURL
 	}
 
 	if sdkConf.HTTPAdapterURL == "" && config.Remotes.HTTPAdapterURL != "" {
 		sdkConf.HTTPAdapterURL = config.Remotes.HTTPAdapterURL
 	}
 
+	if sdkConf.BootstrapURL == "" && config.Remotes.BootstrapURL != "" {
+		sdkConf.BootstrapURL = config.Remotes.BootstrapURL
+	}
+
 	if sdkConf.CertsURL == "" && config.Remotes.CertsURL != "" {
 		sdkConf.CertsURL = config.Remotes.CertsURL
+	}
+
+	if sdkConf.InvitationsURL == "" && config.Remotes.InvitationsURL != "" {
+		sdkConf.InvitationsURL = config.Remotes.InvitationsURL
 	}
 
 	if sdkConf.JournalURL == "" && config.Remotes.JournalURL != "" {
@@ -250,7 +257,9 @@ func setConfigValue(key, value string) error {
 	configKeyToField := map[string]interface{}{
 		"clients_url":      &config.Remotes.ClientsURL,
 		"users_url":        &config.Remotes.UsersURL,
+		"reader_url":       &config.Remotes.ReaderURL,
 		"http_adapter_url": &config.Remotes.HTTPAdapterURL,
+		"bootstrap_url":    &config.Remotes.BootstrapURL,
 		"certs_url":        &config.Remotes.CertsURL,
 		"tls_verification": &config.Remotes.TLSVerification,
 		"offset":           &config.Filter.Offset,

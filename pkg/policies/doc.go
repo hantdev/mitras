@@ -1,2 +1,2 @@
-// Package policies contains Mitras policy definitions.
+// Package policies contains mitras policy definitions.
 package policies

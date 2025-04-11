@@ -37,36 +37,6 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 					`DROP TABLE IF EXISTS domains`,
 				},
 			},
-			{
-				Id: "domain_2",
-				Up: []string{
-					`CREATE TABLE IF NOT EXISTS invitations (
-						invited_by       VARCHAR(36) NOT NULL,
-						invitee_user_id  VARCHAR(36) NOT NULL,
-						domain_id        VARCHAR(36) NOT NULL,
-						role_id          VARCHAR(36) NOT NULL,
-						created_at       TIMESTAMP NOT NULL,
-						updated_at       TIMESTAMP,
-						confirmed_at     TIMESTAMP,
-						rejected_at      TIMESTAMP,
-						UNIQUE (invitee_user_id, domain_id),
-						PRIMARY KEY (invitee_user_id, domain_id),
-						FOREIGN KEY (domain_id) REFERENCES domains(id) ON DELETE CASCADE
-					);`,
-				},
-				Down: []string{
-					`DROP TABLE IF EXISTS invitations`,
-				},
-			},
-			{
-				Id: "domain_3",
-				Up: []string{
-					`ALTER TABLE domains RENAME COLUMN alias TO route;`,
-				},
-				Down: []string{
-					`ALTER TABLE domains RENAME COLUMN route TO alias;`,
-				},
-			},
 		},
 	}
 

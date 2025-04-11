@@ -19,6 +19,7 @@ AUTH_GRPC_SERVER_CN=auth
 AUTH_GRPC_CLIENT_CN=auth-client
 AUTH_GRPC_SERVER_CRT_FILE_NAME=auth-grpc-server
 AUTH_GRPC_CLIENT_CRT_FILE_NAME=auth-grpc-client
+DHPARAM=dhparam.pem
 
 define GRPC_CERT_CONFIG
 [req]
@@ -31,8 +32,8 @@ CN = mg.svc
 C  = VN
 ST = Hanoi
 L  = Hanoi
-O  = Mitras
-OU = Mitras
+O  = MITRAS
+OU = MITRAS
 
 [v3_req]
 subjectAltName = @alt_names
@@ -54,6 +55,11 @@ all: clean_certs ca server_cert clients_grpc_certs auth_grpc_certs
 ca:
 	openssl req -newkey rsa:2048 -x509 -nodes -sha512 -days 1095 \
 				-keyout $(CRT_LOCATION)/ca.key -out $(CRT_LOCATION)/ca.crt -subj "/CN=$(CN_CA)/O=$(O)/OU=$(OU_CA)/emailAddress=$(EA)"
+
+# Generate DH Params
+dhparam:
+	@echo "==> Generating DH Parameters..."
+	openssl dhparam -out $(DHPARAM) 2048
 
 # Server cert and key name is "mitras-server".
 server_cert:

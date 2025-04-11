@@ -1,9 +1,9 @@
 package api
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/groups"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type createGroupReq struct {
@@ -53,8 +53,7 @@ func (req listGroupsReq) validate() error {
 }
 
 type groupReq struct {
-	id    string
-	roles bool
+	id string
 }
 
 func (req groupReq) validate() error {

@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/journal"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 )
@@ -29,7 +28,6 @@ func (lm *loggingMiddleware) Save(ctx context.Context, j journal.Journal) (err e
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("journal",
 				slog.String("occurred_at", j.OccurredAt.Format(time.RFC3339Nano)),
 				slog.String("operation", j.Operation),
@@ -50,7 +48,6 @@ func (lm *loggingMiddleware) RetrieveAll(ctx context.Context, session smqauthn.S
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("page",
 				slog.String("operation", page.Operation),
 				slog.String("entity_type", page.EntityType.String()),
@@ -68,23 +65,4 @@ func (lm *loggingMiddleware) RetrieveAll(ctx context.Context, session smqauthn.S
 	}(time.Now())
 
 	return lm.service.RetrieveAll(ctx, session, page)
-}
-
-func (lm *loggingMiddleware) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (ct journal.ClientTelemetry, err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
-			slog.String("client_id", clientID),
-			slog.String("domain_id", session.DomainID),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("Retrieve client telemetry failed", args...)
-			return
-		}
-		lm.logger.Info("Retrieve client telemetry completed successfully", args...)
-	}(time.Now())
-
-	return lm.service.RetrieveClientTelemetry(ctx, session, clientID)
 }

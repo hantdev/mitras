@@ -19,8 +19,8 @@ func init() {
 	log.Println("The binary was build using nats as the events store")
 }
 
-func NewPublisher(ctx context.Context, url string) (events.Publisher, error) {
-	pb, err := nats.NewPublisher(ctx, url)
+func NewPublisher(ctx context.Context, url, stream string) (events.Publisher, error) {
+	pb, err := nats.NewPublisher(ctx, url, stream)
 	if err != nil {
 		return nil, err
 	}

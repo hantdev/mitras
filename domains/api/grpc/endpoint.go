@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	domains "github.com/hantdev/mitras/domains/private"
+	"github.com/hantdev/mitras/domains"
 )
 
 func deleteUserFromDomainsEndpoint(svc domains.Service) endpoint.Endpoint {
@@ -19,24 +19,5 @@ func deleteUserFromDomainsEndpoint(svc domains.Service) endpoint.Endpoint {
 		}
 
 		return deleteUserRes{deleted: true}, nil
-	}
-}
-
-func retrieveEntityEndpoint(svc domains.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(retrieveEntityReq)
-		if err := req.validate(); err != nil {
-			return retrieveEntityRes{}, err
-		}
-
-		dom, err := svc.RetrieveEntity(ctx, req.ID)
-		if err != nil {
-			return retrieveEntityRes{}, err
-		}
-
-		return retrieveEntityRes{
-			id:     dom.ID,
-			status: uint8(dom.Status),
-		}, nil
 	}
 }

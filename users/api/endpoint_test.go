@@ -11,20 +11,19 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	authmocks "github.com/hantdev/mitras/auth/mocks"
+	"github.com/hantdev/mitras/internal/api"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	oauth2mocks "github.com/hantdev/mitras/pkg/oauth2/mocks"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/hantdev/mitras/users"
-	usersapi "github.com/hantdev/mitras/users/api"
+	httpapi "github.com/hantdev/mitras/users/api"
 	"github.com/hantdev/mitras/users/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -87,12 +86,11 @@ func newUsersServer() (*httptest.Server, *mocks.Service, *authnmocks.Authenticat
 	svc := new(mocks.Service)
 	logger := smqlog.NewMock()
 	mux := chi.NewRouter()
-	idp := uuid.NewMock()
 	provider := new(oauth2mocks.Provider)
 	provider.On("Name").Return("test")
 	authn := new(authnmocks.Authentication)
 	token := new(authmocks.TokenServiceClient)
-	usersapi.MakeHandler(svc, authn, token, true, mux, logger, "", passRegex, idp, provider)
+	httpapi.MakeHandler(svc, authn, token, true, mux, logger, "", passRegex, provider)
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -2118,7 +2116,6 @@ func TestIssueToken(t *testing.T) {
 	defer us.Close()
 
 	validUsername := "valid"
-	dataFormat := `{"username": "%s", "password": "%s"}`
 
 	cases := []struct {
 		desc        string
@@ -2129,42 +2126,42 @@ func TestIssueToken(t *testing.T) {
 	}{
 		{
 			desc:        "issue token with valid identity and secret",
-			data:        fmt.Sprintf(dataFormat, validUsername, secret),
+			data:        fmt.Sprintf(`{"identity": "%s", "secret": "%s"}`, validUsername, secret),
 			contentType: contentType,
 			status:      http.StatusCreated,
 			err:         nil,
 		},
 		{
 			desc:        "issue token with empty identity",
-			data:        fmt.Sprintf(dataFormat, "", secret),
+			data:        fmt.Sprintf(`{"identity": "%s", "secret": "%s"}`, "", secret),
 			contentType: contentType,
 			status:      http.StatusBadRequest,
 			err:         apiutil.ErrValidation,
 		},
 		{
 			desc:        "issue token with empty secret",
-			data:        fmt.Sprintf(dataFormat, validUsername, ""),
+			data:        fmt.Sprintf(`{"identity": "%s", "secret": "%s"}`, validUsername, ""),
 			contentType: contentType,
 			status:      http.StatusBadRequest,
 			err:         apiutil.ErrValidation,
 		},
 		{
 			desc:        "issue token with invalid email",
-			data:        fmt.Sprintf(dataFormat, "invalid", secret),
+			data:        fmt.Sprintf(`{"identity": "%s", "secret": "%s"}`, "invalid", secret),
 			contentType: contentType,
 			status:      http.StatusUnauthorized,
 			err:         svcerr.ErrAuthentication,
 		},
 		{
 			desc:        "issues token with malformed data",
-			data:        fmt.Sprintf(dataFormat, validUsername, secret),
+			data:        fmt.Sprintf(`{"identity": %s, "secret": %s}`, validUsername, secret),
 			contentType: contentType,
 			status:      http.StatusBadRequest,
 			err:         apiutil.ErrValidation,
 		},
 		{
 			desc:        "issue token with invalid contentype",
-			data:        fmt.Sprintf(dataFormat, "invalid", secret),
+			data:        fmt.Sprintf(`{"identity": "%s", "secret": "%s"}`, "invalid", secret),
 			contentType: "application/xml",
 			status:      http.StatusUnsupportedMediaType,
 			err:         apiutil.ErrValidation,
@@ -2559,6 +2556,1329 @@ func TestDelete(t *testing.T) {
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
 			repoCall.Unset()
+			authnCall.Unset()
+		})
+	}
+}
+
+func TestListUsersByUserGroupId(t *testing.T) {
+	us, svc, authn := newUsersServer()
+	defer us.Close()
+
+	cases := []struct {
+		desc              string
+		token             string
+		groupID           string
+		domainID          string
+		page              users.Page
+		status            int
+		query             string
+		listUsersResponse users.UsersPage
+		authnRes          smqauthn.Session
+		authnErr          error
+		err               error
+	}{
+		{
+			desc:     "list users with valid token",
+			token:    validToken,
+			groupID:  validID,
+			domainID: validID,
+			status:   http.StatusOK,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with empty id",
+			token:    validToken,
+			groupID:  "",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrMissingID,
+		},
+		{
+			desc:     "list users with empty token",
+			token:    "",
+			groupID:  validID,
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      apiutil.ErrBearerToken,
+		},
+		{
+			desc:     "list users with invalid token",
+			token:    inValidToken,
+			groupID:  validID,
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      svcerr.ErrAuthentication,
+		},
+		{
+			desc:    "list users with offset",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Offset: 1,
+					Total:  1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "offset=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:    "list users with invalid offset",
+			token:   validToken,
+			groupID: validID,
+			query:   "offset=invalid",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrValidation,
+		},
+		{
+			desc:    "list users with limit",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Limit: 1,
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "limit=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid limit",
+			token:    validToken,
+			groupID:  validID,
+			query:    "limit=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with limit greater than max",
+			token:    validToken,
+			groupID:  validID,
+			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:    "list users with user name",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "username=username",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid user name",
+			token:    validToken,
+			groupID:  validID,
+			query:    "username=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:    "list users with duplicate user name",
+			token:   validToken,
+			groupID: validID,
+			query:   "username=1&username=2",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:    "list users with status",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "status=enabled",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:    "list users with invalid status",
+			token:   validToken,
+			groupID: validID,
+			query:   "status=invalid",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrValidation,
+		},
+		{
+			desc:    "list users with duplicate status",
+			token:   validToken,
+			groupID: validID,
+			query:   "status=enabled&status=disabled",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:    "list users with tags",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "tag=tag1,tag2",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid tags",
+			token:    validToken,
+			groupID:  validID,
+			query:    "tag=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with duplicate tags",
+			token:    validToken,
+			groupID:  validID,
+			query:    "tag=tag1&tag=tag2",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:    "list users with metadata",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:    "list users with invalid metadata",
+			token:   validToken,
+			groupID: validID,
+			query:   "metadata=invalid",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrValidation,
+		},
+		{
+			desc:    "list users with duplicate metadata",
+			token:   validToken,
+			groupID: validID,
+			query:   "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
+			status:  http.StatusBadRequest,
+			err:     apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:    "list users with permissions",
+			token:   validToken,
+			groupID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "permission=view",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:              "list users with duplicate permissions",
+			token:             validToken,
+			groupID:           validID,
+			query:             "permission=view&permission=view",
+			status:            http.StatusBadRequest,
+			listUsersResponse: users.UsersPage{},
+			authnRes:          smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:               apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:    "list users with email",
+			token:   validToken,
+			groupID: validID,
+			query:   fmt.Sprintf("email=%s", user.Email),
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{
+					user,
+				},
+			},
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid email",
+			token:    validToken,
+			groupID:  validID,
+			query:    "email=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with duplicate email",
+			token:    validToken,
+			groupID:  validID,
+			query:    "email=1&email=2",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			req := testRequest{
+				user:   us.Client(),
+				method: http.MethodGet,
+				url:    fmt.Sprintf("%s/%s/groups/%s/users?", us.URL, validID, tc.groupID) + tc.query,
+				token:  tc.token,
+			}
+			authnCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
+			svcCall := svc.On("ListMembers", mock.Anything, smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID}, mock.Anything, mock.Anything, mock.Anything).Return(
+				users.MembersPage{
+					Page:    tc.listUsersResponse.Page,
+					Members: tc.listUsersResponse.Users,
+				},
+				tc.err)
+			res, err := req.make()
+			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
+			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
+			svcCall.Unset()
+			authnCall.Unset()
+		})
+	}
+}
+
+func TestListUsersByChannelID(t *testing.T) {
+	us, svc, authn := newUsersServer()
+	defer us.Close()
+
+	cases := []struct {
+		desc              string
+		token             string
+		channelID         string
+		page              users.Page
+		status            int
+		query             string
+		listUsersResponse users.UsersPage
+		authnRes          smqauthn.Session
+		authnErr          error
+		err               error
+	}{
+		{
+			desc:      "list users with valid token",
+			token:     validToken,
+			status:    http.StatusOK,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with empty token",
+			token:     "",
+			channelID: validID,
+			status:    http.StatusUnauthorized,
+			authnErr:  svcerr.ErrAuthentication,
+			err:       apiutil.ErrBearerToken,
+		},
+		{
+			desc:      "list users with invalid token",
+			token:     inValidToken,
+			channelID: validID,
+			status:    http.StatusUnauthorized,
+			authnErr:  svcerr.ErrAuthentication,
+			err:       svcerr.ErrAuthentication,
+		},
+		{
+			desc:      "list users with offset",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Offset: 1,
+					Total:  1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "offset=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid offset",
+			token:     validToken,
+			channelID: validID,
+			query:     "offset=invalid",
+			status:    http.StatusBadRequest,
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:      "list users with limit",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Limit: 1,
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "limit=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid limit",
+			token:     validToken,
+			channelID: validID,
+			query:     "limit=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:      "list users with limit greater than max",
+			token:     validToken,
+			channelID: validID,
+			query:     fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:      "list users with user name",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "username=username",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid user name",
+			token:     validToken,
+			channelID: validID,
+			query:     "username=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate user name",
+			token:  validToken,
+			query:  "username=1&username=2",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with status",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "status=enabled",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid status",
+			token:     validToken,
+			channelID: validID,
+			query:     "status=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate status",
+			token:  validToken,
+			query:  "status=enabled&status=disabled",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with tags",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "tag=tag1,tag2",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid tags",
+			token:     validToken,
+			channelID: validID,
+			query:     "tag=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:      "list users with duplicate tags",
+			token:     validToken,
+			channelID: validID,
+			query:     "tag=tag1&tag=tag2",
+			status:    http.StatusBadRequest,
+			err:       apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with metadata",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid metadata",
+			token:     validToken,
+			channelID: validID,
+			query:     "metadata=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate metadata",
+			token:  validToken,
+			query:  "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with permissions",
+			token:     validToken,
+			channelID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "permission=view",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with duplicate permissions",
+			token:     validToken,
+			channelID: validID,
+			query:     "permission=view&permission=view",
+			status:    http.StatusBadRequest,
+			err:       apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with email",
+			token:     validToken,
+			channelID: validID,
+			query:     fmt.Sprintf("email=%s", user.Email),
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{
+					user,
+				},
+			},
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:      "list users with invalid email",
+			token:     validToken,
+			channelID: validID,
+			query:     "email=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:      "list users with duplicate email",
+			token:     validToken,
+			channelID: validID,
+			query:     "email=1&email=2",
+			status:    http.StatusBadRequest,
+			err:       apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:      "list users with list_perms",
+			token:     validToken,
+			channelID: validID,
+			query:     "list_perms=true",
+			status:    http.StatusOK,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       nil,
+		},
+		{
+			desc:      "list users with invalid list_perms",
+			token:     validToken,
+			channelID: validID,
+			query:     "list_perms=invalid",
+			status:    http.StatusBadRequest,
+			authnRes:  smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:       apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate list_perms",
+			token:  validToken,
+			query:  "list_perms=true&list_perms=false",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrValidation,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			req := testRequest{
+				user:   us.Client(),
+				method: http.MethodGet,
+				url:    fmt.Sprintf("%s/%s/channels/%s/users?", us.URL, validID, validID) + tc.query,
+				token:  tc.token,
+			}
+
+			authnCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
+			svcCall := svc.On("ListMembers", mock.Anything, smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID}, mock.Anything, mock.Anything, mock.Anything).Return(
+				users.MembersPage{
+					Page:    tc.listUsersResponse.Page,
+					Members: tc.listUsersResponse.Users,
+				},
+				tc.err)
+			res, err := req.make()
+			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
+			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
+			svcCall.Unset()
+			authnCall.Unset()
+		})
+	}
+}
+
+func TestListUsersByDomainID(t *testing.T) {
+	us, svc, authn := newUsersServer()
+	defer us.Close()
+
+	cases := []struct {
+		desc              string
+		token             string
+		domainID          string
+		page              users.Page
+		status            int
+		query             string
+		listUsersResponse users.UsersPage
+		authnRes          smqauthn.Session
+		authnErr          error
+		err               error
+	}{
+		{
+			desc:     "list users with valid token",
+			token:    validToken,
+			domainID: validID,
+			status:   http.StatusOK,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with empty token",
+			token:    "",
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      apiutil.ErrBearerToken,
+		},
+		{
+			desc:     "list users with invalid token",
+			token:    inValidToken,
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      svcerr.ErrAuthentication,
+		},
+		{
+			desc:     "list users with offset",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Offset: 1,
+					Total:  1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "offset=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid offset",
+			token:    validToken,
+			domainID: validID,
+			query:    "offset=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with limit",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Limit: 1,
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "limit=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid limit",
+			token:    validToken,
+			domainID: validID,
+			query:    "limit=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with limit greater than max",
+			token:    validToken,
+			domainID: validID,
+			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with user name",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "username=username",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid user name",
+			token:    validToken,
+			domainID: validID,
+			query:    "username=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with duplicate user name",
+			token:    validToken,
+			domainID: validID,
+			query:    "username=1&username=2",
+			status:   http.StatusBadRequest,
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with status",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "status=enabled",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid status",
+			token:    validToken,
+			domainID: validID,
+			query:    "status=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate status",
+			token:  validToken,
+			query:  "status=enabled&status=disabled",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with tags",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "tag=tag1,tag2",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid tags",
+			token:    validToken,
+			domainID: validID,
+			query:    "tag=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate tags",
+			token:  validToken,
+			query:  "tag=tag1&tag=tag2",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with metadata",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid metadata",
+			token:    validToken,
+			domainID: validID,
+			query:    "metadata=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate metadata",
+			token:  validToken,
+			query:  "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with permissions",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "permission=membership",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with duplicate permissions",
+			token:    validToken,
+			domainID: validID,
+			query:    "permission=view&permission=view",
+			status:   http.StatusBadRequest,
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with email",
+			token:    validToken,
+			domainID: validID,
+			query:    fmt.Sprintf("email=%s", user.Email),
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{
+					user,
+				},
+			},
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid email",
+			token:    validToken,
+			domainID: validID,
+			query:    "email=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate email",
+			token:  validToken,
+			query:  "email=1&email=2",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users wiith list permissions",
+			token:    validToken,
+			domainID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{
+					user,
+				},
+			},
+			query:    "list_perms=true",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid list_perms",
+			token:    validToken,
+			domainID: validID,
+			query:    "list_perms=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate list_perms",
+			token:  validToken,
+			query:  "list_perms=true&list_perms=false",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrValidation,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			req := testRequest{
+				user:   us.Client(),
+				method: http.MethodGet,
+				url:    fmt.Sprintf("%s/%s/users?", us.URL, validID) + tc.query,
+				token:  tc.token,
+			}
+
+			authnCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
+			svcCall := svc.On("ListMembers", mock.Anything, smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID}, mock.Anything, mock.Anything, mock.Anything).Return(
+				users.MembersPage{
+					Page:    tc.listUsersResponse.Page,
+					Members: tc.listUsersResponse.Users,
+				},
+				tc.err)
+			res, err := req.make()
+			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
+			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
+			svcCall.Unset()
+			authnCall.Unset()
+		})
+	}
+}
+
+func TestListUsersByClientID(t *testing.T) {
+	us, svc, authn := newUsersServer()
+	defer us.Close()
+
+	cases := []struct {
+		desc              string
+		token             string
+		clientID          string
+		page              users.Page
+		status            int
+		query             string
+		listUsersResponse users.UsersPage
+		authnRes          smqauthn.Session
+		authnErr          error
+		err               error
+	}{
+		{
+			desc:     "list users with valid token",
+			token:    validToken,
+			clientID: validID,
+			status:   http.StatusOK,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with empty token",
+			token:    "",
+			clientID: validID,
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      apiutil.ErrBearerToken,
+		},
+		{
+			desc:     "list users with invalid token",
+			token:    inValidToken,
+			clientID: validID,
+			status:   http.StatusUnauthorized,
+			authnErr: svcerr.ErrAuthentication,
+			err:      svcerr.ErrAuthentication,
+		},
+		{
+			desc:     "list users with offset",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Offset: 1,
+					Total:  1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "offset=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid offset",
+			token:    validToken,
+			clientID: validID,
+			query:    "offset=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with limit",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Limit: 1,
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "limit=1",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid limit",
+			token:    validToken,
+			clientID: validID,
+			query:    "limit=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with limit greater than max",
+			token:    validToken,
+			clientID: validID,
+			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with name",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "name=username",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid user name",
+			token:    validToken,
+			clientID: validID,
+			query:    "username=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with duplicate user name",
+			token:    validToken,
+			clientID: validID,
+			query:    "username=1&username=2",
+			status:   http.StatusBadRequest,
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with status",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "status=enabled",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid status",
+			token:    validToken,
+			clientID: validID,
+			query:    "status=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate status",
+			token:  validToken,
+			query:  "status=enabled&status=disabled",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with tags",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "tag=tag1,tag2",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid tags",
+			token:    validToken,
+			clientID: validID,
+			query:    "tag=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate tags",
+			token:  validToken,
+			query:  "tag=tag1&tag=tag2",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with metadata",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid metadata",
+			token:    validToken,
+			clientID: validID,
+			query:    "metadata=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:     "list users with duplicate metadata",
+			token:    validToken,
+			clientID: validID,
+			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with permissions",
+			token:    validToken,
+			clientID: validID,
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{user},
+			},
+			query:    "permission=view",
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:   "list users with duplicate permissions",
+			token:  validToken,
+			query:  "permission=view&permission=view",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+		{
+			desc:     "list users with email",
+			token:    validToken,
+			clientID: validID,
+			query:    fmt.Sprintf("email=%s", user.Email),
+			listUsersResponse: users.UsersPage{
+				Page: users.Page{
+					Total: 1,
+				},
+				Users: []users.User{
+					user,
+				},
+			},
+			status:   http.StatusOK,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      nil,
+		},
+		{
+			desc:     "list users with invalid email",
+			token:    validToken,
+			clientID: validID,
+			query:    "email=invalid",
+			status:   http.StatusBadRequest,
+			authnRes: smqauthn.Session{UserID: validID, DomainID: domainID},
+			err:      apiutil.ErrValidation,
+		},
+		{
+			desc:   "list users with duplicate email",
+			token:  validToken,
+			query:  "email=1&email=2",
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrInvalidQueryParams,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			req := testRequest{
+				user:   us.Client(),
+				method: http.MethodGet,
+				url:    fmt.Sprintf("%s/%s/clients/%s/users?", us.URL, validID, validID) + tc.query,
+				token:  tc.token,
+			}
+
+			authnCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
+			svcCall := svc.On("ListMembers", mock.Anything, smqauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID}, mock.Anything, mock.Anything, mock.Anything).Return(
+				users.MembersPage{
+					Page:    tc.listUsersResponse.Page,
+					Members: tc.listUsersResponse.Users,
+				},
+				tc.err)
+			res, err := req.make()
+			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
+			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
+			svcCall.Unset()
 			authnCall.Unset()
 		})
 	}

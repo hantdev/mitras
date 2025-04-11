@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
 	grpcapi "github.com/hantdev/mitras/auth/api/grpc/token"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/stretchr/testify/assert"

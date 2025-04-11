@@ -3,9 +3,9 @@ package api
 import (
 	"testing"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/journal"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -109,36 +109,6 @@ func TestRetrieveJournalsReqValidate(t *testing.T) {
 					Limit:      limit,
 					EntityType: journal.UserEntity,
 				},
-			},
-			err: apiutil.ErrMissingID,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.desc, func(t *testing.T) {
-			err := c.req.validate()
-			assert.Equal(t, c.err, err)
-		})
-	}
-}
-
-func TestRetrieveClientTelemetryReqValidate(t *testing.T) {
-	cases := []struct {
-		desc string
-		req  retrieveClientTelemetryReq
-		err  error
-	}{
-		{
-			desc: "valid",
-			req: retrieveClientTelemetryReq{
-				clientID: "id",
-			},
-			err: nil,
-		},
-		{
-			desc: "missing client id",
-			req: retrieveClientTelemetryReq{
-				clientID: "",
 			},
 			err: apiutil.ErrMissingID,
 		},

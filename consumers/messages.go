@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/hantdev/mitras/pkg/messaging/brokers"

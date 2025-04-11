@@ -1,0 +1,43 @@
+# This docker-compose file contains optional provision services. Since it's optional, this file is
+# dependent of docker-compose file from <project_root>/docker. In order to run this services, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/provision/docker-compose.yml up
+# from project root.
+
+networks:
+  mitras-base-net:
+
+services:
+  provision:
+    image: mitras/provision:${MITRAS_RELEASE_TAG}
+    container_name: mitras-provision
+    restart: on-failure
+    networks:
+      - mitras-base-net
+    ports:
+      - ${MITRAS_PROVISION_HTTP_PORT}:${MITRAS_PROVISION_HTTP_PORT}
+    environment:
+      MITRAS_PROVISION_LOG_LEVEL: ${MITRAS_PROVISION_LOG_LEVEL}
+      MITRAS_PROVISION_HTTP_PORT: ${MITRAS_PROVISION_HTTP_PORT}
+      MITRAS_PROVISION_CONFIG_FILE: ${MITRAS_PROVISION_CONFIG_FILE}
+      MITRAS_PROVISION_ENV_CLIENTS_TLS: ${MITRAS_PROVISION_ENV_CLIENTS_TLS}
+      MITRAS_PROVISION_SERVER_CERT: ${MITRAS_PROVISION_SERVER_CERT}
+      MITRAS_PROVISION_SERVER_KEY: ${MITRAS_PROVISION_SERVER_KEY}
+      MITRAS_PROVISION_USERS_LOCATION: ${MITRAS_PROVISION_USERS_LOCATION}
+      MITRAS_PROVISION_CLIENTS_LOCATION: ${MITRAS_PROVISION_CLIENTS_LOCATION}
+      MITRAS_PROVISION_USER: ${MITRAS_PROVISION_USER}
+      MITRAS_PROVISION_USERNAME: ${MITRAS_PROVISION_USERNAME}
+      MITRAS_PROVISION_PASS: ${MITRAS_PROVISION_PASS}
+      MITRAS_PROVISION_API_KEY: ${MITRAS_PROVISION_API_KEY}
+      MITRAS_PROVISION_CERTS_SVC_URL: ${MITRAS_PROVISION_CERTS_SVC_URL}
+      MITRAS_PROVISION_X509_PROVISIONING: ${MITRAS_PROVISION_X509_PROVISIONING}
+      MITRAS_PROVISION_BS_SVC_URL: ${MITRAS_PROVISION_BS_SVC_URL}
+      MITRAS_PROVISION_BS_CONFIG_PROVISIONING: ${MITRAS_PROVISION_BS_CONFIG_PROVISIONING}
+      MITRAS_PROVISION_BS_AUTO_WHITELIST: ${MITRAS_PROVISION_BS_AUTO_WHITELIST}
+      MITRAS_PROVISION_BS_CONTENT: ${MITRAS_PROVISION_BS_CONTENT}
+      MITRAS_PROVISION_CERTS_HOURS_VALID: ${MITRAS_PROVISION_CERTS_HOURS_VALID}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_PROVISION_INSTANCE_ID: ${MITRAS_PROVISION_INSTANCE_ID}
+    volumes:
+      - ./configs:/configs
+      - ../../ssl/certs/ca.key:/etc/ssl/certs/ca.key
+      - ../../ssl/certs/ca.crt:/etc/ssl/certs/ca.crt

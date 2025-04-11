@@ -10,14 +10,13 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/hantdev/mitras/coap"
-	httpapi "github.com/hantdev/mitras/coap/api"
+	"github.com/hantdev/mitras/coap/api"
 	"github.com/hantdev/mitras/coap/tracing"
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/messaging/brokers"
 	brokerstracing "github.com/hantdev/mitras/pkg/messaging/brokers/tracing"
-	msgevents "github.com/hantdev/mitras/pkg/messaging/events"
 	"github.com/hantdev/mitras/pkg/prometheus"
 	"github.com/hantdev/mitras/pkg/server"
 	coapserver "github.com/hantdev/mitras/pkg/server/coap"
@@ -30,7 +29,7 @@ const (
 	svcName           = "coap_adapter"
 	envPrefix         = "MITRAS_COAP_ADAPTER_"
 	envPrefixHTTP     = "MITRAS_COAP_ADAPTER_HTTP_"
-	envPrefixClients  = "MITRAS_CLIENTS_GRPC_"
+	envPrefixClients  = "MITRAS_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MITRAS_CHANNELS_GRPC_"
 	defSvcHTTPPort    = "5683"
 	defSvcCoAPPort    = "5683"
@@ -40,10 +39,9 @@ type config struct {
 	LogLevel      string  `env:"MITRAS_COAP_ADAPTER_LOG_LEVEL"   envDefault:"info"`
 	BrokerURL     string  `env:"MITRAS_MESSAGE_BROKER_URL"       envDefault:"nats://localhost:4222"`
 	JaegerURL     url.URL `env:"MITRAS_JAEGER_URL"               envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"           envDefault:"false"`
+	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"           envDefault:"true"`
 	InstanceID    string  `env:"MITRAS_COAP_ADAPTER_INSTANCE_ID" envDefault:""`
 	TraceRatio    float64 `env:"MITRAS_JAEGER_TRACE_RATIO"       envDefault:"1.0"`
-	ESURL         string  `env:"MITRAS_ES_URL"                   envDefault:"nats://localhost:4222"`
 }
 
 func main() {
@@ -55,13 +53,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -140,25 +138,18 @@ func main() {
 	defer nps.Close()
 	nps = brokerstracing.NewPubSub(coapServerConfig, tracer, nps)
 
-	nps, err = msgevents.NewPubSubMiddleware(ctx, nps, cfg.ESURL)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create event store middleware: %s", err))
-		exitCode = 1
-		return
-	}
-
 	svc := coap.New(clientsClient, channelsClient, nps)
 
 	svc = tracing.New(tracer, svc)
 
-	svc = httpapi.LoggingMiddleware(svc, logger)
+	svc = api.LoggingMiddleware(svc, logger)
 
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
-	svc = httpapi.MetricsMiddleware(svc, counter, latency)
+	svc = api.MetricsMiddleware(svc, counter, latency)
 
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(cfg.InstanceID), logger)
 
-	cs := coapserver.NewServer(ctx, cancel, svcName, coapServerConfig, httpapi.MakeCoAPHandler(svc, logger), logger)
+	cs := coapserver.NewServer(ctx, cancel, svcName, coapServerConfig, api.MakeCoAPHandler(svc, logger), logger)
 
 	g.Go(func() error {
 		return hs.Start()

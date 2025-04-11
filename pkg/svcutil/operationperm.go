@@ -1,4 +1,3 @@
-// Description: This file contains the OperationPerm struct which is used to store the operation and permission mapping.
 package svcutil
 
 import "fmt"

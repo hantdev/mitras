@@ -7,7 +7,7 @@ vault() {
         if which vault &> /dev/null; then
             $(which vault) "$@"
         else
-            echo "mitras-vault container or vault command not found."
+            echo "mitras-vault container or vault command not found. Please refer to the documentation: https://github.com/hantdev/mitras/blob/main/docker/addons/vault/README.md"
         fi
     fi
 }

@@ -3,8 +3,8 @@ package keys
 import (
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type issueKeyReq struct {

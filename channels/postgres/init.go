@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	gpostgres "github.com/hantdev/mitras/groups/postgres"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	rolesPostgres "github.com/hantdev/mitras/pkg/roles/repo/postgres"
@@ -42,7 +41,8 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 						client_id     VARCHAR(36),
 						type          SMALLINT NOT NULL CHECK (type IN (1, 2)),
 						FOREIGN KEY   (channel_id, domain_id) REFERENCES channels (id, domain_id) ON DELETE CASCADE ON UPDATE CASCADE,
-						PRIMARY KEY   (channel_id, domain_id, client_id, type)
+						PRIMARY KEY   (channel_id, domain_id, client_id, type),
+						UNIQUE        (channel_id, client_id)
 					)`,
 				},
 				Down: []string{
@@ -53,13 +53,5 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 		},
 	}
 	channelsMigration.Migrations = append(channelsMigration.Migrations, rolesMigration.Migrations...)
-
-	groupsMigration, err := gpostgres.Migration()
-	if err != nil {
-		return &migrate.MemoryMigrationSource{}, err
-	}
-
-	channelsMigration.Migrations = append(channelsMigration.Migrations, groupsMigration.Migrations...)
-
 	return channelsMigration, nil
 }

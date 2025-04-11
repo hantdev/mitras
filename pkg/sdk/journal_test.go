@@ -1,18 +1,17 @@
 package sdk_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/journal"
 	"github.com/hantdev/mitras/journal/api"
 	"github.com/hantdev/mitras/journal/mocks"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
@@ -331,7 +330,7 @@ func TestRetrieveJournal(t *testing.T) {
 			}
 			authCall := authn.On("Authenticate", mock.Anything, mock.Anything).Return(tc.session, tc.authnErr)
 			svcCall := svc.On("RetrieveAll", mock.Anything, tc.session, tc.svcReq).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.Journal(context.Background(), tc.entityType, tc.entityID, tc.domainID, tc.pageMeta, tc.token)
+			resp, err := mgsdk.Journal(tc.entityType, tc.entityID, tc.domainID, tc.pageMeta, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {

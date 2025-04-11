@@ -1,3 +1,5 @@
+#!/bin/ash
+
 if [ -z "$MITRAS_MQTT_CLUSTER" ]
 then
       envsubst '${MITRAS_MQTT_ADAPTER_MQTT_PORT}' < /etc/nginx/snippets/mqtt-upstream-single.conf > /etc/nginx/snippets/mqtt-upstream.conf
@@ -9,7 +11,6 @@ fi
 
 envsubst '
     ${MITRAS_NGINX_SERVER_NAME}
-    ${MITRAS_AUTH_HTTP_PORT}
     ${MITRAS_DOMAINS_HTTP_PORT}
     ${MITRAS_GROUPS_HTTP_PORT}
     ${MITRAS_USERS_HTTP_PORT}
@@ -19,6 +20,7 @@ envsubst '
     ${MITRAS_HTTP_ADAPTER_PORT}
     ${MITRAS_NGINX_MQTT_PORT}
     ${MITRAS_NGINX_MQTTS_PORT}
+    ${MITRAS_INVITATIONS_HTTP_PORT}
     ${MITRAS_WS_ADAPTER_HTTP_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 exec nginx -g "daemon off;"

@@ -1,26 +1,24 @@
 package sdk_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
 	httpapi "github.com/hantdev/mitras/certs/api"
 	"github.com/hantdev/mitras/certs/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	sdk "github.com/hantdev/mitras/pkg/sdk"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -63,8 +61,7 @@ func setupCerts() (*httptest.Server, *mocks.Service, *authnmocks.Authentication)
 	svc := new(mocks.Service)
 	logger := smqlog.NewMock()
 	authn := new(authnmocks.Authentication)
-	idp := uuid.NewMock()
-	mux := httpapi.MakeHandler(svc, authn, logger, instanceID, idp)
+	mux := httpapi.MakeHandler(svc, authn, logger, instanceID)
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -182,7 +179,7 @@ func TestIssueCert(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("IssueCert", mock.Anything, tc.domainID, tc.token, tc.clientID, tc.duration).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.IssueCert(context.Background(), tc.clientID, tc.duration, tc.domainID, tc.token)
+			resp, err := mgsdk.IssueCert(tc.clientID, tc.duration, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, tc.svcRes.SerialNumber, resp.SerialNumber)
@@ -266,7 +263,7 @@ func TestViewCert(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ViewCert", mock.Anything, tc.certID).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.ViewCert(context.Background(), tc.certID, tc.domainID, tc.token)
+			resp, err := mgsdk.ViewCert(tc.certID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if err == nil {
 				assert.Equal(t, viewCertRes, resp)
@@ -360,7 +357,7 @@ func TestViewCertByClient(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ListSerials", mock.Anything, tc.clientID, certs.PageMetadata{Revoked: defRevoke, Offset: defOffset, Limit: defLimit}).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.ViewCertByClient(context.Background(), tc.clientID, tc.domainID, tc.token)
+			resp, err := mgsdk.ViewCertByClient(tc.clientID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				assert.Equal(t, viewCertClientRes, resp)
@@ -449,7 +446,7 @@ func TestRevokeCert(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("RevokeCert", mock.Anything, tc.domainID, tc.token, tc.clientID).Return(tc.svcResp, tc.svcErr)
-			resp, err := mgsdk.RevokeCert(context.Background(), tc.clientID, tc.domainID, tc.token)
+			resp, err := mgsdk.RevokeCert(tc.clientID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if err == nil {
 				assert.NotEmpty(t, resp)

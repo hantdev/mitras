@@ -94,30 +94,26 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 type Metadata map[string]interface{}
 
 type DomainReq struct {
-	Name      *string    `json:"name,omitempty"`
-	Metadata  *Metadata  `json:"metadata,omitempty"`
-	Tags      *[]string  `json:"tags,omitempty"`
-	Status    *Status    `json:"status,omitempty"`
-	UpdatedBy *string    `json:"updated_by,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	Name     *string   `json:"name,omitempty"`
+	Metadata *Metadata `json:"metadata,omitempty"`
+	Tags     *[]string `json:"tags,omitempty"`
+	Alias    *string   `json:"alias,omitempty"`
+	Status   *Status   `json:"status,omitempty"`
 }
-
 type Domain struct {
-	ID        string                    `json:"id"`
-	Name      string                    `json:"name"`
-	Metadata  Metadata                  `json:"metadata,omitempty"`
-	Tags      []string                  `json:"tags,omitempty"`
-	Route     string                    `json:"route,omitempty"`
-	Status    Status                    `json:"status"`
-	RoleID    string                    `json:"role_id,omitempty"`
-	RoleName  string                    `json:"role_name,omitempty"`
-	Actions   []string                  `json:"actions,omitempty"`
-	CreatedBy string                    `json:"created_by,omitempty"`
-	CreatedAt time.Time                 `json:"created_at"`
-	UpdatedBy string                    `json:"updated_by,omitempty"`
-	UpdatedAt time.Time                 `json:"updated_at,omitempty"`
-	MemberID  string                    `json:"member_id,omitempty"`
-	Roles     []roles.MemberRoleActions `json:"roles,omitempty"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Metadata  Metadata  `json:"metadata,omitempty"`
+	Tags      []string  `json:"tags,omitempty"`
+	Alias     string    `json:"alias,omitempty"`
+	Status    Status    `json:"status"`
+	RoleID    string    `json:"role_id,omitempty"`
+	RoleName  string    `json:"role_name,omitempty"`
+	Actions   []string  `json:"actions,omitempty"`
+	CreatedBy string    `json:"created_by,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedBy string    `json:"updated_by,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 type Page struct {
@@ -136,7 +132,7 @@ type Page struct {
 	ID       string   `json:"id,omitempty"`
 	IDs      []string `json:"-"`
 	Identity string   `json:"identity,omitempty"`
-	UserID   string   `json:"user_id,omitempty"`
+	UserID   string   `json:"-"`
 }
 
 type DomainsPage struct {
@@ -161,123 +157,42 @@ func (page DomainsPage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
-	// CreateDomain creates a new domain.
-	CreateDomain(ctx context.Context, sesssion authn.Session, d Domain) (Domain, []roles.RoleProvision, error)
-
-	// RetrieveDomain retrieves a domain specified by the provided ID.
-	RetrieveDomain(ctx context.Context, sesssion authn.Session, id string, withRoles bool) (Domain, error)
-
-	// UpdateDomain updates the domain specified by the provided ID.
+	CreateDomain(ctx context.Context, sesssion authn.Session, d Domain) (Domain, error)
+	RetrieveDomain(ctx context.Context, sesssion authn.Session, id string) (Domain, error)
 	UpdateDomain(ctx context.Context, sesssion authn.Session, id string, d DomainReq) (Domain, error)
-
-	// EnableDomain enables the domain specified by the provided ID.
 	EnableDomain(ctx context.Context, sesssion authn.Session, id string) (Domain, error)
-
-	// DisableDomain disables the domain specified by the provided ID.
-	// Only platform administrators and domain admins can disable domains.
 	DisableDomain(ctx context.Context, sesssion authn.Session, id string) (Domain, error)
-
-	// FreezeDomain freezes the domain specified by the provided ID.
-	// Only platform administrators can freeze domains.
 	FreezeDomain(ctx context.Context, sesssion authn.Session, id string) (Domain, error)
-
-	// ListDomains returns a list of domains.
 	ListDomains(ctx context.Context, sesssion authn.Session, page Page) (DomainsPage, error)
-
-	// SendInvitation sends an invitation to the given user.
-	// Only domain administrators and platform administrators can send invitations.
-	SendInvitation(ctx context.Context, session authn.Session, invitation Invitation) (err error)
-
-	// ViewInvitation returns an invitation.
-	// People who can view invitations are:
-	// - the invited user: they can view their own invitations
-	// - the user who sent the invitation
-	// - domain administrators
-	// - platform administrators
-	ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (invitation Invitation, err error)
-
-	// ListInvitations returns a list of invitations.
-	// People who can list invitations are:
-	// - platform administrators can list all invitations
-	// - domain administrators can list invitations for their domain
-	// By default, it will list invitations the current user has sent or received.
-	ListInvitations(ctx context.Context, session authn.Session, page InvitationPageMeta) (invitations InvitationPage, err error)
-
-	// AcceptInvitation accepts an invitation by adding the user to the domain.
-	AcceptInvitation(ctx context.Context, session authn.Session, domainID string) (err error)
-
-	// DeleteInvitation deletes an invitation.
-	// People who can delete invitations are:
-	// - the invited user: they can delete their own invitations
-	// - the user who sent the invitation
-	// - domain administrators
-	// - platform administrators
-	DeleteInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (err error)
-
-	// RejectInvitation rejects an invitation.
-	// People who can reject invitations are:
-	// - the invited user: they can reject their own invitations
-	RejectInvitation(ctx context.Context, session authn.Session, domainID string) (err error)
-
+	DeleteUserFromDomains(ctx context.Context, id string) error
 	roles.RoleManager
 }
 
 // Repository specifies Domain persistence API.
+//
+//go:generate mockery --name Repository --output=./mocks --filename repository.go  --quiet
 type Repository interface {
-	// SaveDomain creates db insert transaction for the given domain.
-	SaveDomain(ctx context.Context, d Domain) (Domain, error)
+	// Save creates db insert transaction for the given domain.
+	Save(ctx context.Context, d Domain) (Domain, error)
 
-	// RetrieveDomainByIDWithRoles retrieves a domain by its unique ID along with member roles.
-	RetrieveDomainByIDWithRoles(ctx context.Context, id string, memberID string) (Domain, error)
+	// RetrieveByID retrieves Domain by its unique ID.
+	RetrieveByID(ctx context.Context, id string) (Domain, error)
 
-	// RetrieveDomainByID retrieves a domain by its unique ID.
-	RetrieveDomainByID(ctx context.Context, id string) (Domain, error)
+	RetrieveByUserAndID(ctx context.Context, userID, id string) (Domain, error)
 
-	// RetrieveDomainByRoute retrieves a domain by its unique route.
-	RetrieveDomainByRoute(ctx context.Context, route string) (Domain, error)
+	// RetrieveAllByIDs retrieves for given Domain IDs.
+	RetrieveAllByIDs(ctx context.Context, pm Page) (DomainsPage, error)
 
-	// RetrieveAllDomainsByIDs retrieves for given Domain IDs.
-	RetrieveAllDomainsByIDs(ctx context.Context, pm Page) (DomainsPage, error)
+	// Update updates the client name and metadata.
+	Update(ctx context.Context, id string, userID string, d DomainReq) (Domain, error)
 
-	// UpdateDomain updates the domain name and metadata.
-	UpdateDomain(ctx context.Context, id string, d DomainReq) (Domain, error)
-
-	// DeleteDomain deletes the domain.
-	DeleteDomain(ctx context.Context, id string) error
+	// Delete
+	Delete(ctx context.Context, id string) error
 
 	// ListDomains list all the domains
 	ListDomains(ctx context.Context, pm Page) (DomainsPage, error)
 
-	// CreateInvitation creates an invitation.
-	SaveInvitation(ctx context.Context, invitation Invitation) (err error)
-
-	// RetrieveInvitation retrieves an invitation.
-	RetrieveInvitation(ctx context.Context, userID, domainID string) (Invitation, error)
-
-	// RetrieveAllInvitations retrieves all invitations.
-	RetrieveAllInvitations(ctx context.Context, page InvitationPageMeta) (invitations InvitationPage, err error)
-
-	// UpdateConfirmation updates an invitation by setting the confirmation time.
-	UpdateConfirmation(ctx context.Context, invitation Invitation) (err error)
-
-	// UpdateRejection updates an invitation by setting the rejection time.
-	UpdateRejection(ctx context.Context, invitation Invitation) (err error)
-
-	// Delete deletes an invitation.
-	DeleteInvitation(ctx context.Context, userID, domainID string) (err error)
-
 	roles.Repository
-}
-
-// Cache contains domains caching interface.
-type Cache interface {
-	// Save stores pair domain status and  domain id.
-	Save(ctx context.Context, domainID string, status Status) error
-
-	// Status returns domain status for given domain ID.
-	Status(ctx context.Context, domainID string) (Status, error)
-
-	// Removes domain from cache.
-	Remove(ctx context.Context, domainID string) error
 }

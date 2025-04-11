@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -24,7 +24,7 @@ func createChannelEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		channels, _, err := svc.CreateChannels(ctx, session, req.Channel)
+		channels, err := svc.CreateChannels(ctx, session, req.Channel)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func createChannelsEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		channels, _, err := svc.CreateChannels(ctx, session, req.Channels...)
+		channels, err := svc.CreateChannels(ctx, session, req.Channels...)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func viewChannelEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		c, err := svc.ViewChannel(ctx, session, req.id, req.roles)
+		c, err := svc.ViewChannel(ctx, session, req.id)
 		if err != nil {
 			return nil, err
 		}
@@ -100,16 +100,20 @@ func listChannelsEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		var page channels.ChannelsPage
-		var err error
-		switch req.userID != "" {
-		case true:
-			page, err = svc.ListUserChannels(ctx, session, req.userID, req.Page)
-		default:
-			page, err = svc.ListChannels(ctx, session, req.Page)
+		pm := channels.PageMetadata{
+			Status:     req.status,
+			Offset:     req.offset,
+			Limit:      req.limit,
+			Name:       req.name,
+			Tag:        req.tag,
+			Permission: req.permission,
+			Metadata:   req.metadata,
+			ListPerms:  req.listPerms,
+			Id:         req.id,
 		}
+		page, err := svc.ListChannels(ctx, session, pm)
 		if err != nil {
-			return channelsPageRes{}, err
+			return nil, err
 		}
 
 		res := channelsPageRes{

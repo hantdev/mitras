@@ -81,7 +81,4 @@ var (
 
 	// ErrRollbackRepo indicates a failure to rollback repository.
 	ErrRollbackRepo = errors.New("failed to rollback repo")
-
-	// ErrUnauthorizedPAT indicates failure occurred while authorizing PAT.
-	ErrUnauthorizedPAT = errors.New("failed to authorize PAT")
 )

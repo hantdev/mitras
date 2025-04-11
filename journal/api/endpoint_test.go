@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/journal"
 	"github.com/hantdev/mitras/journal/api"
 	"github.com/hantdev/mitras/journal/mocks"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -368,7 +368,7 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 			desc:   "with empty domain ID",
 			token:  validToken,
 			url:    "/group/",
-			status: http.StatusBadRequest,
+			status: http.StatusNotFound,
 			svcErr: nil,
 		},
 	}
@@ -384,89 +384,6 @@ func TestListEntityJournalsEndpoint(t *testing.T) {
 			}
 			authCall := authn.On("Authenticate", mock.Anything, c.token).Return(c.session, c.authnErr)
 			svcCall := svc.On("RetrieveAll", mock.Anything, c.session, mock.Anything).Return(journal.JournalsPage{}, c.svcErr)
-			req := testRequest{
-				client: es.Client(),
-				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/journal%s", es.URL, c.domainID, c.url),
-				token:  c.token,
-			}
-			resp, err := req.make()
-			assert.Nil(t, err, c.desc)
-			defer resp.Body.Close()
-			assert.Equal(t, c.status, resp.StatusCode, c.desc)
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestRetrieveClientTelemetryEndpoint(t *testing.T) {
-	es, svc, authn := newjournalServer()
-
-	clientID := testsutil.GenerateUUID(t)
-	userID := testsutil.GenerateUUID(t)
-	domanID := testsutil.GenerateUUID(t)
-
-	cases := []struct {
-		desc        string
-		token       string
-		session     smqauthn.Session
-		clientID    string
-		domainID    string
-		url         string
-		contentType string
-		status      int
-		authnErr    error
-		svcErr      error
-	}{
-		{
-			desc:     "successful",
-			token:    validToken,
-			clientID: clientID,
-			domainID: domanID,
-			url:      fmt.Sprintf("/client/%s/telemetry", clientID),
-			status:   http.StatusOK,
-			svcErr:   nil,
-		},
-		{
-			desc:     "with service error",
-			token:    validToken,
-			clientID: clientID,
-			domainID: domanID,
-			url:      fmt.Sprintf("/client/%s/telemetry", clientID),
-			status:   http.StatusForbidden,
-			svcErr:   svcerr.ErrAuthorization,
-		},
-		{
-			desc:     "with empty token",
-			clientID: clientID,
-			domainID: domanID,
-			url:      fmt.Sprintf("/client/%s/telemetry", clientID),
-			status:   http.StatusUnauthorized,
-			svcErr:   nil,
-		},
-		{
-			desc:     "with invalid client ID",
-			token:    validToken,
-			domainID: domanID,
-			clientID: "invalid",
-			url:      "/client/invalid/telemetry",
-			status:   http.StatusNotFound,
-			svcErr:   svcerr.ErrNotFound,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.desc, func(t *testing.T) {
-			if c.token == validToken {
-				c.session = smqauthn.Session{
-					UserID:       userID,
-					DomainID:     c.domainID,
-					DomainUserID: c.domainID + "_" + userID,
-				}
-			}
-			authCall := authn.On("Authenticate", mock.Anything, c.token).Return(c.session, c.authnErr)
-			svcCall := svc.On("RetrieveClientTelemetry", mock.Anything, c.session, c.clientID).Return(journal.ClientTelemetry{}, c.svcErr)
 			req := testRequest{
 				client: es.Client(),
 				method: http.MethodGet,

@@ -44,12 +44,3 @@ func (mm *metricsMiddleware) RetrieveAll(ctx context.Context, session smqauthn.S
 
 	return mm.service.RetrieveAll(ctx, session, page)
 }
-
-func (mm *metricsMiddleware) RetrieveClientTelemetry(ctx context.Context, session smqauthn.Session, clientID string) (journal.ClientTelemetry, error) {
-	defer func(begin time.Time) {
-		mm.counter.With("method", "retrieve_client_telemetry").Add(1)
-		mm.latency.With("method", "retrieve_client_telemetry").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-
-	return mm.service.RetrieveClientTelemetry(ctx, session, clientID)
-}

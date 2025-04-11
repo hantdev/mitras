@@ -3,9 +3,10 @@ package http
 import (
 	"strings"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
+	smqclients "github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/connections"
 )
 
@@ -49,8 +50,7 @@ func (req createChannelsReq) validate() error {
 }
 
 type viewChannelReq struct {
-	id    string
-	roles bool
+	id string
 }
 
 func (req viewChannelReq) validate() error {
@@ -61,16 +61,30 @@ func (req viewChannelReq) validate() error {
 }
 
 type listChannelsReq struct {
-	channels.Page
-	userID string
+	status     smqclients.Status
+	offset     uint64
+	limit      uint64
+	name       string
+	tag        string
+	permission string
+	visibility string
+	userID     string
+	listPerms  bool
+	metadata   smqclients.Metadata
+	id         string
 }
 
 func (req listChannelsReq) validate() error {
-	if req.Limit > api.MaxLimitSize || req.Limit < 1 {
+	if req.limit > api.MaxLimitSize || req.limit < 1 {
 		return apiutil.ErrLimitSize
 	}
-
-	if len(req.Name) > api.MaxNameSize {
+	if req.visibility != "" &&
+		req.visibility != api.AllVisibility &&
+		req.visibility != api.MyVisibility &&
+		req.visibility != api.SharedVisibility {
+		return apiutil.ErrInvalidVisibilityType
+	}
+	if len(req.name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
 

@@ -15,7 +15,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			if args[0] == "client" {
-				cert, err := sdk.ViewCertByClient(cmd.Context(), args[1], args[2], args[3])
+				cert, err := sdk.ViewCertByClient(args[1], args[2], args[3])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -23,7 +23,7 @@ var cmdCerts = []cobra.Command{
 				logJSONCmd(*cmd, cert)
 				return
 			}
-			cert, err := sdk.ViewCert(cmd.Context(), args[0], args[1], args[2])
+			cert, err := sdk.ViewCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -40,7 +40,7 @@ var cmdCerts = []cobra.Command{
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-			rtime, err := sdk.RevokeCert(cmd.Context(), args[0], args[1], args[2])
+			rtime, err := sdk.RevokeCert(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -66,7 +66,7 @@ func NewCertsCmd() *cobra.Command {
 
 			clientID := args[0]
 
-			c, err := sdk.IssueCert(cmd.Context(), clientID, ttl, args[1], args[2])
+			c, err := sdk.IssueCert(clientID, ttl, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return

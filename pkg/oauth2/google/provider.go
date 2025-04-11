@@ -9,7 +9,7 @@ import (
 	"time"
 
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	mitrasoauth2 "github.com/hantdev/mitras/pkg/oauth2"
+	mgoauth2 "github.com/hantdev/mitras/pkg/oauth2"
 	uclient "github.com/hantdev/mitras/users"
 	"golang.org/x/oauth2"
 	googleoauth2 "golang.org/x/oauth2/google"
@@ -27,7 +27,7 @@ var scopes = []string{
 	"https://www.googleapis.com/auth/userinfo.profile",
 }
 
-var _ mitrasoauth2.Provider = (*config)(nil)
+var _ mgoauth2.Provider = (*config)(nil)
 
 type config struct {
 	config        *oauth2.Config
@@ -37,7 +37,7 @@ type config struct {
 }
 
 // NewProvider returns a new Google OAuth provider.
-func NewProvider(cfg mitrasoauth2.Config, uiRedirectURL, errorURL string) mitrasoauth2.Provider {
+func NewProvider(cfg mgoauth2.Config, uiRedirectURL, errorURL string) mgoauth2.Provider {
 	return &config{
 		config: &oauth2.Config{
 			ClientID:     cfg.ClientID,

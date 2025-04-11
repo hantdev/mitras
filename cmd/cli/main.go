@@ -38,7 +38,10 @@ func main() {
 	groupsCmd := cli.NewGroupsCmd()
 	channelsCmd := cli.NewChannelsCmd()
 	messagesCmd := cli.NewMessagesCmd()
+	provisionCmd := cli.NewProvisionCmd()
+	bootstrapCmd := cli.NewBootstrapCmd()
 	certsCmd := cli.NewCertsCmd()
+	subscriptionsCmd := cli.NewSubscriptionCmd()
 	configCmd := cli.NewConfigCmd()
 	invitationsCmd := cli.NewInvitationsCmd()
 	journalCmd := cli.NewJournalCmd()
@@ -51,12 +54,23 @@ func main() {
 	rootCmd.AddCommand(clientsCmd)
 	rootCmd.AddCommand(channelsCmd)
 	rootCmd.AddCommand(messagesCmd)
+	rootCmd.AddCommand(provisionCmd)
+	rootCmd.AddCommand(bootstrapCmd)
 	rootCmd.AddCommand(certsCmd)
+	rootCmd.AddCommand(subscriptionsCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(invitationsCmd)
 	rootCmd.AddCommand(journalCmd)
 
 	// Root Flags
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.BootstrapURL,
+		"bootstrap-url",
+		"b",
+		sdkConf.BootstrapURL,
+		"Bootstrap service URL",
+	)
+
 	rootCmd.PersistentFlags().StringVarP(
 		&sdkConf.CertsURL,
 		"certs-url",
@@ -95,6 +109,22 @@ func main() {
 		"p",
 		sdkConf.HTTPAdapterURL,
 		"HTTP adapter URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.ReaderURL,
+		"reader-url",
+		"R",
+		sdkConf.ReaderURL,
+		"Reader URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.InvitationsURL,
+		"invitations-url",
+		"v",
+		sdkConf.InvitationsURL,
+		"Inivitations URL",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
@@ -202,6 +232,14 @@ func main() {
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
+		&cli.State,
+		"state",
+		"z",
+		"",
+		"Bootstrap state query parameter",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
 		&cli.Topic,
 		"topic",
 		"T",
@@ -216,15 +254,6 @@ func main() {
 		"",
 		"Subscription contact query parameter",
 	)
-
-	rootCmd.PersistentFlags().BoolVarP(
-		&sdkConf.Roles,
-		"roles",
-		"R",
-		false,
-		"Adds option to display roles for entities",
-	)
-
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}

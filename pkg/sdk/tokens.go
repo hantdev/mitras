@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,11 +17,11 @@ type Token struct {
 }
 
 type Login struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Identity string `json:"identity"`
+	Secret   string `json:"secret"`
 }
 
-func (sdk mgSDK) CreateToken(ctx context.Context, lt Login) (Token, errors.SDKError) {
+func (sdk mgSDK) CreateToken(lt Login) (Token, errors.SDKError) {
 	data, err := json.Marshal(lt)
 	if err != nil {
 		return Token{}, errors.NewSDKError(err)
@@ -30,7 +29,7 @@ func (sdk mgSDK) CreateToken(ctx context.Context, lt Login) (Token, errors.SDKEr
 
 	url := fmt.Sprintf("%s/%s/%s", sdk.usersURL, usersEndpoint, issueTokenEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, "", data, nil, http.StatusCreated)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, "", data, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Token{}, sdkerr
 	}
@@ -42,10 +41,10 @@ func (sdk mgSDK) CreateToken(ctx context.Context, lt Login) (Token, errors.SDKEr
 	return token, nil
 }
 
-func (sdk mgSDK) RefreshToken(ctx context.Context, token string) (Token, errors.SDKError) {
+func (sdk mgSDK) RefreshToken(token string) (Token, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s", sdk.usersURL, usersEndpoint, refreshTokenEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, nil, nil, http.StatusCreated)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, nil, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Token{}, sdkerr
 	}

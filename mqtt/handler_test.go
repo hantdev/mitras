@@ -8,17 +8,17 @@ import (
 	"testing"
 
 	"github.com/hantdev/hermina/pkg/session"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
 	"github.com/hantdev/mitras/mqtt"
+	"github.com/hantdev/mitras/mqtt/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/messaging/mocks"
 	"github.com/hantdev/mitras/pkg/policies"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,11 +33,11 @@ const (
 	clientID              = "clientID"
 	clientID1             = "clientID1"
 	subtopic              = "testSubtopic"
-	invalidChannelIDTopic = "c/**/m"
+	invalidChannelIDTopic = "channels/**/messages"
 )
 
 var (
-	topicMsg            = "c/%s/m"
+	topicMsg            = "channels/%s/messages"
 	topic               = fmt.Sprintf(topicMsg, chanID)
 	invalidTopic        = invalidValue
 	payload             = []byte("[{'n':'test-name', 'v': 1.2}]")
@@ -65,9 +65,9 @@ var (
 )
 
 var (
-	clients   *climocks.ClientsServiceClient
-	channels  *chmocks.ChannelsServiceClient
-	publisher *mocks.PubSub
+	clients    = new(climocks.ClientsServiceClient)
+	channels   = new(chmocks.ChannelsServiceClient)
+	eventStore = new(mocks.EventStore)
 )
 
 func TestAuthConnect(t *testing.T) {
@@ -144,8 +144,10 @@ func TestAuthConnect(t *testing.T) {
 				password = string(tc.session.Password)
 			}
 			clientsCall := clients.On("Authenticate", mock.Anything, &grpcClientsV1.AuthnReq{ClientSecret: password}).Return(tc.authNRes, tc.authNErr)
+			svcCall := eventStore.On("Connect", mock.Anything, password).Return(tc.err)
 			err := handler.AuthConnect(ctx)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+			svcCall.Unset()
 			clientsCall.Unset()
 		})
 	}
@@ -404,11 +406,9 @@ func TestPublish(t *testing.T) {
 		if tc.session != nil {
 			ctx = session.NewContext(ctx, tc.session)
 		}
-		repoCall := publisher.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		err := handler.Publish(ctx, &tc.topic, &tc.payload)
 		assert.Contains(t, logBuffer.String(), tc.logMsg)
 		assert.Equal(t, tc.err, err)
-		repoCall.Unset()
 	}
 }
 
@@ -511,12 +511,16 @@ func TestDisconnect(t *testing.T) {
 
 	for _, tc := range cases {
 		ctx := context.TODO()
+		password := ""
 		if tc.session != nil {
 			ctx = session.NewContext(ctx, tc.session)
+			password = string(tc.session.Password)
 		}
+		svcCall := eventStore.On("Disconnect", mock.Anything, password).Return(tc.err)
 		err := handler.Disconnect(ctx)
 		assert.Contains(t, logBuffer.String(), tc.logMsg)
 		assert.Equal(t, tc.err, err)
+		svcCall.Unset()
 	}
 }
 
@@ -527,6 +531,6 @@ func newHandler() session.Handler {
 	}
 	clients = new(climocks.ClientsServiceClient)
 	channels = new(chmocks.ChannelsServiceClient)
-	publisher = new(mocks.PubSub)
-	return mqtt.NewHandler(publisher, logger, clients, channels)
+	eventStore = new(mocks.EventStore)
+	return mqtt.NewHandler(mocks.NewPublisher(), eventStore, logger, clients, channels)
 }

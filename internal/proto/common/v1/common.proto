@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package common.v1;
-option go_package = "github.com/hantdev/mitras/api/grpc/common/v1";
+option go_package = "github.com/hantdev/mitras/internal/grpc/common/v1";
 
 
 message RetrieveEntitiesReq {

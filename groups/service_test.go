@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/0x6flab/namegenerator"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	"github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/groups/mocks"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
@@ -39,22 +39,6 @@ var (
 			"key": "value",
 		},
 		Status: groups.EnabledStatus,
-	}
-	validGroupWithRoles = groups.Group{
-		ID:          testsutil.GenerateUUID(&testing.T{}),
-		Name:        namegen.Generate(),
-		Description: namegen.Generate(),
-		Metadata: map[string]interface{}{
-			"key": "value",
-		},
-		Status: groups.EnabledStatus,
-		Roles: []roles.MemberRoleActions{
-			{
-				RoleID:     "test-id",
-				RoleName:   "test-name",
-				AccessType: "direct",
-			},
-		},
 	}
 	parentGroupID = testsutil.GenerateUUID(&testing.T{})
 	childGroupID  = testsutil.GenerateUUID(&testing.T{})
@@ -214,9 +198,9 @@ func TestCreateGroup(t *testing.T) {
 			repoCall := repo.On("Save", context.Background(), mock.Anything).Return(tc.saveResp, tc.saveErr)
 			policyCall := policies.On("AddPolicies", context.Background(), mock.Anything).Return(tc.addPoliciesErr)
 			policyCall1 := policies.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
-			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.RoleProvision{}, tc.addRoleErr)
+			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.Role{}, tc.addRoleErr)
 			repoCall2 := repo.On("Delete", context.Background(), mock.Anything).Return(tc.deleteErr)
-			got, _, err := svc.CreateGroup(context.Background(), validSession, tc.group)
+			got, err := svc.CreateGroup(context.Background(), validSession, tc.group)
 			assert.Equal(t, tc.err, err, fmt.Sprintf("expected error %v but got %v", tc.err, err))
 			if err == nil {
 				assert.NotEmpty(t, got.ID)
@@ -239,58 +223,39 @@ func TestViewGroup(t *testing.T) {
 	svc := newService(t)
 
 	cases := []struct {
-		desc      string
-		session   smqauthn.Session
-		id        string
-		withRoles bool
-		repoResp  groups.Group
-		repoErr   error
-		err       error
+		desc     string
+		session  smqauthn.Session
+		id       string
+		repoResp groups.Group
+		repoErr  error
+		err      error
 	}{
 		{
-			desc:      "view group successfully",
-			id:        validGroup.ID,
-			session:   validSession,
-			withRoles: false,
-			repoResp:  validGroup,
+			desc:     "view group successfully",
+			id:       validGroup.ID,
+			session:  validSession,
+			repoResp: validGroup,
 		},
 		{
-			desc:      "view group successfully with roles",
-			id:        validGroupWithRoles.ID,
-			session:   validSession,
-			withRoles: true,
-			repoResp:  validGroupWithRoles,
-		},
-		{
-			desc:      "view group with failed to retrieve",
-			id:        testsutil.GenerateUUID(t),
-			session:   validSession,
-			withRoles: false,
-			repoErr:   repoerr.ErrNotFound,
-			err:       svcerr.ErrViewEntity,
+			desc:    "view group with failed to retrieve",
+			id:      testsutil.GenerateUUID(t),
+			session: validSession,
+			repoErr: repoerr.ErrNotFound,
+			err:     svcerr.ErrViewEntity,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := repo.On("RetrieveByID", context.Background(), tc.id).Return(tc.repoResp, tc.repoErr)
-			repoCall1 := repo.On("RetrieveByIDWithRoles", context.Background(), tc.id, tc.session.UserID).Return(tc.repoResp, tc.repoErr)
-			got, err := svc.ViewGroup(context.Background(), validSession, tc.id, tc.withRoles)
+			repoCall := repo.On("RetrieveByIDAndUser", context.Background(), tc.session.DomainID, tc.session.UserID, tc.id).Return(tc.repoResp, tc.repoErr)
+			got, err := svc.ViewGroup(context.Background(), validSession, tc.id)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("expected error %v to contain %v", err, tc.err))
 			if err == nil {
-				switch tc.withRoles {
-				case true:
-					assert.Equal(t, tc.repoResp, got)
-					ok := repo.AssertCalled(t, "RetrieveByIDWithRoles", context.Background(), tc.id, tc.session.UserID)
-					assert.True(t, ok, fmt.Sprintf("RetrieveByIDWithRoles was not called on %s", tc.desc))
-				default:
-					assert.Equal(t, tc.repoResp, got)
-					ok := repo.AssertCalled(t, "RetrieveByID", context.Background(), tc.id)
-					assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
-				}
+				assert.Equal(t, tc.repoResp, got)
+				ok := repo.AssertCalled(t, "RetrieveByIDAndUser", context.Background(), tc.session.DomainID, tc.session.UserID, tc.id)
+				assert.True(t, ok, fmt.Sprintf("RetrieveByIDAndUser was not called on %s", tc.desc))
 			}
 			repoCall.Unset()
-			repoCall1.Unset()
 		})
 	}
 }

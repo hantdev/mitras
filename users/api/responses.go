@@ -20,6 +20,8 @@ var (
 	_ mitras.Response = (*viewMembersRes)(nil)
 	_ mitras.Response = (*passwResetReqRes)(nil)
 	_ mitras.Response = (*passwChangeRes)(nil)
+	_ mitras.Response = (*assignUsersRes)(nil)
+	_ mitras.Response = (*unassignUsersRes)(nil)
 	_ mitras.Response = (*updateUserRes)(nil)
 	_ mitras.Response = (*tokenRes)(nil)
 	_ mitras.Response = (*deleteUserRes)(nil)
@@ -185,6 +187,34 @@ func (res passwChangeRes) Headers() map[string]string {
 
 func (res passwChangeRes) Empty() bool {
 	return false
+}
+
+type assignUsersRes struct{}
+
+func (res assignUsersRes) Code() int {
+	return http.StatusCreated
+}
+
+func (res assignUsersRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res assignUsersRes) Empty() bool {
+	return true
+}
+
+type unassignUsersRes struct{}
+
+func (res unassignUsersRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res unassignUsersRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res unassignUsersRes) Empty() bool {
+	return true
 }
 
 type deleteUserRes struct {

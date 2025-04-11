@@ -4,8 +4,8 @@ import (
 	"net/mail"
 	"net/url"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/users"
 )
@@ -113,6 +113,23 @@ type searchUsersReq struct {
 func (req searchUsersReq) validate() error {
 	if req.Username == "" && req.Id == "" && req.FirstName == "" && req.LastName == "" {
 		return apiutil.ErrEmptySearchQuery
+	}
+
+	return nil
+}
+
+type listMembersByObjectReq struct {
+	users.Page
+	objectKind string
+	objectID   string
+}
+
+func (req listMembersByObjectReq) validate() error {
+	if req.objectID == "" {
+		return apiutil.ErrMissingID
+	}
+	if req.objectKind == "" {
+		return apiutil.ErrMissingMemberKind
 	}
 
 	return nil
@@ -239,15 +256,15 @@ func (req changeUserStatusReq) validate() error {
 }
 
 type loginUserReq struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+	Identity string `json:"identity,omitempty"`
+	Secret   string `json:"secret,omitempty"`
 }
 
 func (req loginUserReq) validate() error {
-	if req.Username == "" {
+	if req.Identity == "" {
 		return apiutil.ErrMissingIdentity
 	}
-	if req.Password == "" {
+	if req.Secret == "" {
 		return apiutil.ErrMissingPass
 	}
 
@@ -303,6 +320,90 @@ func (req resetTokenReq) validate() error {
 	}
 	if !passRegex.MatchString(req.ConfPass) {
 		return apiutil.ErrPasswordFormat
+	}
+
+	return nil
+}
+
+type assignUsersReq struct {
+	groupID  string
+	Relation string   `json:"relation"`
+	UserIDs  []string `json:"user_ids"`
+}
+
+func (req assignUsersReq) validate() error {
+	if req.Relation == "" {
+		return apiutil.ErrMissingRelation
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.UserIDs) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignUsersReq struct {
+	groupID  string
+	Relation string   `json:"relation"`
+	UserIDs  []string `json:"user_ids"`
+}
+
+func (req unassignUsersReq) validate() error {
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.UserIDs) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type assignGroupsReq struct {
+	groupID  string
+	domainID string
+	GroupIDs []string `json:"group_ids"`
+}
+
+func (req assignGroupsReq) validate() error {
+	if req.domainID == "" {
+		return apiutil.ErrMissingDomainID
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.GroupIDs) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignGroupsReq struct {
+	groupID  string
+	domainID string
+	GroupIDs []string `json:"group_ids"`
+}
+
+func (req unassignGroupsReq) validate() error {
+	if req.domainID == "" {
+		return apiutil.ErrMissingDomainID
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.GroupIDs) == 0 {
+		return apiutil.ErrEmptyList
 	}
 
 	return nil

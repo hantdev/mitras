@@ -11,15 +11,14 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/hantdev/mitras/journal"
-	httpapi "github.com/hantdev/mitras/journal/api"
+	"github.com/hantdev/mitras/journal/api"
 	"github.com/hantdev/mitras/journal/events"
 	"github.com/hantdev/mitras/journal/middleware"
 	journalpg "github.com/hantdev/mitras/journal/postgres"
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	authsvcAuthz "github.com/hantdev/mitras/pkg/authz/authsvc"
-	domainsAuthz "github.com/hantdev/mitras/pkg/domains/grpcclient"
 	"github.com/hantdev/mitras/pkg/events/store"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
@@ -35,20 +34,19 @@ import (
 )
 
 const (
-	svcName          = "journal"
-	envPrefixDB      = "MITRAS_JOURNAL_DB_"
-	envPrefixHTTP    = "MITRAS_JOURNAL_HTTP_"
-	envPrefixAuth    = "MITRAS_AUTH_GRPC_"
-	envPrefixDomains = "MITRAS_DOMAINS_GRPC_"
-	defDB            = "journal"
-	defSvcHTTPPort   = "9021"
+	svcName        = "journal"
+	envPrefixDB    = "MITRAS_JOURNAL_DB_"
+	envPrefixHTTP  = "MITRAS_JOURNAL_HTTP_"
+	envPrefixAuth  = "MITRAS_AUTH_GRPC_"
+	defDB          = "journal"
+	defSvcHTTPPort = "9021"
 )
 
 type config struct {
 	LogLevel      string  `env:"MITRAS_JOURNAL_LOG_LEVEL"   envDefault:"info"`
 	ESURL         string  `env:"MITRAS_ES_URL"              envDefault:"nats://localhost:4222"`
 	JaegerURL     url.URL `env:"MITRAS_JAEGER_URL"          envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"      envDefault:"false"`
+	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"      envDefault:"true"`
 	InstanceID    string  `env:"MITRAS_JOURNAL_INSTANCE_ID" envDefault:""`
 	TraceRatio    float64 `env:"MITRAS_JAEGER_TRACE_RATIO"  envDefault:"1.0"`
 }
@@ -62,13 +60,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err)
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -108,21 +106,7 @@ func main() {
 	defer authnHandler.Close()
 	logger.Info("AuthN successfully connected to auth gRPC server " + authnHandler.Secure())
 
-	domsGrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
-		exitCode = 1
-		return
-	}
-	domAuthz, _, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
-	if err != nil {
-		logger.Error(err.Error())
-		exitCode = 1
-		return
-	}
-	defer domainsHandler.Close()
-
-	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientCfg, domAuthz)
+	authz, authzHandler, err := authsvcAuthz.NewAuthorization(ctx, authClientCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
@@ -168,7 +152,7 @@ func main() {
 		return
 	}
 
-	hs := http.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, svcName, cfg.InstanceID), logger)
+	hs := http.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(svc, authn, logger, svcName, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -183,7 +167,7 @@ func main() {
 	}
 }
 
-func newService(db *sqlx.DB, dbConfig pgclient.Config, authz mitrasauthz.Authorization, logger *slog.Logger, tracer trace.Tracer) journal.Service {
+func newService(db *sqlx.DB, dbConfig pgclient.Config, authz smqauthz.Authorization, logger *slog.Logger, tracer trace.Tracer) journal.Service {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	repo := journalpg.NewRepository(database)
 	idp := uuid.New()

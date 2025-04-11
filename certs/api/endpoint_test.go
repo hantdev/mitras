@@ -10,17 +10,16 @@ import (
 	"testing"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
-	"github.com/hantdev/mitras/certs/api"
+	httpapi "github.com/hantdev/mitras/certs/api"
 	"github.com/hantdev/mitras/certs/mocks"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -67,9 +66,8 @@ func (tr testRequest) make() (*http.Response, error) {
 func newCertServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
 	svc := new(mocks.Service)
 	logger := smqlog.NewMock()
-	idp := uuid.NewMock()
 	authn := new(authnmocks.Authentication)
-	mux := api.MakeHandler(svc, authn, logger, "", idp)
+	mux := httpapi.MakeHandler(svc, authn, logger, "")
 
 	return httptest.NewServer(mux), svc, authn
 }

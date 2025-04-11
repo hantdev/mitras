@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	hermina "github.com/hantdev/hermina/pkg/http"
+	mgate "github.com/hantdev/hermina/pkg/http"
 	"github.com/hantdev/hermina/pkg/session"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	"github.com/hantdev/mitras/pkg/apiutil"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -46,25 +46,25 @@ var (
 	errClientNotInitialized     = errors.New("client is not initialized")
 	errFailedPublish            = errors.New("failed to publish")
 	errFailedPublishToMsgBroker = errors.New("failed to publish to mitras message broker")
-	errMalformedSubtopic        = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed subtopic"))
-	errMalformedTopic           = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed topic"))
-	errMissingTopicPub          = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to publish due to missing topic"))
-	errFailedParseSubtopic      = hermina.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to parse subtopic"))
+	errMalformedSubtopic        = mgate.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed subtopic"))
+	errMalformedTopic           = mgate.NewHTTPProxyError(http.StatusBadRequest, errors.New("malformed topic"))
+	errMissingTopicPub          = mgate.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to publish due to missing topic"))
+	errFailedParseSubtopic      = mgate.NewHTTPProxyError(http.StatusBadRequest, errors.New("failed to parse subtopic"))
 )
 
-var channelRegExp = regexp.MustCompile(`^\/?c\/([\w\-]+)\/m(\/[^?]*)?(\?.*)?$`)
+var channelRegExp = regexp.MustCompile(`^\/?channels\/([\w\-]+)\/messages(\/[^?]*)?(\?.*)?$`)
 
 // Event implements events.Event interface.
 type handler struct {
 	publisher messaging.Publisher
 	clients   grpcClientsV1.ClientsServiceClient
 	channels  grpcChannelsV1.ChannelsServiceClient
-	authn     mitrasauthn.Authentication
+	authn     smqauthn.Authentication
 	logger    *slog.Logger
 }
 
 // NewHandler creates new Handler entity.
-func NewHandler(publisher messaging.Publisher, authn mitrasauthn.Authentication, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient, logger *slog.Logger) session.Handler {
+func NewHandler(publisher messaging.Publisher, authn smqauthn.Authentication, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient, logger *slog.Logger) session.Handler {
 	return &handler{
 		publisher: publisher,
 		authn:     authn,
@@ -85,7 +85,7 @@ func (h *handler) AuthConnect(ctx context.Context) error {
 	var tok string
 	switch {
 	case string(s.Password) == "":
-		return hermina.NewHTTPProxyError(http.StatusBadRequest, errors.Wrap(apiutil.ErrValidation, apiutil.ErrBearerKey))
+		return mgate.NewHTTPProxyError(http.StatusBadRequest, errors.Wrap(apiutil.ErrValidation, apiutil.ErrBearerKey))
 	case strings.HasPrefix(string(s.Password), apiutil.ClientPrefix):
 		tok = strings.TrimPrefix(string(s.Password), apiutil.ClientPrefix)
 	default:
@@ -129,11 +129,11 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 		authnRes, err := h.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: secret})
 		if err != nil {
 			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNClient, secret, *topic, err))
-			return hermina.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
+			return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 		}
 		if !authnRes.Authenticated {
 			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNClient, secret, *topic, svcerr.ErrAuthentication))
-			return hermina.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
+			return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 		}
 		clientType = policies.ClientType
 		clientID = authnRes.GetId()
@@ -142,17 +142,17 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 		authnSession, err := h.authn.Authenticate(ctx, token)
 		if err != nil {
 			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNToken, *topic, err))
-			return hermina.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
+			return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 		}
 		clientType = policies.UserType
 		clientID = authnSession.DomainUserID
 	default:
-		return hermina.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
+		return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 	}
 
 	chanID, subtopic, err := parseTopic(*topic)
 	if err != nil {
-		return hermina.NewHTTPProxyError(http.StatusBadRequest, err)
+		return mgate.NewHTTPProxyError(http.StatusBadRequest, err)
 	}
 
 	msg := messaging.Message{
@@ -171,10 +171,10 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 	}
 	res, err := h.channels.Authorize(ctx, ar)
 	if err != nil {
-		return hermina.NewHTTPProxyError(http.StatusBadRequest, err)
+		return mgate.NewHTTPProxyError(http.StatusBadRequest, err)
 	}
 	if !res.GetAuthorized() {
-		return hermina.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthorization)
+		return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthorization)
 	}
 
 	if clientType == policies.ClientType {
@@ -207,7 +207,7 @@ func (h *handler) Disconnect(ctx context.Context) error {
 
 func parseTopic(topic string) (string, string, error) {
 	// Topics are in the format:
-	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
+	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 	channelParts := channelRegExp.FindStringSubmatch(topic)
 	if len(channelParts) < 2 {
 		return "", "", errors.Wrap(errFailedPublish, errMalformedTopic)
@@ -231,7 +231,7 @@ func parseSubtopic(subtopic string) (string, error) {
 
 	subtopic, err := url.QueryUnescape(subtopic)
 	if err != nil {
-		return "", hermina.NewHTTPProxyError(http.StatusBadRequest, errMalformedSubtopic)
+		return "", mgate.NewHTTPProxyError(http.StatusBadRequest, errMalformedSubtopic)
 	}
 	subtopic = strings.ReplaceAll(subtopic, "/", ".")
 
@@ -243,7 +243,7 @@ func parseSubtopic(subtopic string) (string, error) {
 		}
 
 		if len(elem) > 1 && (strings.Contains(elem, "*") || strings.Contains(elem, ">")) {
-			return "", hermina.NewHTTPProxyError(http.StatusBadRequest, errMalformedSubtopic)
+			return "", mgate.NewHTTPProxyError(http.StatusBadRequest, errMalformedSubtopic)
 		}
 
 		filteredElems = append(filteredElems, elem)

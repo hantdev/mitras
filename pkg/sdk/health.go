@@ -33,8 +33,12 @@ func (sdk mgSDK) Health(service string) (HealthInfo, errors.SDKError) {
 		url = fmt.Sprintf("%s/health", sdk.clientsURL)
 	case "users":
 		url = fmt.Sprintf("%s/health", sdk.usersURL)
+	case "bootstrap":
+		url = fmt.Sprintf("%s/health", sdk.bootstrapURL)
 	case "certs":
 		url = fmt.Sprintf("%s/health", sdk.certsURL)
+	case "reader":
+		url = fmt.Sprintf("%s/health", sdk.readerURL)
 	case "http-adapter":
 		url = fmt.Sprintf("%s/health", sdk.httpAdapterURL)
 	}

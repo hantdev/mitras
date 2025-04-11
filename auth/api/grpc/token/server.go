@@ -4,9 +4,9 @@ import (
 	"context"
 
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/auth"
 	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 )
 
 var _ grpcTokenV1.TokenServiceServer = (*tokenGrpcServer)(nil)

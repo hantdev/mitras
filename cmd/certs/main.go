@@ -11,10 +11,10 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/hantdev/mitras/certs"
-	httpapi "github.com/hantdev/mitras/certs/api"
+	"github.com/hantdev/mitras/certs/api"
 	pki "github.com/hantdev/mitras/certs/pki/amcerts"
 	"github.com/hantdev/mitras/certs/tracing"
-	mitraslog "github.com/hantdev/mitras/logger"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
@@ -40,7 +40,7 @@ type config struct {
 	LogLevel      string  `env:"MITRAS_CERTS_LOG_LEVEL"        envDefault:"info"`
 	ClientsURL    string  `env:"MITRAS_CLIENTS_URL"            envDefault:"http://localhost:9000"`
 	JaegerURL     url.URL `env:"MITRAS_JAEGER_URL"             envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"         envDefault:"false"`
+	SendTelemetry bool    `env:"MITRAS_SEND_TELEMETRY"         envDefault:"true"`
 	InstanceID    string  `env:"MITRAS_CERTS_INSTANCE_ID"      envDefault:""`
 	TraceRatio    float64 `env:"MITRAS_JAEGER_TRACE_RATIO"     envDefault:"1.0"`
 
@@ -63,13 +63,13 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -128,10 +128,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-
-	idp := uuid.New()
-
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, logger, cfg.InstanceID, idp), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(svc, authn, logger, cfg.InstanceID), logger)
 
 	g.Go(func() error {
 		return hs.Start()
@@ -152,9 +149,9 @@ func newService(tracer trace.Tracer, logger *slog.Logger, cfg config, pkiAgent p
 	}
 	sdk := mgsdk.NewSDK(config)
 	svc := certs.New(sdk, pkiAgent)
-	svc = httpapi.LoggingMiddleware(svc, logger)
+	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := prometheus.MakeMetrics(svcName, "api")
-	svc = httpapi.MetricsMiddleware(svc, counter, latency)
+	svc = api.MetricsMiddleware(svc, counter, latency)
 	svc = tracing.New(svc, tracer)
 
 	return svc

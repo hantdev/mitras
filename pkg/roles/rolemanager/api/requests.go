@@ -1,8 +1,8 @@
 package http
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type createRoleReq struct {
@@ -50,56 +50,10 @@ func (req listRolesReq) validate() error {
 	return nil
 }
 
-type listEntityMembersReq struct {
-	token            string
-	entityID         string
-	limit            uint64
-	offset           uint64
-	dir              string
-	order            string
-	accessProviderID string
-	roleId           string
-	roleName         string
-	actions          []string
-	accessType       string
-}
-
-func (req listEntityMembersReq) validate() error {
-	if req.token == "" {
-		return apiutil.ErrBearerToken
-	}
-	if req.entityID == "" {
-		return apiutil.ErrMissingID
-	}
-	if req.limit > api.MaxLimitSize || req.limit < 1 {
-		return apiutil.ErrLimitSize
-	}
-	return nil
-}
-
-type removeEntityMembersReq struct {
-	token     string
-	entityID  string
-	MemberIDs []string `json:"member_ids"`
-}
-
-func (req removeEntityMembersReq) validate() error {
-	if req.token == "" {
-		return apiutil.ErrBearerToken
-	}
-	if req.entityID == "" {
-		return apiutil.ErrMissingID
-	}
-	if len(req.MemberIDs) == 0 {
-		return apiutil.ErrMissingMemberIDs
-	}
-	return nil
-}
-
 type viewRoleReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 }
 
 func (req viewRoleReq) validate() error {
@@ -109,8 +63,8 @@ func (req viewRoleReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	return nil
 }
@@ -118,7 +72,7 @@ func (req viewRoleReq) validate() error {
 type updateRoleReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	Name     string `json:"name"`
 }
 
@@ -129,10 +83,7 @@ func (req updateRoleReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
-	}
-	if req.Name == "" {
+	if req.roleName == "" || req.Name == "" {
 		return apiutil.ErrMissingRoleName
 	}
 	return nil
@@ -141,7 +92,7 @@ func (req updateRoleReq) validate() error {
 type deleteRoleReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 }
 
 func (req deleteRoleReq) validate() error {
@@ -151,8 +102,8 @@ func (req deleteRoleReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	return nil
 }
@@ -171,7 +122,7 @@ func (req listAvailableActionsReq) validate() error {
 type addRoleActionsReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	Actions  []string `json:"actions"`
 }
 
@@ -182,8 +133,8 @@ func (req addRoleActionsReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 
 	if len(req.Actions) == 0 {
@@ -195,7 +146,7 @@ func (req addRoleActionsReq) validate() error {
 type listRoleActionsReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 }
 
 func (req listRoleActionsReq) validate() error {
@@ -205,8 +156,8 @@ func (req listRoleActionsReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	return nil
 }
@@ -214,7 +165,7 @@ func (req listRoleActionsReq) validate() error {
 type deleteRoleActionsReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	Actions  []string `json:"actions"`
 }
 
@@ -225,8 +176,8 @@ func (req deleteRoleActionsReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 
 	if len(req.Actions) == 0 {
@@ -238,7 +189,7 @@ func (req deleteRoleActionsReq) validate() error {
 type deleteAllRoleActionsReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 }
 
 func (req deleteAllRoleActionsReq) validate() error {
@@ -248,8 +199,8 @@ func (req deleteAllRoleActionsReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	return nil
 }
@@ -257,7 +208,7 @@ func (req deleteAllRoleActionsReq) validate() error {
 type addRoleMembersReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	Members  []string `json:"members"`
 }
 
@@ -268,8 +219,8 @@ func (req addRoleMembersReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	if len(req.Members) == 0 {
 		return apiutil.ErrMissingRoleMembers
@@ -280,7 +231,7 @@ func (req addRoleMembersReq) validate() error {
 type listRoleMembersReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	limit    uint64
 	offset   uint64
 }
@@ -292,8 +243,8 @@ func (req listRoleMembersReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	if req.limit > api.MaxLimitSize || req.limit < 1 {
 		return apiutil.ErrLimitSize
@@ -304,7 +255,7 @@ func (req listRoleMembersReq) validate() error {
 type deleteRoleMembersReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 	Members  []string `json:"members"`
 }
 
@@ -315,8 +266,8 @@ func (req deleteRoleMembersReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	if len(req.Members) == 0 {
 		return apiutil.ErrMissingRoleMembers
@@ -327,7 +278,7 @@ func (req deleteRoleMembersReq) validate() error {
 type deleteAllRoleMembersReq struct {
 	token    string
 	entityID string
-	roleID   string
+	roleName string
 }
 
 func (req deleteAllRoleMembersReq) validate() error {
@@ -337,8 +288,8 @@ func (req deleteAllRoleMembersReq) validate() error {
 	if req.entityID == "" {
 		return apiutil.ErrMissingID
 	}
-	if req.roleID == "" {
-		return apiutil.ErrMissingRoleID
+	if req.roleName == "" {
+		return apiutil.ErrMissingRoleName
 	}
 	return nil
 }

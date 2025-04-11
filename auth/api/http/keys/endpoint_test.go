@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
 	httpapi "github.com/hantdev/mitras/auth/api/http"
 	"github.com/hantdev/mitras/auth/jwt"
 	"github.com/hantdev/mitras/auth/mocks"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	policymocks "github.com/hantdev/mitras/pkg/policies/mocks"
 	"github.com/hantdev/mitras/pkg/uuid"
@@ -66,16 +66,12 @@ func (tr testRequest) make() (*http.Response, error) {
 
 func newService() (auth.Service, *mocks.KeyRepository) {
 	krepo := new(mocks.KeyRepository)
-	pRepo := new(mocks.PATSRepository)
-	cache := new(mocks.Cache)
-	hash := new(mocks.Hasher)
 	idProvider := uuid.NewMock()
 	pService := new(policymocks.Service)
 	pEvaluator := new(policymocks.Evaluator)
 	t := jwt.New([]byte(secret))
-	callback := new(mocks.CallBack)
 
-	return auth.New(krepo, pRepo, cache, hash, idProvider, t, pEvaluator, pService, loginDuration, refreshDuration, invalidDuration, callback), krepo
+	return auth.New(krepo, idProvider, t, pEvaluator, pService, loginDuration, refreshDuration, invalidDuration), krepo
 }
 
 func newServer(svc auth.Service) *httptest.Server {

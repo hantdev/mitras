@@ -1,7 +1,7 @@
 package api
 
 import (
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/messaging"
 )
 

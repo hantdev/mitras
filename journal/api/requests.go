@@ -1,9 +1,9 @@
 package api
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/journal"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type retrieveJournalsReq struct {
@@ -22,18 +22,6 @@ func (req retrieveJournalsReq) validate() error {
 		return apiutil.ErrInvalidDirection
 	}
 	if req.page.EntityID == "" {
-		return apiutil.ErrMissingID
-	}
-
-	return nil
-}
-
-type retrieveClientTelemetryReq struct {
-	clientID string
-}
-
-func (req retrieveClientTelemetryReq) validate() error {
-	if req.clientID == "" {
 		return apiutil.ErrMissingID
 	}
 

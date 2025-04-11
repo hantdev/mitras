@@ -3,16 +3,16 @@ package grpcclient
 import (
 	"context"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
-	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	tokengrpc "github.com/hantdev/mitras/auth/api/grpc/token"
 	channelsgrpc "github.com/hantdev/mitras/channels/api/grpc"
 	clientsauth "github.com/hantdev/mitras/clients/api/grpc"
 	domainsgrpc "github.com/hantdev/mitras/domains/api/grpc"
 	groupsgrpc "github.com/hantdev/mitras/groups/api/grpc"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/internal/grpc/groups/v1"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	grpchealth "google.golang.org/grpc/health/grpc_health_v1"
 )
 

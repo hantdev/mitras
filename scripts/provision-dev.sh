@@ -1,7 +1,9 @@
+#!/usr/bin/env bash
+
 ###
-# Provisions example user, client and channel on a clean Mitras installation.
+# Provisions example user, client and channel on a clean mitras installation.
 #
-# Expects a running Mitras installation.
+# Expects a running mitras installation.
 #
 #
 ###
@@ -17,7 +19,7 @@ PASSWORD=$2
 DEVICE=$3
 CHANNEL=$4
 
-#provision user:
+#provision user
 printf "Provisoning user with email $EMAIL and password $PASSWORD \n"
 curl -s -S --cacert docker/ssl/certs/mitras-server.crt --insecure -X POST -H "Content-Type: application/json" https://localhost/users -d '{"credentials": {"identity": "'"$EMAIL"'","secret": "'"$PASSWORD"'"}, "status": "enabled", "role": "admin"  }'
 

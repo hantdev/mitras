@@ -5,8 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/users"
 )
@@ -29,7 +28,6 @@ func (lm *loggingMiddleware) Register(ctx context.Context, session authn.Session
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("username", user.Credentials.Username),
 				slog.String("first_name", user.FirstName),
@@ -53,7 +51,6 @@ func (lm *loggingMiddleware) IssueToken(ctx context.Context, username, secret st
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 		}
 		if t.AccessType != "" {
 			args = append(args, slog.String("access_type", t.AccessType))
@@ -74,7 +71,6 @@ func (lm *loggingMiddleware) RefreshToken(ctx context.Context, session authn.Ses
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 		}
 		if t.AccessType != "" {
 			args = append(args, slog.String("access_type", t.AccessType))
@@ -95,7 +91,6 @@ func (lm *loggingMiddleware) View(ctx context.Context, session authn.Session, id
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", id),
 			),
@@ -116,7 +111,6 @@ func (lm *loggingMiddleware) ViewProfile(ctx context.Context, session authn.Sess
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", c.ID),
 				slog.String("username", c.Credentials.Username),
@@ -138,7 +132,6 @@ func (lm *loggingMiddleware) ListUsers(ctx context.Context, session authn.Sessio
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("page",
 				slog.Uint64("limit", pm.Limit),
 				slog.Uint64("offset", pm.Offset),
@@ -160,7 +153,6 @@ func (lm *loggingMiddleware) SearchUsers(ctx context.Context, cp users.Page) (mp
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("page",
 				slog.Uint64("limit", cp.Limit),
 				slog.Uint64("offset", cp.Offset),
@@ -183,7 +175,6 @@ func (lm *loggingMiddleware) Update(ctx context.Context, session authn.Session, 
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", u.ID),
 				slog.String("username", u.Credentials.Username),
@@ -208,7 +199,6 @@ func (lm *loggingMiddleware) UpdateTags(ctx context.Context, session authn.Sessi
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", c.ID),
 				slog.Any("tags", c.Tags),
@@ -230,7 +220,6 @@ func (lm *loggingMiddleware) UpdateEmail(ctx context.Context, session authn.Sess
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", c.ID),
 				slog.String("email", c.Email),
@@ -252,7 +241,6 @@ func (lm *loggingMiddleware) UpdateSecret(ctx context.Context, session authn.Ses
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", c.ID),
 			),
@@ -273,7 +261,6 @@ func (lm *loggingMiddleware) UpdateUsername(ctx context.Context, session authn.S
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", u.ID),
 				slog.String("username", u.Credentials.Username),
@@ -295,7 +282,6 @@ func (lm *loggingMiddleware) UpdateProfilePicture(ctx context.Context, session a
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", user.ID),
 				slog.String("profile_picture", user.ProfilePicture),
@@ -317,7 +303,6 @@ func (lm *loggingMiddleware) GenerateResetToken(ctx context.Context, email, host
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("host", host),
 		}
 		if err != nil {
@@ -336,7 +321,6 @@ func (lm *loggingMiddleware) ResetSecret(ctx context.Context, session authn.Sess
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 		}
 		if err != nil {
 			args = append(args, slog.Any("error", err))
@@ -354,7 +338,6 @@ func (lm *loggingMiddleware) SendPasswordReset(ctx context.Context, host, email,
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("host", host),
 		}
 		if err != nil {
@@ -373,7 +356,6 @@ func (lm *loggingMiddleware) UpdateRole(ctx context.Context, session authn.Sessi
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", user.ID),
 				slog.String("role", user.Role.String()),
@@ -395,7 +377,6 @@ func (lm *loggingMiddleware) Enable(ctx context.Context, session authn.Session, 
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", id),
 			),
@@ -416,7 +397,6 @@ func (lm *loggingMiddleware) Disable(ctx context.Context, session authn.Session,
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("user",
 				slog.String("id", id),
 			),
@@ -431,12 +411,37 @@ func (lm *loggingMiddleware) Disable(ctx context.Context, session authn.Session,
 	return lm.svc.Disable(ctx, session, id)
 }
 
+// ListMembers logs the list_members request. It logs the group id, and the time it took to complete the request.
+// If the request fails, it logs the error.
+func (lm *loggingMiddleware) ListMembers(ctx context.Context, session authn.Session, objectKind, objectID string, cp users.Page) (mp users.MembersPage, err error) {
+	defer func(begin time.Time) {
+		args := []any{
+			slog.String("duration", time.Since(begin).String()),
+			slog.Group("object",
+				slog.String("kind", objectKind),
+				slog.String("id", objectID),
+			),
+			slog.Group("page",
+				slog.Uint64("limit", cp.Limit),
+				slog.Uint64("offset", cp.Offset),
+				slog.Uint64("total", mp.Total),
+			),
+		}
+		if err != nil {
+			args = append(args, slog.Any("error", err))
+			lm.logger.Warn("List members failed", args...)
+			return
+		}
+		lm.logger.Info("List members completed successfully", args...)
+	}(time.Now())
+	return lm.svc.ListMembers(ctx, session, objectKind, objectID, cp)
+}
+
 // Identify logs the identify request. It logs the time it took to complete the request.
 func (lm *loggingMiddleware) Identify(ctx context.Context, session authn.Session) (id string, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("user_id", id),
 		}
 		if err != nil {
@@ -453,7 +458,6 @@ func (lm *loggingMiddleware) OAuthCallback(ctx context.Context, user users.User)
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("user_id", user.ID),
 		}
 		if err != nil {
@@ -471,7 +475,6 @@ func (lm *loggingMiddleware) Delete(ctx context.Context, session authn.Session, 
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("user_id", id),
 		}
 		if err != nil {
@@ -489,7 +492,6 @@ func (lm *loggingMiddleware) OAuthAddUserPolicy(ctx context.Context, user users.
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("user_id", user.ID),
 		}
 		if err != nil {

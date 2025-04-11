@@ -7,10 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hantdev/mitras/domains"
 	"github.com/hantdev/mitras/pkg/authn"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
 )
 
@@ -32,15 +30,13 @@ func LoggingMiddleware(svc domains.Service, logger *slog.Logger) domains.Service
 	}
 }
 
-func (lm *loggingMiddleware) CreateDomain(ctx context.Context, session authn.Session, d domains.Domain) (do domains.Domain, rps []roles.RoleProvision, err error) {
+func (lm *loggingMiddleware) CreateDomain(ctx context.Context, session authn.Session, d domains.Domain) (do domains.Domain, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("domain",
 				slog.String("id", d.ID),
 				slog.String("name", d.Name),
-				slog.String("route", d.Route),
 			),
 		}
 		if err != nil {
@@ -53,13 +49,11 @@ func (lm *loggingMiddleware) CreateDomain(ctx context.Context, session authn.Ses
 	return lm.svc.CreateDomain(ctx, session, d)
 }
 
-func (lm *loggingMiddleware) RetrieveDomain(ctx context.Context, session authn.Session, id string, withRoles bool) (do domains.Domain, err error) {
+func (lm *loggingMiddleware) RetrieveDomain(ctx context.Context, session authn.Session, id string) (do domains.Domain, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.String("domain_id", id),
-			slog.Bool("with_roles", withRoles),
 		}
 		if err != nil {
 			args = append(args, slog.String("error", err.Error()))
@@ -68,14 +62,13 @@ func (lm *loggingMiddleware) RetrieveDomain(ctx context.Context, session authn.S
 		}
 		lm.logger.Info("Retrieve domain completed successfully", args...)
 	}(time.Now())
-	return lm.svc.RetrieveDomain(ctx, session, id, withRoles)
+	return lm.svc.RetrieveDomain(ctx, session, id)
 }
 
 func (lm *loggingMiddleware) UpdateDomain(ctx context.Context, session authn.Session, id string, d domains.DomainReq) (do domains.Domain, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("domain",
 				slog.String("id", id),
 				slog.Any("name", d.Name),
@@ -95,7 +88,6 @@ func (lm *loggingMiddleware) EnableDomain(ctx context.Context, session authn.Ses
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("domain",
 				slog.String("id", id),
 				slog.String("name", do.Name),
@@ -115,7 +107,6 @@ func (lm *loggingMiddleware) DisableDomain(ctx context.Context, session authn.Se
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("domain",
 				slog.String("id", id),
 				slog.String("name", do.Name),
@@ -135,7 +126,6 @@ func (lm *loggingMiddleware) FreezeDomain(ctx context.Context, session authn.Ses
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("domain",
 				slog.String("id", id),
 				slog.String("name", do.Name),
@@ -155,7 +145,6 @@ func (lm *loggingMiddleware) ListDomains(ctx context.Context, session authn.Sess
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("request_id", middleware.GetReqID(ctx)),
 			slog.Group("page",
 				slog.Uint64("limit", page.Limit),
 				slog.Uint64("offset", page.Offset),
@@ -172,105 +161,18 @@ func (lm *loggingMiddleware) ListDomains(ctx context.Context, session authn.Sess
 	return lm.svc.ListDomains(ctx, session, page)
 }
 
-func (lm *loggingMiddleware) SendInvitation(ctx context.Context, session authn.Session, invitation domains.Invitation) (err error) {
+func (lm *loggingMiddleware) DeleteUserFromDomains(ctx context.Context, id string) (err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
-			slog.String("invitee_user_id", invitation.InviteeUserID),
-			slog.String("domain_id", invitation.DomainID),
+			slog.String("id", id),
 		}
 		if err != nil {
 			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("Send invitation failed", args...)
+			lm.logger.Warn("Delete entity policies failed to complete successfully", args...)
 			return
 		}
-		lm.logger.Info("Send invitation completed successfully", args...)
+		lm.logger.Info("Delete entity policies completed successfully", args...)
 	}(time.Now())
-	return lm.svc.SendInvitation(ctx, session, invitation)
-}
-
-func (lm *loggingMiddleware) ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (invitation domains.Invitation, err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.String("invitee_user_id", inviteeUserID),
-			slog.String("domain_id", domainID),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("View invitation failed", args...)
-			return
-		}
-		lm.logger.Info("View invitation completed successfully", args...)
-	}(time.Now())
-	return lm.svc.ViewInvitation(ctx, session, inviteeUserID, domainID)
-}
-
-func (lm *loggingMiddleware) ListInvitations(ctx context.Context, session authn.Session, pm domains.InvitationPageMeta) (invs domains.InvitationPage, err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.Group("page",
-				slog.Uint64("offset", pm.Offset),
-				slog.Uint64("limit", pm.Limit),
-				slog.Uint64("total", invs.Total),
-			),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("List invitations failed", args...)
-			return
-		}
-		lm.logger.Info("List invitations completed successfully", args...)
-	}(time.Now())
-	return lm.svc.ListInvitations(ctx, session, pm)
-}
-
-func (lm *loggingMiddleware) AcceptInvitation(ctx context.Context, session authn.Session, domainID string) (err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.String("domain_id", domainID),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("Accept invitation failed", args...)
-			return
-		}
-		lm.logger.Info("Accept invitation completed successfully", args...)
-	}(time.Now())
-	return lm.svc.AcceptInvitation(ctx, session, domainID)
-}
-
-func (lm *loggingMiddleware) RejectInvitation(ctx context.Context, session authn.Session, domainID string) (err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.String("domain_id", domainID),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("Reject invitation failed", args...)
-			return
-		}
-		lm.logger.Info("Reject invitation completed successfully", args...)
-	}(time.Now())
-	return lm.svc.RejectInvitation(ctx, session, domainID)
-}
-
-func (lm *loggingMiddleware) DeleteInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (err error) {
-	defer func(begin time.Time) {
-		args := []any{
-			slog.String("duration", time.Since(begin).String()),
-			slog.String("invitee_user_id", inviteeUserID),
-			slog.String("domain_id", domainID),
-		}
-		if err != nil {
-			args = append(args, slog.Any("error", err))
-			lm.logger.Warn("Delete invitation failed", args...)
-			return
-		}
-		lm.logger.Info("Delete invitation completed successfully", args...)
-	}(time.Now())
-	return lm.svc.DeleteInvitation(ctx, session, inviteeUserID, domainID)
+	return lm.svc.DeleteUserFromDomains(ctx, id)
 }

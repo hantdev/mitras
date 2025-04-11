@@ -3,8 +3,8 @@ package api
 import (
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/certs"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 const maxLimitSize = 100

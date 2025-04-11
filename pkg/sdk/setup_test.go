@@ -7,14 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hantdev/mitras/channels"
 	mgchannels "github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/clients"
-	"github.com/hantdev/mitras/domains"
 	groups "github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/invitations"
 	"github.com/hantdev/mitras/journal"
-	"github.com/hantdev/mitras/pkg/roles"
 	sdk "github.com/hantdev/mitras/pkg/sdk"
 	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/hantdev/mitras/users"
@@ -31,7 +29,7 @@ const (
 	contentType     = "application/senml+json"
 	invalid         = "invalid"
 	wrongID         = "wrongID"
-	roleName        = "roleName"
+	defPermission   = "read_permission"
 )
 
 var (
@@ -105,27 +103,18 @@ func convertGroup(g sdk.Group) groups.Group {
 	}
 
 	return groups.Group{
-		ID:                        g.ID,
-		Domain:                    g.DomainID,
-		Parent:                    g.ParentID,
-		Name:                      g.Name,
-		Description:               g.Description,
-		Metadata:                  groups.Metadata(g.Metadata),
-		Level:                     g.Level,
-		Path:                      g.Path,
-		Children:                  convertChildren(g.Children),
-		CreatedAt:                 g.CreatedAt,
-		UpdatedAt:                 g.UpdatedAt,
-		Status:                    status,
-		RoleID:                    g.RoleID,
-		RoleName:                  g.RoleName,
-		Actions:                   g.Actions,
-		AccessType:                g.AccessType,
-		AccessProviderId:          g.AccessProviderId,
-		AccessProviderRoleId:      g.AccessProviderRoleId,
-		AccessProviderRoleName:    g.AccessProviderRoleName,
-		AccessProviderRoleActions: g.AccessProviderRoleActions,
-		Roles:                     g.Roles,
+		ID:          g.ID,
+		Domain:      g.DomainID,
+		Parent:      g.ParentID,
+		Name:        g.Name,
+		Description: g.Description,
+		Metadata:    groups.Metadata(g.Metadata),
+		Level:       g.Level,
+		Path:        g.Path,
+		Children:    convertChildren(g.Children),
+		CreatedAt:   g.CreatedAt,
+		UpdatedAt:   g.UpdatedAt,
+		Status:      status,
 	}
 }
 
@@ -185,52 +174,45 @@ func convertClient(c sdk.Client) clients.Client {
 		Name:        c.Name,
 		Tags:        c.Tags,
 		Domain:      c.DomainID,
-		ParentGroup: c.ParentGroup,
 		Credentials: clients.Credentials(c.Credentials),
 		Metadata:    clients.Metadata(c.Metadata),
 		CreatedAt:   c.CreatedAt,
 		UpdatedAt:   c.UpdatedAt,
-		UpdatedBy:   c.UpdatedBy,
 		Status:      status,
-		Roles:       c.Roles,
 	}
 }
 
 func convertChannel(g sdk.Channel) mgchannels.Channel {
 	if g.Status == "" {
-		g.Status = channels.EnabledStatus.String()
+		g.Status = clients.EnabledStatus.String()
 	}
-	status, err := channels.ToStatus(g.Status)
+	status, err := clients.ToStatus(g.Status)
 	if err != nil {
 		return mgchannels.Channel{}
 	}
 	return mgchannels.Channel{
 		ID:          g.ID,
-		Name:        g.Name,
-		Tags:        g.Tags,
-		ParentGroup: g.ParentGroup,
 		Domain:      g.DomainID,
-		Metadata:    channels.Metadata(g.Metadata),
+		ParentGroup: g.ParentGroup,
+		Name:        g.Name,
+		Metadata:    clients.Metadata(g.Metadata),
 		CreatedAt:   g.CreatedAt,
 		UpdatedAt:   g.UpdatedAt,
-		UpdatedBy:   g.UpdatedBy,
 		Status:      status,
-		Roles:       g.Roles,
 	}
 }
 
-func convertInvitation(i sdk.Invitation) domains.Invitation {
-	return domains.Invitation{
-		InvitedBy:     i.InvitedBy,
-		InviteeUserID: i.InviteeUserID,
-		DomainID:      i.DomainID,
-		RoleID:        i.RoleID,
-		RoleName:      i.RoleName,
-		Actions:       i.Actions,
-		CreatedAt:     i.CreatedAt,
-		UpdatedAt:     i.UpdatedAt,
-		ConfirmedAt:   i.ConfirmedAt,
-		RejectedAt:    i.RejectedAt,
+func convertInvitation(i sdk.Invitation) invitations.Invitation {
+	return invitations.Invitation{
+		InvitedBy:   i.InvitedBy,
+		UserID:      i.UserID,
+		DomainID:    i.DomainID,
+		Token:       i.Token,
+		Relation:    i.Relation,
+		CreatedAt:   i.CreatedAt,
+		UpdatedAt:   i.UpdatedAt,
+		ConfirmedAt: i.ConfirmedAt,
+		Resend:      i.Resend,
 	}
 }
 
@@ -262,32 +244,6 @@ func generateTestUser(t *testing.T) sdk.User {
 		UpdatedAt: createdAt,
 		Status:    users.EnabledStatus.String(),
 		Role:      users.UserRole.String(),
-	}
-}
-
-func convertRole(r roles.Role) sdk.Role {
-	return sdk.Role{
-		ID:        r.ID,
-		Name:      r.Name,
-		EntityID:  r.EntityID,
-		CreatedBy: r.CreatedBy,
-		CreatedAt: r.CreatedAt,
-		UpdatedBy: r.UpdatedBy,
-		UpdatedAt: r.UpdatedAt,
-	}
-}
-
-func convertRoleProvision(r roles.RoleProvision) sdk.Role {
-	return sdk.Role{
-		ID:              r.ID,
-		Name:            r.Name,
-		EntityID:        r.EntityID,
-		CreatedBy:       r.CreatedBy,
-		CreatedAt:       r.CreatedAt,
-		UpdatedBy:       r.UpdatedBy,
-		UpdatedAt:       r.UpdatedAt,
-		OptionalActions: r.OptionalActions,
-		OptionalMembers: r.OptionalMembers,
 	}
 }
 

@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
 	"github.com/hantdev/mitras/auth"
 	grpcapi "github.com/hantdev/mitras/auth/api/grpc"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
 	"google.golang.org/grpc"
 )
 

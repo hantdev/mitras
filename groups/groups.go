@@ -22,29 +22,27 @@ type Metadata map[string]interface{}
 // Path in a tree consisting of group IDs
 // Paths are unique per domain.
 type Group struct {
-	ID                        string                    `json:"id"`
-	Domain                    string                    `json:"domain_id,omitempty"`
-	Parent                    string                    `json:"parent_id,omitempty"`
-	Name                      string                    `json:"name"`
-	Description               string                    `json:"description,omitempty"`
-	Metadata                  Metadata                  `json:"metadata,omitempty"`
-	Level                     int                       `json:"level,omitempty"`
-	Path                      string                    `json:"path,omitempty"`
-	Children                  []*Group                  `json:"children,omitempty"`
-	CreatedAt                 time.Time                 `json:"created_at"`
-	UpdatedAt                 time.Time                 `json:"updated_at,omitempty"`
-	UpdatedBy                 string                    `json:"updated_by,omitempty"`
-	Status                    Status                    `json:"status"`
-	RoleID                    string                    `json:"role_id,omitempty"`
-	RoleName                  string                    `json:"role_name,omitempty"`
-	Actions                   []string                  `json:"actions,omitempty"`
-	AccessType                string                    `json:"access_type,omitempty"`
-	AccessProviderId          string                    `json:"access_provider_id,omitempty"`
-	AccessProviderRoleId      string                    `json:"access_provider_role_id,omitempty"`
-	AccessProviderRoleName    string                    `json:"access_provider_role_name,omitempty"`
-	AccessProviderRoleActions []string                  `json:"access_provider_role_actions,omitempty"`
-	MemberId                  string                    `json:"member_id,omitempty"`
-	Roles                     []roles.MemberRoleActions `json:"roles,omitempty"`
+	ID                        string    `json:"id"`
+	Domain                    string    `json:"domain_id,omitempty"`
+	Parent                    string    `json:"parent_id,omitempty"`
+	Name                      string    `json:"name"`
+	Description               string    `json:"description,omitempty"`
+	Metadata                  Metadata  `json:"metadata,omitempty"`
+	Level                     int       `json:"level,omitempty"`
+	Path                      string    `json:"path,omitempty"`
+	Children                  []*Group  `json:"children,omitempty"`
+	CreatedAt                 time.Time `json:"created_at"`
+	UpdatedAt                 time.Time `json:"updated_at,omitempty"`
+	UpdatedBy                 string    `json:"updated_by,omitempty"`
+	Status                    Status    `json:"status"`
+	RoleID                    string    `json:"role_id,omitempty"`
+	RoleName                  string    `json:"role_name,omitempty"`
+	Actions                   []string  `json:"actions,omitempty"`
+	AccessType                string    `json:"access_type,omitempty"`
+	AccessProviderId          string    `json:"access_provider_id,omitempty"`
+	AccessProviderRoleId      string    `json:"access_provider_role_id,omitempty"`
+	AccessProviderRoleName    string    `json:"access_provider_role_name,omitempty"`
+	AccessProviderRoleActions []string  `json:"access_provider_role_actions,omitempty"`
 }
 
 type Member struct {
@@ -81,6 +79,8 @@ type HierarchyPage struct {
 }
 
 // Repository specifies a group persistence API.
+//
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines" --unroll-variadic=false
 type Repository interface {
 	// Save group.
 	Save(ctx context.Context, g Group) (Group, error)
@@ -92,8 +92,6 @@ type Repository interface {
 	RetrieveByID(ctx context.Context, id string) (Group, error)
 
 	RetrieveByIDAndUser(ctx context.Context, domainID, userID, groupID string) (Group, error)
-
-	RetrieveByIDWithRoles(ctx context.Context, groupID, memberID string) (Group, error)
 
 	// RetrieveAll retrieves all groups.
 	RetrieveAll(ctx context.Context, pm PageMeta) (Page, error)
@@ -130,20 +128,20 @@ type Repository interface {
 	roles.Repository
 }
 
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines" --unroll-variadic=false
 type Service interface {
 	// CreateGroup creates new  group.
-	CreateGroup(ctx context.Context, session authn.Session, g Group) (Group, []roles.RoleProvision, error)
+	CreateGroup(ctx context.Context, session authn.Session, g Group) (Group, error)
 
 	// UpdateGroup updates the group identified by the provided ID.
 	UpdateGroup(ctx context.Context, session authn.Session, g Group) (Group, error)
 
 	// ViewGroup retrieves data about the group identified by ID.
-	ViewGroup(ctx context.Context, session authn.Session, id string, withRoles bool) (Group, error)
+	ViewGroup(ctx context.Context, session authn.Session, id string) (Group, error)
 
-	// ListGroups retrieves groups for given filters.
+	// ListGroups retrieves
 	ListGroups(ctx context.Context, session authn.Session, pm PageMeta) (Page, error)
 
-	// ListGroups retrieves user accessible groups for given filters.
 	ListUserGroups(ctx context.Context, session authn.Session, userID string, pm PageMeta) (Page, error)
 
 	// EnableGroup logically enables the group identified with the provided ID.

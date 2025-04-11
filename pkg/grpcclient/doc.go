@@ -1,3 +1,3 @@
-// Package grpc client contains the domain concept definitions needed to support
-// Mitras grpcclient functionality.
+// Package auth contains the domain concept definitions needed to support
+// mitras auth functionality.
 package grpcclient

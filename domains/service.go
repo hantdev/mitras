@@ -12,6 +12,8 @@ import (
 	"github.com/hantdev/mitras/pkg/roles"
 )
 
+const defLimit = 100
+
 var (
 	errCreateDomainPolicy = errors.New("failed to create domain policy")
 	errRollbackRepo       = errors.New("failed to rollback repo")
@@ -19,7 +21,6 @@ var (
 
 type service struct {
 	repo       Repository
-	cache      Cache
 	policy     policies.Service
 	idProvider mitras.IDProvider
 	roles.ProvisionManageService
@@ -27,7 +28,7 @@ type service struct {
 
 var _ Service = (*service)(nil)
 
-func New(repo Repository, cache Cache, policy policies.Service, idProvider mitras.IDProvider, sidProvider mitras.IDProvider, availableActions []roles.Action, builtInRoles map[roles.BuiltInRoleName][]roles.Action) (Service, error) {
+func New(repo Repository, policy policies.Service, idProvider mitras.IDProvider, sidProvider mitras.IDProvider, availableActions []roles.Action, builtInRoles map[roles.BuiltInRoleName][]roles.Action) (Service, error) {
 	rpms, err := roles.NewProvisionManageService(policies.DomainType, repo, policy, sidProvider, availableActions, builtInRoles)
 	if err != nil {
 		return nil, err
@@ -35,39 +36,36 @@ func New(repo Repository, cache Cache, policy policies.Service, idProvider mitra
 
 	return &service{
 		repo:                   repo,
-		cache:                  cache,
 		policy:                 policy,
 		idProvider:             idProvider,
 		ProvisionManageService: rpms,
 	}, nil
 }
 
-func (svc service) CreateDomain(ctx context.Context, session authn.Session, d Domain) (retDo Domain, retRps []roles.RoleProvision, retErr error) {
+func (svc service) CreateDomain(ctx context.Context, session authn.Session, d Domain) (do Domain, err error) {
 	d.CreatedBy = session.UserID
 
-	if d.ID == "" {
-		domainID, err := svc.idProvider.ID()
-		if err != nil {
-			return Domain{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
-		}
-		d.ID = domainID
+	domainID, err := svc.idProvider.ID()
+	if err != nil {
+		return Domain{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
+	d.ID = domainID
 
 	if d.Status != DisabledStatus && d.Status != EnabledStatus {
-		return Domain{}, []roles.RoleProvision{}, svcerr.ErrInvalidStatus
+		return Domain{}, svcerr.ErrInvalidStatus
 	}
 
 	d.CreatedAt = time.Now()
 
 	// Domain is created in repo first, because Roles table have foreign key relation with Domain ID
-	dom, err := svc.repo.SaveDomain(ctx, d)
+	dom, err := svc.repo.Save(ctx, d)
 	if err != nil {
-		return Domain{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
+		return Domain{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
 	defer func() {
-		if retErr != nil {
-			if errRollBack := svc.repo.DeleteDomain(ctx, d.ID); errRollBack != nil {
-				retErr = errors.Wrap(retErr, errors.Wrap(errRollbackRepo, errRollBack))
+		if err != nil {
+			if errRollBack := svc.repo.Delete(ctx, domainID); errRollBack != nil {
+				err = errors.Wrap(err, errors.Wrap(errRollbackRepo, errRollBack))
 			}
 		}
 	}()
@@ -86,27 +84,21 @@ func (svc service) CreateDomain(ctx context.Context, session authn.Session, d Do
 		},
 	}
 
-	rps, err := svc.AddNewEntitiesRoles(ctx, d.ID, session.UserID, []string{d.ID}, optionalPolicies, newBuiltInRoleMembers)
-	if err != nil {
-		return Domain{}, []roles.RoleProvision{}, errors.Wrap(errCreateDomainPolicy, err)
+	if _, err := svc.AddNewEntitiesRoles(ctx, domainID, session.UserID, []string{domainID}, optionalPolicies, newBuiltInRoleMembers); err != nil {
+		return Domain{}, errors.Wrap(errCreateDomainPolicy, err)
 	}
 
-	return dom, rps, nil
+	return dom, nil
 }
 
-func (svc service) RetrieveDomain(ctx context.Context, session authn.Session, id string, withRoles bool) (Domain, error) {
+func (svc service) RetrieveDomain(ctx context.Context, session authn.Session, id string) (Domain, error) {
 	var domain Domain
 	var err error
 	switch session.SuperAdmin {
 	case true:
-		domain, err = svc.repo.RetrieveDomainByID(ctx, id)
+		domain, err = svc.repo.RetrieveByID(ctx, id)
 	default:
-		switch withRoles {
-		case true:
-			domain, err = svc.repo.RetrieveDomainByIDWithRoles(ctx, id, session.UserID)
-		default:
-			domain, err = svc.repo.RetrieveDomainByID(ctx, id)
-		}
+		domain, err = svc.repo.RetrieveByUserAndID(ctx, session.UserID, id)
 	}
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrViewEntity, err)
@@ -115,10 +107,7 @@ func (svc service) RetrieveDomain(ctx context.Context, session authn.Session, id
 }
 
 func (svc service) UpdateDomain(ctx context.Context, session authn.Session, id string, d DomainReq) (Domain, error) {
-	updatedAt := time.Now()
-	d.UpdatedAt = &updatedAt
-	d.UpdatedBy = &session.UserID
-	dom, err := svc.repo.UpdateDomain(ctx, id, d)
+	dom, err := svc.repo.Update(ctx, id, session.UserID, d)
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
@@ -127,44 +116,29 @@ func (svc service) UpdateDomain(ctx context.Context, session authn.Session, id s
 
 func (svc service) EnableDomain(ctx context.Context, session authn.Session, id string) (Domain, error) {
 	status := EnabledStatus
-	updatedAt := time.Now()
-	dom, err := svc.repo.UpdateDomain(ctx, id, DomainReq{Status: &status, UpdatedBy: &session.UserID, UpdatedAt: &updatedAt})
+	dom, err := svc.repo.Update(ctx, id, session.UserID, DomainReq{Status: &status})
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
-	if err := svc.cache.Remove(ctx, id); err != nil {
-		return dom, errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-
 	return dom, nil
 }
 
 func (svc service) DisableDomain(ctx context.Context, session authn.Session, id string) (Domain, error) {
 	status := DisabledStatus
-	updatedAt := time.Now()
-	dom, err := svc.repo.UpdateDomain(ctx, id, DomainReq{Status: &status, UpdatedBy: &session.UserID, UpdatedAt: &updatedAt})
+	dom, err := svc.repo.Update(ctx, id, session.UserID, DomainReq{Status: &status})
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
-	if err := svc.cache.Remove(ctx, id); err != nil {
-		return dom, errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-
 	return dom, nil
 }
 
 // Only SuperAdmin can freeze the domain.
 func (svc service) FreezeDomain(ctx context.Context, session authn.Session, id string) (Domain, error) {
 	status := FreezeStatus
-	updatedAt := time.Now()
-	dom, err := svc.repo.UpdateDomain(ctx, id, DomainReq{Status: &status, UpdatedBy: &session.UserID, UpdatedAt: &updatedAt})
+	dom, err := svc.repo.Update(ctx, id, session.UserID, DomainReq{Status: &status})
 	if err != nil {
 		return Domain{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
-	if err := svc.cache.Remove(ctx, id); err != nil {
-		return dom, errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-
 	return dom, nil
 }
 
@@ -181,132 +155,43 @@ func (svc service) ListDomains(ctx context.Context, session authn.Session, p Pag
 	return dp, nil
 }
 
-func (svc *service) SendInvitation(ctx context.Context, session authn.Session, invitation Invitation) error {
-	if _, err := svc.repo.RetrieveRole(ctx, invitation.RoleID); err != nil {
-		return errors.Wrap(svcerr.ErrInvalidRole, err)
-	}
-	invitation.InvitedBy = session.UserID
-
-	invitation.CreatedAt = time.Now()
-
-	if err := svc.repo.SaveInvitation(ctx, invitation); err != nil {
-		return errors.Wrap(svcerr.ErrCreateEntity, err)
-	}
-	return nil
-}
-
-func (svc *service) ViewInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) (invitation Invitation, err error) {
-	inv, err := svc.repo.RetrieveInvitation(ctx, inviteeUserID, domainID)
+func (svc service) DeleteUserFromDomains(ctx context.Context, id string) (err error) {
+	domainsPage, err := svc.repo.ListDomains(ctx, Page{UserID: id, Limit: defLimit})
 	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	role, err := svc.repo.RetrieveRole(ctx, inv.RoleID)
-	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	actions, err := svc.repo.RoleListActions(ctx, inv.RoleID)
-	if err != nil {
-		return Invitation{}, errors.Wrap(svcerr.ErrViewEntity, err)
-	}
-	inv.Actions = actions
-	inv.RoleName = role.Name
-
-	return inv, nil
-}
-
-func (svc *service) ListInvitations(ctx context.Context, session authn.Session, page InvitationPageMeta) (invitations InvitationPage, err error) {
-	ip, err := svc.repo.RetrieveAllInvitations(ctx, page)
-	if err != nil {
-		return InvitationPage{}, err
-	}
-	return ip, nil
-}
-
-func (svc *service) AcceptInvitation(ctx context.Context, session authn.Session, domainID string) error {
-	inv, err := svc.repo.RetrieveInvitation(ctx, session.UserID, domainID)
-	if err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
+		return err
 	}
 
-	if inv.InviteeUserID != session.UserID {
-		return svcerr.ErrAuthorization
-	}
-
-	if !inv.ConfirmedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyAccepted
-	}
-
-	if !inv.RejectedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyRejected
-	}
-
-	session.DomainID = domainID
-
-	if _, err := svc.RoleAddMembers(ctx, session, domainID, inv.RoleID, []string{session.UserID}); err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	inv.ConfirmedAt = time.Now()
-	inv.UpdatedAt = inv.ConfirmedAt
-
-	if err := svc.repo.UpdateConfirmation(ctx, inv); err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	return nil
-}
-
-func (svc *service) RejectInvitation(ctx context.Context, session authn.Session, domainID string) error {
-	inv, err := svc.repo.RetrieveInvitation(ctx, session.UserID, domainID)
-	if err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	if inv.InviteeUserID != session.UserID {
-		return svcerr.ErrAuthorization
-	}
-
-	if !inv.ConfirmedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyAccepted
-	}
-
-	if !inv.RejectedAt.IsZero() {
-		return svcerr.ErrInvitationAlreadyRejected
-	}
-
-	inv.RejectedAt = time.Now()
-	inv.UpdatedAt = inv.RejectedAt
-
-	if err := svc.repo.UpdateRejection(ctx, inv); err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	return nil
-}
-
-func (svc *service) DeleteInvitation(ctx context.Context, session authn.Session, inviteeUserID, domainID string) error {
-	if session.UserID == inviteeUserID {
-		if err := svc.repo.DeleteInvitation(ctx, inviteeUserID, domainID); err != nil {
-			return errors.Wrap(svcerr.ErrRemoveEntity, err)
+	if domainsPage.Total > defLimit {
+		for i := defLimit; i < int(domainsPage.Total); i += defLimit {
+			page := Page{UserID: id, Offset: uint64(i), Limit: defLimit}
+			dp, err := svc.repo.ListDomains(ctx, page)
+			if err != nil {
+				return err
+			}
+			domainsPage.Domains = append(domainsPage.Domains, dp.Domains...)
 		}
-		return nil
 	}
 
-	inv, err := svc.repo.RetrieveInvitation(ctx, inviteeUserID, domainID)
-	if err != nil {
-		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
+	// if err := svc.RemoveMembersFromAllRoles(ctx, authn.Session{}, []string{id}); err != nil {
+	// 	return err
+	// }
+	////////////ToDo//////////////
+	// Remove user from all roles in all domains
+	//////////////////////////
 
-	if inv.InvitedBy == session.UserID {
-		if err := svc.repo.DeleteInvitation(ctx, inviteeUserID, domainID); err != nil {
-			return errors.Wrap(svcerr.ErrRemoveEntity, err)
-		}
-		return nil
-	}
+	// for _, domain := range domainsPage.Domains {
+	// 	req := policies.Policy{
+	// 		Subject:     policies.EncodeDomainUserID(domain.ID, id),
+	// 		SubjectType: policies.UserType,
+	// 	}
+	// 	if err := svc.policies.DeletePolicyFilter(ctx, req); err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	if err := svc.repo.DeleteInvitation(ctx, inviteeUserID, domainID); err != nil {
-		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
+	// if err := svc.repo.DeleteUserPolicies(ctx, id); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

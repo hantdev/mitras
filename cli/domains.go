@@ -9,11 +9,11 @@ import (
 
 var cmdDomains = []cobra.Command{
 	{
-		Use:   "create <name> <route> <token>",
+		Use:   "create <name> <alias> <token>",
 		Short: "Create Domain",
-		Long: "Create Domain with provided name and route. \n" +
+		Long: "Create Domain with provided name and alias. \n" +
 			"For example:\n" +
-			"\tmitras-cli domains create domain_1 domain_1_route $TOKEN\n",
+			"\tmitras-cli domains create domain_1 domain_1_alias $TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -22,9 +22,9 @@ var cmdDomains = []cobra.Command{
 
 			dom := smqsdk.Domain{
 				Name:  args[0],
-				Route: args[1],
+				Alias: args[1],
 			}
-			d, err := sdk.CreateDomain(cmd.Context(), dom, args[2])
+			d, err := sdk.CreateDomain(dom, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -54,7 +54,7 @@ var cmdDomains = []cobra.Command{
 				Status:   Status,
 			}
 			if args[0] == all {
-				l, err := sdk.Domains(cmd.Context(), pageMetadata, args[1])
+				l, err := sdk.Domains(pageMetadata, args[1])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -62,7 +62,7 @@ var cmdDomains = []cobra.Command{
 				logJSONCmd(*cmd, l)
 				return
 			}
-			d, err := sdk.Domain(cmd.Context(), args[0], args[1])
+			d, err := sdk.Domain(args[0], args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -93,7 +93,7 @@ var cmdDomains = []cobra.Command{
 				Status:   Status,
 			}
 
-			l, err := sdk.ListDomainMembers(cmd.Context(), args[0], pageMetadata, args[1])
+			l, err := sdk.ListDomainUsers(args[0], pageMetadata, args[1])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -105,9 +105,9 @@ var cmdDomains = []cobra.Command{
 	{
 		Use:   "update <domain_id> <JSON_string> <user_auth_token>",
 		Short: "Update domains",
-		Long: "Updates domains name, route and metadata \n" +
+		Long: "Updates domains name, alias and metadata \n" +
 			"Usage:\n" +
-			"\tmitras-cli domains update <domain_id> '{\"name\":\"new name\", \"route\":\"new_route\", \"metadata\":{\"key\": \"value\"}}' $TOKEN \n",
+			"\tmitras-cli domains update <domain_id> '{\"name\":\"new name\", \"alias\":\"new_alias\", \"metadata\":{\"key\": \"value\"}}' $TOKEN \n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 && len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -121,7 +121,7 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 			d.ID = args[0]
-			d, err := sdk.UpdateDomain(cmd.Context(), d, args[2])
+			d, err := sdk.UpdateDomain(d, args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -142,14 +142,13 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 
-			if err := sdk.EnableDomain(cmd.Context(), args[0], args[1]); err != nil {
+			if err := sdk.EnableDomain(args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			logOKCmd(*cmd)
 		},
 	},
-
 	{
 		Use:   "disable <domain_id> <token>",
 		Short: "Change domain status to disabled",
@@ -162,27 +161,7 @@ var cmdDomains = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DisableDomain(cmd.Context(), args[0], args[1]); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logOKCmd(*cmd)
-		},
-	},
-
-	{
-		Use:   "freeze <domain_id> <token>",
-		Short: "Change domain status to frozen",
-		Long: "Change domain status to frozen\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains freeze <domain_id> <token>\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			if err := sdk.FreezeDomain(cmd.Context(), args[0], args[1]); err != nil {
+			if err := sdk.DisableDomain(args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -191,108 +170,24 @@ var cmdDomains = []cobra.Command{
 	},
 }
 
-var cmdDomainRoles = []cobra.Command{
+var domainAssignCmds = []cobra.Command{
 	{
-		Use:   "create <JSON_role> <domain_id> <user_auth_token>",
-		Short: "Create domain role",
-		Long: "Create role\n" +
+		Use:   "users <relation> <user_ids> <domain_id> <token>",
+		Short: "Assign users",
+		Long: "Assign users to a domain\n" +
 			"Usage:\n" +
-			"\tmitras-cli domains roles create <JSON_role> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles create '{\"role_name\":\"admin\",\"optional_actions\":[\"read\",\"update\"]}' 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			var roleReq smqsdk.RoleReq
-			if err := json.Unmarshal([]byte(args[0]), &roleReq); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			r, err := sdk.CreateDomainRole(cmd.Context(), args[1], roleReq, args[2])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "get [all | <role_id>] <domain_id> <user_auth_token>",
-		Short: "Get roles",
-		Long: "Get roles\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles get all <domain_id> <user_auth_token> - lists all roles\n" +
-			"\tmitras-cli domains roles get all <domain_id> <user_auth_token> --offset <offset> --limit <limit> - lists all roles with provided offset and limit\n" +
-			"\tmitras-cli domains roles get <role_id> <domain_id> <user_auth_token> - shows role by role id and domain id\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			pageMetadata := smqsdk.PageMetadata{
-				Offset: Offset,
-				Limit:  Limit,
-			}
-			if args[0] == all {
-				rs, err := sdk.DomainRoles(cmd.Context(), args[1], pageMetadata, args[2])
-				if err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logJSONCmd(*cmd, rs)
-				return
-			}
-			r, err := sdk.DomainRole(cmd.Context(), args[0], args[1], args[2])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "update <new_name> <role_id> <domain_id> <user_auth_token>",
-		Short: "Update role name",
-		Long: "Update role name\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles update <new_name> <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles update 'new_name' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
+			"\tmitras-cli domains assign users <relation> '[\"<user_id_1>\", \"<user_id_2>\"]' <domain_id> $TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
-
-			r, err := sdk.UpdateDomainRole(cmd.Context(), args[2], args[1], args[0], args[3])
-			if err != nil {
+			var userIDs []string
+			if err := json.Unmarshal([]byte(args[1]), &userIDs); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
-			logJSONCmd(*cmd, r)
-		},
-	},
-
-	{
-		Use:   "delete <role_id> <domain_id> <user_auth_token>",
-		Short: "Delete role",
-		Long: "Delete role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles delete <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles delete 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-
-			if err := sdk.DeleteDomainRole(cmd.Context(), args[1], args[0], args[2]); err != nil {
+			if err := sdk.AddUserToDomain(args[2], smqsdk.UsersRelationRequest{Relation: args[0], UserIDs: userIDs}, args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -301,261 +196,65 @@ var cmdDomainRoles = []cobra.Command{
 	},
 }
 
-var cmdDomainsActions = []cobra.Command{
+var domainUnassignCmds = []cobra.Command{
 	{
-		Use:   "add <JSON_actions> <role_id> <domain_id> <user_auth_token>",
-		Short: "Add actions to role",
-		Long: "Add actions to role\n" +
+		Use:   "users <user_id> <domain_id> <token>",
+		Short: "Unassign users",
+		Long: "Unassign users from a domain\n" +
 			"Usage:\n" +
-			"\tmitras-cli domains roles actions add <JSON_actions> <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles actions add '{\"actions\":[\"read\",\"write\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			actions := struct {
-				Actions []string `json:"actions"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &actions); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			acts, err := sdk.AddDomainRoleActions(cmd.Context(), args[2], args[1], actions.Actions, args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, acts)
-		},
-	},
-
-	{
-		Use:   "list <role_id> <domain_id> <user_auth_token>",
-		Short: "List actions of role",
-		Long: "List actions of role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles actions list <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles actions list 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
+			"\tmitras-cli domains unassign users <user_id> <domain_id> $TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			l, err := sdk.DomainRoleActions(cmd.Context(), args[1], args[0], args[2])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, l)
-		},
-	},
-
-	{
-		Use:   "delete [all | <JSON_actions>] <role_id> <domain_id> <user_auth_token>",
-		Short: "Delete actions from role",
-		Long: "Delete actions from role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles actions delete <JSON_actions> <role_id> <domain_id> <user_auth_token>\n" +
-			"\tmitras-cli domains roles actions delete all <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles actions delete '{\"actions\":[\"read\",\"write\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == all {
-				if err := sdk.RemoveAllDomainRoleActions(cmd.Context(), args[2], args[1], args[3]); err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logOKCmd(*cmd)
-				return
-			}
-			actions := struct {
-				Actions []string `json:"actions"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &actions); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			if err := sdk.RemoveDomainRoleActions(cmd.Context(), args[2], args[1], actions.Actions, args[3]); err != nil {
+			if err := sdk.RemoveUserFromDomain(args[1], args[0], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 			logOKCmd(*cmd)
-		},
-	},
-
-	{
-		Use:   "available-actions <user_auth_token>",
-		Short: "List available actions",
-		Long: "List available actions\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles actions available-actions <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles actions available-actions $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			acts, err := sdk.AvailableDomainRoleActions(cmd.Context(), args[0])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, acts)
 		},
 	},
 }
 
-var cmdDomainsMembers = []cobra.Command{
-	{
-		Use:   "add <JSON_members> <role_id> <domain_id> <user_auth_token>",
-		Short: "Add members to role",
-		Long: "Add members to role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles members add <JSON_members> <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles members add '{\"members\":[\"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\", \"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			members := struct {
-				Members []string `json:"members"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &members); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
+func NewDomainAssignCmds() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "assign [users]",
+		Short: "Assign users to a domain",
+		Long:  "Assign users to a domain",
+	}
+	for i := range domainAssignCmds {
+		cmd.AddCommand(&domainAssignCmds[i])
+	}
+	return &cmd
+}
 
-			memb, err := sdk.AddDomainRoleMembers(cmd.Context(), args[2], args[1], members.Members, args[3])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, memb)
-		},
-	},
-
-	{
-		Use:   "list <role_id> <domain_id> <user_auth_token>",
-		Short: "List members of role",
-		Long: "List members of role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles members list <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles members list 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 3 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			pageMetadata := smqsdk.PageMetadata{
-				Offset: Offset,
-				Limit:  Limit,
-			}
-
-			l, err := sdk.DomainRoleMembers(cmd.Context(), args[1], args[0], pageMetadata, args[2])
-			if err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logJSONCmd(*cmd, l)
-		},
-	},
-
-	{
-		Use:   "delete [all | <JSON_members>] <role_id> <domain_id> <user_auth_token>",
-		Short: "Delete members from role",
-		Long: "Delete members from role\n" +
-			"Usage:\n" +
-			"\tmitras-cli domains roles members delete <JSON_members> <role_id> <domain_id> <user_auth_token>\n" +
-			"\tmitras-cli domains roles members delete all <role_id> <domain_id> <user_auth_token>\n" +
-			"For example:\n" +
-			"\tmitras-cli domains roles members delete all 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n" +
-			"\tmitras-cli domains roles members delete '{\"members\":[\"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\", \"5dc1ce4b-7cc9-4f12-98a6-9d74cc4980bb\"]}' 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a $USER_AUTH_TOKEN\n",
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 4 {
-				logUsageCmd(*cmd, cmd.Use)
-				return
-			}
-			if args[0] == all {
-				if err := sdk.RemoveAllDomainRoleMembers(cmd.Context(), args[2], args[1], args[3]); err != nil {
-					logErrorCmd(*cmd, err)
-					return
-				}
-				logOKCmd(*cmd)
-				return
-			}
-
-			members := struct {
-				Members []string `json:"members"`
-			}{}
-			if err := json.Unmarshal([]byte(args[0]), &members); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-
-			if err := sdk.RemoveDomainRoleMembers(cmd.Context(), args[2], args[1], members.Members, args[3]); err != nil {
-				logErrorCmd(*cmd, err)
-				return
-			}
-			logOKCmd(*cmd)
-		},
-	},
+func NewDomainUnassignCmds() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "unassign [users]",
+		Short: "Unassign users from a domain",
+		Long:  "Unassign users from a domain",
+	}
+	for i := range domainUnassignCmds {
+		cmd.AddCommand(&domainUnassignCmds[i])
+	}
+	return &cmd
 }
 
 // NewDomainsCmd returns domains command.
 func NewDomainsCmd() *cobra.Command {
-	actionsCmd := cobra.Command{
-		Use:   "actions [add | list | delete | available-actions]",
-		Short: "Actions management",
-		Long:  "Actions management: add, list, delete actions and list available actions",
-	}
-	for i := range cmdDomainsActions {
-		actionsCmd.AddCommand(&cmdDomainsActions[i])
-	}
-
-	membersCmd := cobra.Command{
-		Use:   "members [add | list | delete]",
-		Short: "Members management",
-		Long:  "Members management: add, list, delete members",
-	}
-	for i := range cmdDomainsMembers {
-		membersCmd.AddCommand(&cmdDomainsMembers[i])
-	}
-
-	rolesCmd := cobra.Command{
-		Use:   "roles [create | get | update | delete | actions | members]",
-		Short: "Roles management",
-		Long:  "Roles management: create, update, retrieve roles and assign/unassign members to roles",
-	}
-
-	rolesCmd.AddCommand(&actionsCmd)
-	rolesCmd.AddCommand(&membersCmd)
-
-	for i := range cmdDomainRoles {
-		rolesCmd.AddCommand(&cmdDomainRoles[i])
-	}
 	cmd := cobra.Command{
 		Use:   "domains [create | get | update | enable | disable | enable | users | assign | unassign]",
 		Short: "Domains management",
 		Long:  `Domains management: create, update, retrieve domains , assign/unassign users to domains and list users of domain"`,
 	}
-	cmd.AddCommand(&rolesCmd)
 
 	for i := range cmdDomains {
 		cmd.AddCommand(&cmdDomains[i])
 	}
 
+	cmd.AddCommand(NewDomainAssignCmds())
+	cmd.AddCommand(NewDomainUnassignCmds())
 	return &cmd
 }

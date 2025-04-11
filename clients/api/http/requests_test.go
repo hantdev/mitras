@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -189,31 +189,37 @@ func TestListClientsReqValidate(t *testing.T) {
 		{
 			desc: "valid request",
 			req: listClientsReq{
-				Page: clients.Page{Limit: 10},
+				limit: 10,
 			},
 			err: nil,
 		},
 		{
 			desc: "limit too big",
 			req: listClientsReq{
-				Page: clients.Page{Limit: api.MaxLimitSize + 1},
+				limit: api.MaxLimitSize + 1,
 			},
 			err: apiutil.ErrLimitSize,
 		},
 		{
 			desc: "limit too small",
 			req: listClientsReq{
-				Page: clients.Page{Limit: 0},
+				limit: 0,
 			},
 			err: apiutil.ErrLimitSize,
 		},
 		{
+			desc: "invalid visibility",
+			req: listClientsReq{
+				limit:      10,
+				visibility: "invalid",
+			},
+			err: apiutil.ErrInvalidVisibilityType,
+		},
+		{
 			desc: "name too long",
 			req: listClientsReq{
-				Page: clients.Page{
-					Limit: 10,
-					Name:  strings.Repeat("a", api.MaxNameSize+1),
-				},
+				limit: 10,
+				name:  strings.Repeat("a", api.MaxNameSize+1),
 			},
 			err: apiutil.ErrNameSize,
 		},

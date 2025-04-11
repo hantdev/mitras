@@ -1,0 +1,64 @@
+# This docker-compose file contains optional Postgres and journal services
+# for mitras platform. Since these are optional, this file is dependent of docker-compose file
+# from <project_root>/docker. In order to run these services, execute command:
+# docker-compose -f docker/docker-compose.yml -f docker/addons/journal/docker-compose.yml up
+# from project root. PostgreSQL default port (5432) is exposed, so you can use various tools for database
+# inspection and data visualization.
+
+networks:
+  mitras-base-net:
+
+volumes:
+  mitras-journal-volume:
+
+services:
+  journal-db:
+    image: postgres:16.2-alpine
+    container_name: mitras-journal-db
+    restart: on-failure
+    command: postgres -c "max_connections=${MITRAS_POSTGRES_MAX_CONNECTIONS}"
+    environment:
+      POSTGRES_USER: ${MITRAS_JOURNAL_DB_USER}
+      POSTGRES_PASSWORD: ${MITRAS_JOURNAL_DB_PASS}
+      POSTGRES_DB: ${MITRAS_JOURNAL_DB_NAME}
+      MITRAS_POSTGRES_MAX_CONNECTIONS: ${MITRAS_POSTGRES_MAX_CONNECTIONS}
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-journal-volume:/var/lib/postgresql/data
+
+  journal:
+    image: mitras/journal:${MITRAS_RELEASE_TAG}
+    container_name: mitras-journal
+    depends_on:
+      - journal-db
+    restart: on-failure
+    environment:
+      MITRAS_JOURNAL_LOG_LEVEL: ${MITRAS_JOURNAL_LOG_LEVEL}
+      MITRAS_JOURNAL_HTTP_HOST: ${MITRAS_JOURNAL_HTTP_HOST}
+      MITRAS_JOURNAL_HTTP_PORT: ${MITRAS_JOURNAL_HTTP_PORT}
+      MITRAS_JOURNAL_HTTP_SERVER_CERT: ${MITRAS_JOURNAL_HTTP_SERVER_CERT}
+      MITRAS_JOURNAL_HTTP_SERVER_KEY: ${MITRAS_JOURNAL_HTTP_SERVER_KEY}
+      MITRAS_JOURNAL_DB_HOST: ${MITRAS_JOURNAL_DB_HOST}
+      MITRAS_JOURNAL_DB_PORT: ${MITRAS_JOURNAL_DB_PORT}
+      MITRAS_JOURNAL_DB_USER: ${MITRAS_JOURNAL_DB_USER}
+      MITRAS_JOURNAL_DB_PASS: ${MITRAS_JOURNAL_DB_PASS}
+      MITRAS_JOURNAL_DB_NAME: ${MITRAS_JOURNAL_DB_NAME}
+      MITRAS_JOURNAL_DB_SSL_MODE: ${MITRAS_JOURNAL_DB_SSL_MODE}
+      MITRAS_JOURNAL_DB_SSL_CERT: ${MITRAS_JOURNAL_DB_SSL_CERT}
+      MITRAS_JOURNAL_DB_SSL_KEY: ${MITRAS_JOURNAL_DB_SSL_KEY}
+      MITRAS_JOURNAL_DB_SSL_ROOT_CERT: ${MITRAS_JOURNAL_DB_SSL_ROOT_CERT}
+      MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
+      MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
+      MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
+      MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
+      MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
+      MITRAS_ES_URL: ${MITRAS_ES_URL}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_JOURNAL_INSTANCE_ID: ${MITRAS_JOURNAL_INSTANCE_ID}
+    ports:
+      - ${MITRAS_JOURNAL_HTTP_PORT}:${MITRAS_JOURNAL_HTTP_PORT}
+    networks:
+      - mitras-base-net

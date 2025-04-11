@@ -1,10 +1,6 @@
 package authz
 
-import (
-	"context"
-
-	"github.com/hantdev/mitras/auth"
-)
+import "context"
 
 type PolicyReq struct {
 	// Domain contains the domain ID.
@@ -43,17 +39,9 @@ type PolicyReq struct {
 	Permission string `json:"permission,omitempty"`
 }
 
-type PatReq struct {
-	UserID           string          `json:"user_id,omitempty"`           // UserID
-	PatID            string          `json:"pat_id,omitempty"`            // UserID
-	EntityType       auth.EntityType `json:"entity_type,omitempty"`       // Entity type
-	OptionalDomainID string          `json:"optional_domainID,omitempty"` // Optional domain id
-	Operation        auth.Operation  `json:"operation,omitempty"`         // Operation
-	EntityID         string          `json:"entityID,omitempty"`          // EntityID
-}
-
 // Authz is mitras authorization library.
+//
+//go:generate mockery --name Authorization --output=./mocks --filename authz.go --quiet
 type Authorization interface {
 	Authorize(ctx context.Context, pr PolicyReq) error
-	AuthorizePAT(ctx context.Context, pr PatReq) error
 }

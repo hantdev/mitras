@@ -13,9 +13,6 @@ import (
 	"github.com/authzed/grpcutil"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcGroupsV1 "github.com/hantdev/mitras/api/grpc/groups/v1"
 	"github.com/hantdev/mitras/channels"
 	grpcapi "github.com/hantdev/mitras/channels/api/grpc"
 	httpapi "github.com/hantdev/mitras/channels/api/http"
@@ -24,15 +21,13 @@ import (
 	"github.com/hantdev/mitras/channels/postgres"
 	pChannels "github.com/hantdev/mitras/channels/private"
 	"github.com/hantdev/mitras/channels/tracing"
-	dpostgres "github.com/hantdev/mitras/domains/postgres"
-	gpostgres "github.com/hantdev/mitras/groups/postgres"
-	mitraslog "github.com/hantdev/mitras/logger"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcGroupsV1 "github.com/hantdev/mitras/internal/grpc/groups/v1"
+	smqlog "github.com/hantdev/mitras/logger"
 	authsvcAuthn "github.com/hantdev/mitras/pkg/authn/authsvc"
-	mitrasauthz "github.com/hantdev/mitras/pkg/authz"
+	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	authsvcAuthz "github.com/hantdev/mitras/pkg/authz/authsvc"
-	dconsumer "github.com/hantdev/mitras/pkg/domains/events/consumer"
-	domainsAuthz "github.com/hantdev/mitras/pkg/domains/grpcclient"
-	gconsumer "github.com/hantdev/mitras/pkg/groups/events/consumer"
 	"github.com/hantdev/mitras/pkg/grpcclient"
 	jaegerclient "github.com/hantdev/mitras/pkg/jaeger"
 	"github.com/hantdev/mitras/pkg/policies"
@@ -40,12 +35,10 @@ import (
 	pg "github.com/hantdev/mitras/pkg/postgres"
 	pgclient "github.com/hantdev/mitras/pkg/postgres"
 	"github.com/hantdev/mitras/pkg/prometheus"
-	"github.com/hantdev/mitras/pkg/roles"
 	"github.com/hantdev/mitras/pkg/server"
 	grpcserver "github.com/hantdev/mitras/pkg/server/grpc"
 	httpserver "github.com/hantdev/mitras/pkg/server/http"
 	"github.com/hantdev/mitras/pkg/sid"
-	spicedbdecoder "github.com/hantdev/mitras/pkg/spicedb"
 	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
@@ -61,9 +54,8 @@ const (
 	envPrefixHTTP    = "MITRAS_CHANNELS_HTTP_"
 	envPrefixGRPC    = "MITRAS_CHANNELS_GRPC_"
 	envPrefixAuth    = "MITRAS_AUTH_GRPC_"
-	envPrefixClients = "MITRAS_CLIENTS_GRPC_"
+	envPrefixClients = "MITRAS_CLIENTS_AUTH_GRPC_"
 	envPrefixGroups  = "MITRAS_GROUPS_GRPC_"
-	envPrefixDomains = "MITRAS_DOMAINS_GRPC_"
 	defDB            = "channels"
 	defSvcHTTPPort   = "9005"
 	defSvcGRPCPort   = "7005"
@@ -73,14 +65,12 @@ type config struct {
 	LogLevel            string  `env:"MITRAS_CHANNELS_LOG_LEVEL"           envDefault:"info"`
 	InstanceID          string  `env:"MITRAS_CHANNELS_INSTANCE_ID"         envDefault:""`
 	JaegerURL           url.URL `env:"MITRAS_JAEGER_URL"                   envDefault:"http://localhost:4318/v1/traces"`
-	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"               envDefault:"false"`
+	SendTelemetry       bool    `env:"MITRAS_SEND_TELEMETRY"               envDefault:"true"`
 	ESURL               string  `env:"MITRAS_ES_URL"                       envDefault:"nats://localhost:4222"`
-	ESConsumerName      string  `env:"MITRAS_CHANNELS_EVENT_CONSUMER"      envDefault:"channels"`
 	TraceRatio          float64 `env:"MITRAS_JAEGER_TRACE_RATIO"           envDefault:"1.0"`
 	SpicedbHost         string  `env:"MITRAS_SPICEDB_HOST"                 envDefault:"localhost"`
 	SpicedbPort         string  `env:"MITRAS_SPICEDB_PORT"                 envDefault:"50051"`
 	SpicedbPreSharedKey string  `env:"MITRAS_SPICEDB_PRE_SHARED_KEY"       envDefault:"12345678"`
-	SpicedbSchemaFile   string  `env:"MITRAS_SPICEDB_SCHEMA_FILE"          envDefault:"schema.zed"`
 }
 
 func main() {
@@ -94,13 +84,13 @@ func main() {
 	}
 
 	var logger *slog.Logger
-	logger, err := mitraslog.New(os.Stdout, cfg.LogLevel)
+	logger, err := smqlog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err.Error())
 	}
 
 	var exitCode int
-	defer mitraslog.ExitWithError(&exitCode)
+	defer smqlog.ExitWithError(&exitCode)
 
 	if cfg.InstanceID == "" {
 		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
@@ -167,21 +157,7 @@ func main() {
 	defer authnClient.Close()
 	logger.Info("AuthN  successfully connected to auth gRPC server " + authnClient.Secure())
 
-	domsGrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&domsGrpcCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
-		exitCode = 1
-		return
-	}
-	domAuthz, _, domainsHandler, err := domainsAuthz.NewAuthorization(ctx, domsGrpcCfg)
-	if err != nil {
-		logger.Error(err.Error())
-		exitCode = 1
-		return
-	}
-	defer domainsHandler.Close()
-
-	authz, authzClient, err := authsvcAuthz.NewAuthorization(ctx, grpcCfg, domAuthz)
+	authz, authzClient, err := authsvcAuthz.NewAuthorization(ctx, grpcCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
@@ -220,27 +196,9 @@ func main() {
 	defer groupsHandler.Close()
 	logger.Info("Groups gRPC client successfully connected to groups gRPC server " + groupsHandler.Secure())
 
-	svc, psvc, err := newService(ctx, db, dbConfig, authz, policyEvaluator, policyService, cfg, tracer, clientsClient, groupsClient, logger)
+	svc, psvc, err := newService(ctx, db, dbConfig, authz, policyEvaluator, policyService, cfg.ESURL, tracer, clientsClient, groupsClient, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to create services: %s", err))
-		exitCode = 1
-		return
-	}
-
-	ddatabase := pg.NewDatabase(db, dbConfig, tracer)
-	drepo := dpostgres.NewRepository(ddatabase)
-
-	if err := dconsumer.DomainsEventsSubscribe(ctx, drepo, cfg.ESURL, cfg.ESConsumerName, logger); err != nil {
-		logger.Error(fmt.Sprintf("failed to create domains event store : %s", err))
-		exitCode = 1
-		return
-	}
-
-	gdatabase := pg.NewDatabase(db, dbConfig, tracer)
-	grepo := gpostgres.New(gdatabase)
-
-	if err := gconsumer.GroupsEventsSubscribe(ctx, grepo, cfg.ESURL, cfg.ESConsumerName, logger); err != nil {
-		logger.Error(fmt.Sprintf("failed to create groups event store : %s", err))
 		exitCode = 1
 		return
 	}
@@ -265,8 +223,7 @@ func main() {
 		return
 	}
 	mux := chi.NewRouter()
-	idp := uuid.New()
-	httpSvc := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID, idp), logger)
+	httpSvc := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, authn, mux, logger, cfg.InstanceID), logger)
 
 	// Start all servers
 	g.Go(func() error {
@@ -286,8 +243,8 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz mitrasauthz.Authorization,
-	pe policies.Evaluator, ps policies.Service, cfg config, tracer trace.Tracer, clientsClient grpcClientsV1.ClientsServiceClient,
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz smqauthz.Authorization,
+	pe policies.Evaluator, ps policies.Service, esURL string, tracer trace.Tracer, clientsClient grpcClientsV1.ClientsServiceClient,
 	groupsClient grpcGroupsV1.GroupsServiceClient, logger *slog.Logger,
 ) (channels.Service, pChannels.Service, error) {
 	database := pg.NewDatabase(db, dbConfig, tracer)
@@ -299,17 +256,12 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 		return nil, nil, err
 	}
 
-	availableActions, buildInRoles, err := availableActionsAndBuiltInRoles(cfg.SpicedbSchemaFile)
+	svc, err := channels.New(repo, ps, idp, clientsClient, groupsClient, sidp)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	svc, err := channels.New(repo, ps, idp, clientsClient, groupsClient, sidp, availableActions, buildInRoles)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	svc, err = events.NewEventStoreMiddleware(ctx, svc, cfg.ESURL)
+	svc, err = events.NewEventStoreMiddleware(ctx, svc, esURL)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -342,17 +294,4 @@ func newSpiceDBPolicyServiceEvaluator(cfg config, logger *slog.Logger) (policies
 
 	pe := spicedb.NewPolicyEvaluator(client, logger)
 	return pe, ps, nil
-}
-
-func availableActionsAndBuiltInRoles(spicedbSchemaFile string) ([]roles.Action, map[roles.BuiltInRoleName][]roles.Action, error) {
-	availableActions, err := spicedbdecoder.GetActionsFromSchema(spicedbSchemaFile, policies.ChannelType)
-	if err != nil {
-		return []roles.Action{}, map[roles.BuiltInRoleName][]roles.Action{}, err
-	}
-
-	builtInRoles := map[roles.BuiltInRoleName][]roles.Action{
-		channels.BuiltInRoleAdmin: availableActions,
-	}
-
-	return availableActions, builtInRoles, err
 }

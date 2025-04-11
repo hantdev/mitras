@@ -23,24 +23,20 @@ type ClientRepository struct {
 
 // Repository is the interface that wraps the basic methods for
 // a client repository.
+//
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet
 type Repository interface {
 	// RetrieveByID retrieves client by its unique ID.
 	RetrieveByID(ctx context.Context, id string) (Client, error)
 
-	// RetrieveByIDWithRoles retrieves client by its unique ID along with member roles.
-	RetrieveByIDWithRoles(ctx context.Context, id, memberID string) (Client, error)
-
 	// RetrieveAll retrieves all clients.
 	RetrieveAll(ctx context.Context, pm Page) (ClientsPage, error)
-
-	// RetrieveUserClients retrieve all clients of a given user id.
-	RetrieveUserClients(ctx context.Context, domainID, userID string, pm Page) (ClientsPage, error)
 
 	// SearchClients retrieves clients based on search criteria.
 	SearchClients(ctx context.Context, pm Page) (ClientsPage, error)
 
-	// RetrieveByIds
-	RetrieveByIds(ctx context.Context, ids []string) (ClientsPage, error)
+	// RetrieveAllByIDs retrieves for given client IDs .
+	RetrieveAllByIDs(ctx context.Context, pm Page) (ClientsPage, error)
 
 	// Update updates the client name and metadata.
 	Update(ctx context.Context, client Client) (Client, error)
@@ -66,6 +62,8 @@ type Repository interface {
 
 	// RetrieveBySecret retrieves a client based on the secret (key).
 	RetrieveBySecret(ctx context.Context, key string) (Client, error)
+
+	RetrieveByIds(ctx context.Context, ids []string) (ClientsPage, error)
 
 	AddConnections(ctx context.Context, conns []Connection) error
 
@@ -94,19 +92,18 @@ type Repository interface {
 
 // Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
+//
+//go:generate mockery --name Service --output=./mocks --filename service.go  --quiet
 type Service interface {
 	// CreateClients creates new client. In case of the failed registration, a
 	// non-nil error value is returned.
-	CreateClients(ctx context.Context, session authn.Session, client ...Client) ([]Client, []roles.RoleProvision, error)
+	CreateClients(ctx context.Context, session authn.Session, client ...Client) ([]Client, error)
 
 	// View retrieves client info for a given client ID and an authorized token.
-	View(ctx context.Context, session authn.Session, id string, withRoles bool) (Client, error)
+	View(ctx context.Context, session authn.Session, id string) (Client, error)
 
-	// ListClients retrieves clients list for given page query.
-	ListClients(ctx context.Context, session authn.Session, pm Page) (ClientsPage, error)
-
-	// ListUserClients retrieves clients list for a given user id and page query.
-	ListUserClients(ctx context.Context, session authn.Session, userID string, pm Page) (ClientsPage, error)
+	// ListClients retrieves clients list for a valid auth token.
+	ListClients(ctx context.Context, session authn.Session, reqUserID string, pm Page) (ClientsPage, error)
 
 	// Update updates the client's name and metadata.
 	Update(ctx context.Context, session authn.Session, client Client) (Client, error)
@@ -134,6 +131,8 @@ type Service interface {
 }
 
 // Cache contains client caching interface.
+//
+//go:generate mockery --name Cache --output=./mocks --filename cache.go --quiet
 type Cache interface {
 	// Save stores pair client secret, client id.
 	Save(ctx context.Context, clientSecret, clientID string) error
@@ -159,20 +158,8 @@ type Client struct {
 	UpdatedAt   time.Time   `json:"updated_at,omitempty"`
 	UpdatedBy   string      `json:"updated_by,omitempty"`
 	Status      Status      `json:"status,omitempty"` // 1 for enabled, 0 for disabled
+	Permissions []string    `json:"permissions,omitempty"`
 	Identity    string      `json:"identity,omitempty"`
-	// Extended
-	ParentGroupPath           string                    `json:"parent_group_path,omitempty"`
-	RoleID                    string                    `json:"role_id,omitempty"`
-	RoleName                  string                    `json:"role_name,omitempty"`
-	Actions                   []string                  `json:"actions,omitempty"`
-	AccessType                string                    `json:"access_type,omitempty"`
-	AccessProviderId          string                    `json:"access_provider_id,omitempty"`
-	AccessProviderRoleId      string                    `json:"access_provider_role_id,omitempty"`
-	AccessProviderRoleName    string                    `json:"access_provider_role_name,omitempty"`
-	AccessProviderRoleActions []string                  `json:"access_provider_role_actions,omitempty"`
-	ConnectionTypes           []connections.ConnType    `json:"connection_types,omitempty"`
-	MemberId                  string                    `json:"member_id,omitempty"`
-	Roles                     []roles.MemberRoleActions `json:"roles,omitempty"`
 }
 
 // ClientsPage contains page related metadata as well as list.
@@ -192,26 +179,21 @@ type MembersPage struct {
 // Page contains the page metadata that helps navigation.
 
 type Page struct {
-	Total          uint64   `json:"total"`
-	Offset         uint64   `json:"offset"`
-	Limit          uint64   `json:"limit"`
-	Order          string   `json:"order,omitempty"`
-	Dir            string   `json:"dir,omitempty"`
-	ID             string   `json:"id,omitempty"`
-	Name           string   `json:"name,omitempty"`
-	Metadata       Metadata `json:"metadata,omitempty"`
-	Domain         string   `json:"domain,omitempty"`
-	Tag            string   `json:"tag,omitempty"`
-	Status         Status   `json:"status,omitempty"`
-	Identity       string   `json:"identity,omitempty"`
-	Group          string   `json:"group,omitempty"`
-	Channel        string   `json:"channel,omitempty"`
-	ConnectionType string   `json:"connection_type,omitempty"`
-	RoleName       string   `json:"role_name,omitempty"`
-	RoleID         string   `json:"role_id,omitempty"`
-	Actions        []string `json:"actions,omitempty"`
-	AccessType     string   `json:"access_type,omitempty"`
-	IDs            []string `json:"-"`
+	Total      uint64   `json:"total"`
+	Offset     uint64   `json:"offset"`
+	Limit      uint64   `json:"limit"`
+	Name       string   `json:"name,omitempty"`
+	Id         string   `json:"id,omitempty"`
+	Order      string   `json:"order,omitempty"`
+	Dir        string   `json:"dir,omitempty"`
+	Metadata   Metadata `json:"metadata,omitempty"`
+	Domain     string   `json:"domain,omitempty"`
+	Tag        string   `json:"tag,omitempty"`
+	Permission string   `json:"permission,omitempty"`
+	Status     Status   `json:"status,omitempty"`
+	IDs        []string `json:"ids,omitempty"`
+	Identity   string   `json:"identity,omitempty"`
+	ListPerms  bool     `json:"-"`
 }
 
 // Metadata represents arbitrary JSON.

@@ -1,0 +1,17 @@
+common_name: "Mitras_Selfsigned_ca"
+organization:
+  - "Mitras"
+organizational_unit:
+  - "Mitras_ca"
+country:
+  - "VIETNAM"
+province:
+  - "Hanoi"
+locality:
+  - "1 Dai Co Viet"
+postal_code:
+  - "100000"
+dns_names:
+  - "localhost"
+ip_addresses:
+  - "localhost"

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	grpcDomainsV1 "github.com/hantdev/mitras/api/grpc/domains/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/domains"
 	grpcapi "github.com/hantdev/mitras/domains/api/grpc"
-	domains "github.com/hantdev/mitras/domains/private"
+	grpcDomainsV1 "github.com/hantdev/mitras/internal/grpc/domains/v1"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -26,8 +26,9 @@ const (
 	clientsType     = "clients"
 	usersType       = "users"
 	description     = "Description"
-	groupName       = "mitrasx"
+	groupName       = "smqx"
 	adminpermission = "admin"
+
 	authoritiesObj  = "authorities"
 	memberRelation  = "member"
 	loginDuration   = 30 * time.Minute

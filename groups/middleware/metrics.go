@@ -7,7 +7,6 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/hantdev/mitras/groups"
 	"github.com/hantdev/mitras/pkg/authn"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
 )
 
@@ -32,7 +31,7 @@ func MetricsMiddleware(svc groups.Service, counter metrics.Counter, latency metr
 }
 
 // CreateGroup instruments CreateGroup method with metrics.
-func (ms *metricsMiddleware) CreateGroup(ctx context.Context, session authn.Session, g groups.Group) (groups.Group, []roles.RoleProvision, error) {
+func (ms *metricsMiddleware) CreateGroup(ctx context.Context, session authn.Session, g groups.Group) (groups.Group, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "create_group").Add(1)
 		ms.latency.With("method", "create_group").Observe(time.Since(begin).Seconds())
@@ -50,12 +49,12 @@ func (ms *metricsMiddleware) UpdateGroup(ctx context.Context, session authn.Sess
 }
 
 // ViewGroup instruments ViewGroup method with metrics.
-func (ms *metricsMiddleware) ViewGroup(ctx context.Context, session authn.Session, id string, withRoles bool) (g groups.Group, err error) {
+func (ms *metricsMiddleware) ViewGroup(ctx context.Context, session authn.Session, id string) (g groups.Group, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "view_group").Add(1)
 		ms.latency.With("method", "view_group").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ViewGroup(ctx, session, id, withRoles)
+	return ms.svc.ViewGroup(ctx, session, id)
 }
 
 // ListGroups instruments ListGroups method with metrics.

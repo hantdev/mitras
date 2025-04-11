@@ -3,18 +3,17 @@ package http
 import (
 	"log/slog"
 
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/hantdev/mitras"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/clients"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	roleManagerHttp "github.com/hantdev/mitras/pkg/roles/rolemanager/api"
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.Mux, logger *slog.Logger, idp mitras.IDProvider) *chi.Mux {
+func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.Mux, logger *slog.Logger) *chi.Mux {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -22,7 +21,6 @@ func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.M
 
 	r.Group(func(r chi.Router) {
 		r.Use(api.AuthenticateMiddleware(authn, true))
-		r.Use(api.RequestIDMiddleware(idp))
 
 		r.Route("/{domainID}/clients", func(r chi.Router) {
 			r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
@@ -45,7 +43,6 @@ func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.M
 				api.EncodeResponse,
 				opts...,
 			), "create_clients").ServeHTTP)
-
 			r = roleManagerHttp.EntityAvailableActionsRouter(svc, d, r, opts)
 
 			r.Route("/{clientID}", func(r chi.Router) {
@@ -111,10 +108,16 @@ func clientsHandler(svc clients.Service, authn smqauthn.Authentication, r *chi.M
 					api.EncodeResponse,
 					opts...,
 				), "delete_client").ServeHTTP)
-
 				roleManagerHttp.EntityRoleMangerRouter(svc, d, r, opts)
 			})
 		})
+
+		r.Get("/{domainID}/users/{userID}/clients", otelhttp.NewHandler(kithttp.NewServer(
+			listClientsEndpoint(svc),
+			decodeListClients,
+			api.EncodeResponse,
+			opts...,
+		), "list_user_clients").ServeHTTP)
 	})
 	return r
 }

@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/certs"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,7 +29,7 @@ const (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc certs.Service, authn smqauthn.Authentication, logger *slog.Logger, instanceID string, idp mitras.IDProvider) http.Handler {
+func MakeHandler(svc certs.Service, authn smqauthn.Authentication, logger *slog.Logger, instanceID string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -38,8 +38,6 @@ func MakeHandler(svc certs.Service, authn smqauthn.Authentication, logger *slog.
 
 	r.Group(func(r chi.Router) {
 		r.Use(api.AuthenticateMiddleware(authn, true))
-		r.Use(api.RequestIDMiddleware(idp))
-
 		r.Route("/{domainID}", func(r chi.Router) {
 			r.Route("/certs", func(r chi.Router) {
 				r.Post("/", otelhttp.NewHandler(kithttp.NewServer(

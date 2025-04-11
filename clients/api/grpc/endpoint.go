@@ -3,9 +3,9 @@ package grpc
 import (
 	"context"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/hantdev/mitras/clients"
 	pClients "github.com/hantdev/mitras/clients/private"
+	"github.com/go-kit/kit/endpoint"
 )
 
 func authenticateEndpoint(svc pClients.Service) endpoint.Endpoint {

@@ -1,0 +1,60 @@
+# This docker-compose file contains optional Postgres and Postgres-writer services
+# for mitras platform. Since these are optional, this file is dependent of docker-compose file
+# from <project_root>/docker. In order to run these services, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/postgres-writer/docker-compose.yml up
+# from project root. PostgreSQL default port (5432) is exposed, so you can use various tools for database
+# inspection and data visualization.
+
+networks:
+  mitras-base-net:
+
+volumes:
+  mitras-postgres-writer-volume:
+
+services:
+  postgres:
+    image: postgres:16.2-alpine
+    container_name: mitras-postgres
+    restart: on-failure
+    environment:
+      POSTGRES_USER: ${MITRAS_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${MITRAS_POSTGRES_PASS}
+      POSTGRES_DB: ${MITRAS_POSTGRES_NAME}
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-postgres-writer-volume:/var/lib/postgresql/data
+
+  postgres-writer:
+    image: mitras/postgres-writer:${MITRAS_RELEASE_TAG}
+    container_name: mitras-postgres-writer
+    depends_on:
+      - postgres
+    restart: on-failure
+    environment:
+      MITRAS_POSTGRES_WRITER_LOG_LEVEL: ${MITRAS_POSTGRES_WRITER_LOG_LEVEL}
+      MITRAS_POSTGRES_WRITER_CONFIG_PATH: ${MITRAS_POSTGRES_WRITER_CONFIG_PATH}
+      MITRAS_POSTGRES_WRITER_HTTP_HOST: ${MITRAS_POSTGRES_WRITER_HTTP_HOST}
+      MITRAS_POSTGRES_WRITER_HTTP_PORT: ${MITRAS_POSTGRES_WRITER_HTTP_PORT}
+      MITRAS_POSTGRES_WRITER_HTTP_SERVER_CERT: ${MITRAS_POSTGRES_WRITER_HTTP_SERVER_CERT}
+      MITRAS_POSTGRES_WRITER_HTTP_SERVER_KEY: ${MITRAS_POSTGRES_WRITER_HTTP_SERVER_KEY}
+      MITRAS_POSTGRES_HOST: ${MITRAS_POSTGRES_HOST}
+      MITRAS_POSTGRES_PORT: ${MITRAS_POSTGRES_PORT}
+      MITRAS_POSTGRES_USER: ${MITRAS_POSTGRES_USER}
+      MITRAS_POSTGRES_PASS: ${MITRAS_POSTGRES_PASS}
+      MITRAS_POSTGRES_NAME: ${MITRAS_POSTGRES_NAME}
+      MITRAS_POSTGRES_SSL_MODE: ${MITRAS_POSTGRES_SSL_MODE}
+      MITRAS_POSTGRES_SSL_CERT: ${MITRAS_POSTGRES_SSL_CERT}
+      MITRAS_POSTGRES_SSL_KEY: ${MITRAS_POSTGRES_SSL_KEY}
+      MITRAS_POSTGRES_SSL_ROOT_CERT: ${MITRAS_POSTGRES_SSL_ROOT_CERT}
+      MITRAS_MESSAGE_BROKER_URL: ${MITRAS_MESSAGE_BROKER_URL}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_POSTGRES_WRITER_INSTANCE_ID: ${MITRAS_POSTGRES_WRITER_INSTANCE_ID}
+    ports:
+      - ${MITRAS_POSTGRES_WRITER_HTTP_PORT}:${MITRAS_POSTGRES_WRITER_HTTP_PORT}
+    networks:
+      - mitras-base-net
+    volumes:
+      - ./config.toml:/config.toml

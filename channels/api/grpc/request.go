@@ -1,12 +1,6 @@
 package grpc
 
-import (
-	"github.com/hantdev/mitras/pkg/connections"
-	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/hantdev/mitras/pkg/policies"
-)
-
-var errDomainID = errors.New("domain id required for users")
+import "github.com/hantdev/mitras/pkg/connections"
 
 type authorizeReq struct {
 	domainID   string
@@ -15,14 +9,6 @@ type authorizeReq struct {
 	clientType string
 	connType   connections.ConnType
 }
-
-func (req authorizeReq) validate() error {
-	if req.clientType == policies.UserType && req.domainID == "" {
-		return errDomainID
-	}
-	return nil
-}
-
 type removeClientConnectionsReq struct {
 	clientID string
 }

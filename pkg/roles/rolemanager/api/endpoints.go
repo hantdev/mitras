@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -24,11 +24,11 @@ func CreateRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		rp, err := svc.AddRole(ctx, session, req.entityID, req.RoleName, req.OptionalActions, req.OptionalMembers)
+		ro, err := svc.AddRole(ctx, session, req.entityID, req.RoleName, req.OptionalActions, req.OptionalMembers)
 		if err != nil {
 			return nil, err
 		}
-		return createRoleRes{RoleProvision: rp}, nil
+		return createRoleRes{Role: ro}, nil
 	}
 }
 
@@ -52,57 +52,6 @@ func ListRolesEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 	}
 }
 
-func ListEntityMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(listEntityMembersReq)
-		if err := req.validate(); err != nil {
-			return nil, errors.Wrap(apiutil.ErrValidation, err)
-		}
-
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return nil, svcerr.ErrAuthentication
-		}
-
-		pageQuery := roles.MembersRolePageQuery{
-			Offset:           req.offset,
-			Limit:            req.limit,
-			AccessProviderID: req.accessProviderID,
-			Order:            req.order,
-			Dir:              req.dir,
-			RoleID:           req.roleId,
-			RoleName:         req.roleName,
-			Actions:          req.actions,
-			AccessType:       req.accessType,
-		}
-
-		mems, err := svc.ListEntityMembers(ctx, session, req.entityID, pageQuery)
-		if err != nil {
-			return nil, err
-		}
-		return listEntityMembersRes{mems}, nil
-	}
-}
-
-func RemoveEntityMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(removeEntityMembersReq)
-		if err := req.validate(); err != nil {
-			return nil, errors.Wrap(apiutil.ErrValidation, err)
-		}
-
-		session, ok := ctx.Value(api.SessionKey).(authn.Session)
-		if !ok {
-			return nil, svcerr.ErrAuthentication
-		}
-
-		if err := svc.RemoveEntityMembers(ctx, session, req.entityID, req.MemberIDs); err != nil {
-			return nil, err
-		}
-		return deleteEntityMembersRes{}, nil
-	}
-}
-
 func ViewRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(viewRoleReq)
@@ -115,7 +64,7 @@ func ViewRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		ro, err := svc.RetrieveRole(ctx, session, req.entityID, req.roleID)
+		ro, err := svc.RetrieveRole(ctx, session, req.entityID, req.roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +84,7 @@ func UpdateRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		ro, err := svc.UpdateRoleName(ctx, session, req.entityID, req.roleID, req.Name)
+		ro, err := svc.UpdateRoleName(ctx, session, req.entityID, req.roleName, req.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +104,7 @@ func DeleteRoleEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		if err := svc.RemoveRole(ctx, session, req.entityID, req.roleID); err != nil {
+		if err := svc.RemoveRole(ctx, session, req.entityID, req.roleName); err != nil {
 			return nil, err
 		}
 		return deleteRoleRes{}, nil
@@ -194,7 +143,7 @@ func AddRoleActionsEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		caps, err := svc.RoleAddActions(ctx, session, req.entityID, req.roleID, req.Actions)
+		caps, err := svc.RoleAddActions(ctx, session, req.entityID, req.roleName, req.Actions)
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +163,7 @@ func ListRoleActionsEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		caps, err := svc.RoleListActions(ctx, session, req.entityID, req.roleID)
+		caps, err := svc.RoleListActions(ctx, session, req.entityID, req.roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +183,7 @@ func DeleteRoleActionsEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		if err := svc.RoleRemoveActions(ctx, session, req.entityID, req.roleID, req.Actions); err != nil {
+		if err := svc.RoleRemoveActions(ctx, session, req.entityID, req.roleName, req.Actions); err != nil {
 			return nil, err
 		}
 		return deleteRoleActionsRes{}, nil
@@ -253,7 +202,7 @@ func DeleteAllRoleActionsEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		if err := svc.RoleRemoveAllActions(ctx, session, req.entityID, req.roleID); err != nil {
+		if err := svc.RoleRemoveAllActions(ctx, session, req.entityID, req.roleName); err != nil {
 			return nil, err
 		}
 		return deleteAllRoleActionsRes{}, nil
@@ -272,7 +221,7 @@ func AddRoleMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		members, err := svc.RoleAddMembers(ctx, session, req.entityID, req.roleID, req.Members)
+		members, err := svc.RoleAddMembers(ctx, session, req.entityID, req.roleName, req.Members)
 		if err != nil {
 			return nil, err
 		}
@@ -292,7 +241,7 @@ func ListRoleMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		mp, err := svc.RoleListMembers(ctx, session, req.entityID, req.roleID, req.limit, req.offset)
+		mp, err := svc.RoleListMembers(ctx, session, req.entityID, req.roleName, req.limit, req.offset)
 		if err != nil {
 			return nil, err
 		}
@@ -312,7 +261,7 @@ func DeleteRoleMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		if err := svc.RoleRemoveMembers(ctx, session, req.entityID, req.roleID, req.Members); err != nil {
+		if err := svc.RoleRemoveMembers(ctx, session, req.entityID, req.roleName, req.Members); err != nil {
 			return nil, err
 		}
 		return deleteRoleMembersRes{}, nil
@@ -331,7 +280,7 @@ func DeleteAllRoleMembersEndpoint(svc roles.RoleManager) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		if err := svc.RoleRemoveAllMembers(ctx, session, req.entityID, req.roleID); err != nil {
+		if err := svc.RoleRemoveAllMembers(ctx, session, req.entityID, req.roleName); err != nil {
 			return nil, err
 		}
 		return deleteAllRoleMemberRes{}, nil
