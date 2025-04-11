@@ -1,7 +1,6 @@
 package sdk_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,20 +9,19 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
 	chapi "github.com/hantdev/mitras/channels/api/http"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
+	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/roles"
 	sdk "github.com/hantdev/mitras/pkg/sdk"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -39,8 +37,7 @@ func setupChannels() (*httptest.Server, *chmocks.Service, *authnmocks.Authentica
 	logger := smqlog.NewMock()
 	authn := new(authnmocks.Authentication)
 	mux := chi.NewRouter()
-	idp := uuid.NewMock()
-	chapi.MakeHandler(svc, authn, mux, logger, "", idp)
+	chapi.MakeHandler(svc, authn, mux, logger, "")
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -51,14 +48,14 @@ func TestCreateChannel(t *testing.T) {
 
 	createChannelReq := channels.Channel{
 		Name:     channel.Name,
-		Metadata: channels.Metadata{"role": "client"},
-		Status:   channels.EnabledStatus,
+		Metadata: clients.Metadata{"role": "client"},
+		Status:   clients.EnabledStatus,
 	}
 
 	channelReq := sdk.Channel{
 		Name:     channel.Name,
 		Metadata: validMetadata,
-		Status:   channels.EnabledStatus.String(),
+		Status:   clients.EnabledStatus.String(),
 	}
 
 	parentID := testsutil.GenerateUUID(&testing.T{})
@@ -66,7 +63,7 @@ func TestCreateChannel(t *testing.T) {
 	pChannel.ParentGroup = parentID
 
 	iChannel := convertChannel(channel)
-	iChannel.Metadata = channels.Metadata{
+	iChannel.Metadata = clients.Metadata{
 		"test": make(chan int),
 	}
 
@@ -132,14 +129,14 @@ func TestCreateChannel(t *testing.T) {
 			channelReq: sdk.Channel{
 				Name:        channel.Name,
 				ParentGroup: parentID,
-				Status:      channels.EnabledStatus.String(),
+				Status:      clients.EnabledStatus.String(),
 			},
 			domainID: domainID,
 			token:    validToken,
 			createChannelReq: channels.Channel{
 				Name:        channel.Name,
 				ParentGroup: parentID,
-				Status:      channels.EnabledStatus,
+				Status:      clients.EnabledStatus,
 			},
 			svcRes:   []channels.Channel{convertChannel(pChannel)},
 			svcErr:   nil,
@@ -151,14 +148,14 @@ func TestCreateChannel(t *testing.T) {
 			channelReq: sdk.Channel{
 				Name:        channel.Name,
 				ParentGroup: wrongID,
-				Status:      channels.EnabledStatus.String(),
+				Status:      clients.EnabledStatus.String(),
 			},
 			domainID: domainID,
 			token:    validToken,
 			createChannelReq: channels.Channel{
 				Name:        channel.Name,
 				ParentGroup: wrongID,
-				Status:      channels.EnabledStatus,
+				Status:      clients.EnabledStatus,
 			},
 			svcRes:   []channels.Channel{},
 			svcErr:   svcerr.ErrCreateEntity,
@@ -174,7 +171,7 @@ func TestCreateChannel(t *testing.T) {
 				Metadata:    validMetadata,
 				CreatedAt:   channel.CreatedAt,
 				UpdatedAt:   channel.UpdatedAt,
-				Status:      channels.EnabledStatus.String(),
+				Status:      clients.EnabledStatus.String(),
 			},
 			domainID: domainID,
 			token:    validToken,
@@ -182,10 +179,10 @@ func TestCreateChannel(t *testing.T) {
 				ID:          channel.ID,
 				ParentGroup: parentID,
 				Name:        channel.Name,
-				Metadata:    channels.Metadata{"role": "client"},
+				Metadata:    clients.Metadata{"role": "client"},
 				CreatedAt:   channel.CreatedAt,
 				UpdatedAt:   channel.UpdatedAt,
-				Status:      channels.EnabledStatus,
+				Status:      clients.EnabledStatus,
 			},
 			svcRes:   []channels.Channel{convertChannel(pChannel)},
 			svcErr:   nil,
@@ -210,130 +207,14 @@ func TestCreateChannel(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := gsvc.On("CreateChannels", mock.Anything, tc.session, []channels.Channel{tc.createChannelReq}).Return(tc.svcRes, []roles.RoleProvision{}, tc.svcErr)
-			resp, err := mgsdk.CreateChannel(context.Background(), tc.channelReq, tc.domainID, tc.token)
+			svcCall := gsvc.On("CreateChannels", mock.Anything, tc.session, tc.createChannelReq).Return(tc.svcRes, tc.svcErr)
+			resp, err := mgsdk.CreateChannel(tc.channelReq, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "CreateChannels", mock.Anything, tc.session, []channels.Channel{tc.createChannelReq})
+				ok := svcCall.Parent.AssertCalled(t, "CreateChannels", mock.Anything, tc.session, tc.createChannelReq)
 				assert.True(t, ok)
 			}
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestCreateChannels(t *testing.T) {
-	ts, gsvc, auth := setupChannels()
-	defer ts.Close()
-
-	var chs []sdk.Channel
-	conf := sdk.Config{
-		ChannelsURL: ts.URL,
-	}
-	mgsdk := sdk.NewSDK(conf)
-
-	for i := 0; i < 3; i++ {
-		gr := generateTestChannel(t)
-		chs = append(chs, gr)
-	}
-
-	cases := []struct {
-		desc              string
-		domainID          string
-		token             string
-		session           smqauthn.Session
-		channelsReq       []sdk.Channel
-		createChannelsReq []channels.Channel
-		svcRes            []channels.Channel
-		svcErr            error
-		authenticateErr   error
-		response          []sdk.Channel
-		err               errors.SDKError
-	}{
-		{
-			desc:              "create channels successfully",
-			domainID:          domainID,
-			token:             validToken,
-			channelsReq:       chs,
-			createChannelsReq: convertChannels(chs),
-			svcRes:            convertChannels(chs),
-			svcErr:            nil,
-			response:          chs,
-			err:               nil,
-		},
-		{
-			desc:              "create channels with invalid token",
-			domainID:          domainID,
-			token:             invalidToken,
-			channelsReq:       chs,
-			createChannelsReq: convertChannels(chs),
-			svcRes:            []channels.Channel{},
-			authenticateErr:   svcerr.ErrAuthentication,
-			response:          []sdk.Channel{},
-			err:               errors.NewSDKErrorWithStatus(svcerr.ErrAuthentication, http.StatusUnauthorized),
-		},
-		{
-			desc:              "create channels with empty token",
-			domainID:          validID,
-			token:             "",
-			channelsReq:       chs,
-			createChannelsReq: convertChannels(chs),
-			svcRes:            []channels.Channel{},
-			svcErr:            nil,
-			response:          []sdk.Channel{},
-			err:               errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
-		},
-		{
-			desc:     "create channels with service response that can,t be marshalled",
-			domainID: domainID,
-			token:    validToken,
-			channelsReq: []sdk.Channel{
-				{
-					ID:   generateUUID(t),
-					Name: "channel_1",
-					Metadata: map[string]interface{}{
-						"test": make(chan int),
-					},
-				},
-			},
-			createChannelsReq: convertChannels(chs),
-			svcRes:            []channels.Channel{},
-			svcErr:            nil,
-			response:          []sdk.Channel{},
-			err:               errors.NewSDKError(errors.New("json: unsupported type: chan int")),
-		},
-		{
-			desc:              "create channels with service response that can't be unmarshalled",
-			domainID:          domainID,
-			token:             validToken,
-			channelsReq:       chs,
-			createChannelsReq: convertChannels(chs),
-			svcRes: []channels.Channel{
-				{
-					ID: generateUUID(t),
-					Metadata: channels.Metadata{
-						"test": make(chan int),
-					},
-				},
-			},
-			svcErr:   nil,
-			response: []sdk.Channel{},
-			err:      errors.NewSDKError(errors.New("unexpected end of JSON input")),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == validToken {
-				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
-			}
-			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := gsvc.On("CreateChannels", mock.Anything, tc.session, tc.createChannelsReq).Return(tc.svcRes, []roles.RoleProvision{}, tc.svcErr)
-			resp, err := mgsdk.CreateChannels(context.Background(), tc.channelsReq, tc.domainID, tc.token)
-			assert.Equal(t, tc.err, err)
-			assert.Equal(t, tc.response, resp)
 			svcCall.Unset()
 			authCall.Unset()
 		})
@@ -351,7 +232,11 @@ func TestListChannels(t *testing.T) {
 	mgsdk := sdk.NewSDK(conf)
 
 	for i := 10; i < 100; i++ {
-		gr := generateTestChannel(t)
+		gr := sdk.Channel{
+			ID:       generateUUID(t),
+			Name:     fmt.Sprintf("channel_%d", i),
+			Metadata: sdk.Metadata{"name": fmt.Sprintf("client_%d", i)},
+		}
 		chs = append(chs, gr)
 	}
 
@@ -360,15 +245,15 @@ func TestListChannels(t *testing.T) {
 		domainID         string
 		token            string
 		session          smqauthn.Session
-		status           channels.Status
+		status           clients.Status
 		total            uint64
 		offset           uint64
 		limit            uint64
 		level            int
 		name             string
 		metadata         sdk.Metadata
-		channelsPageMeta channels.Page
-		svcRes           channels.ChannelsPage
+		channelsPageMeta channels.PageMetadata
+		svcRes           channels.Page
 		svcErr           error
 		authenticateRes  smqauthn.Session
 		authenticateErr  error
@@ -382,15 +267,13 @@ func TestListChannels(t *testing.T) {
 			limit:    limit,
 			offset:   offset,
 			total:    total,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-				Offset:  offset,
-				Limit:   limit,
+			channelsPageMeta: channels.PageMetadata{
+				Offset:     offset,
+				Limit:      limit,
+				Permission: defPermission,
 			},
-			svcRes: channels.ChannelsPage{
-				Page: channels.Page{
+			svcRes: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: uint64(len(chs[offset:limit])),
 				},
 				Channels: convertChannels(chs[offset:limit]),
@@ -409,33 +292,26 @@ func TestListChannels(t *testing.T) {
 			domainID: domainID,
 			offset:   offset,
 			limit:    limit,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-				Offset:  offset,
-				Limit:   limit,
+			channelsPageMeta: channels.PageMetadata{
+				Offset: offset,
+				Limit:  limit,
 			},
-			svcRes:          channels.ChannelsPage{},
+			svcRes:          channels.Page{},
 			authenticateErr: svcerr.ErrAuthentication,
 			response:        sdk.ChannelsPage{},
 			err:             errors.NewSDKErrorWithStatus(svcerr.ErrAuthentication, http.StatusUnauthorized),
 		},
 		{
-			desc:     "list channels with empty token",
-			token:    "",
-			domainID: validID,
-			offset:   offset,
-			limit:    limit,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-			},
-			svcRes:   channels.ChannelsPage{},
-			svcErr:   nil,
-			response: sdk.ChannelsPage{},
-			err:      errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
+			desc:             "list channels with empty token",
+			token:            "",
+			domainID:         validID,
+			offset:           offset,
+			limit:            limit,
+			channelsPageMeta: channels.PageMetadata{},
+			svcRes:           channels.Page{},
+			svcErr:           nil,
+			response:         sdk.ChannelsPage{},
+			err:              errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
 		},
 		{
 			desc:     "list channels with zero limit",
@@ -443,15 +319,13 @@ func TestListChannels(t *testing.T) {
 			domainID: domainID,
 			offset:   offset,
 			limit:    0,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-				Offset:  offset,
-				Limit:   10,
+			channelsPageMeta: channels.PageMetadata{
+				Offset:     offset,
+				Limit:      10,
+				Permission: defPermission,
 			},
-			svcRes: channels.ChannelsPage{
-				Page: channels.Page{
+			svcRes: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: uint64(len(chs[offset:])),
 				},
 				Channels: convertChannels(chs[offset:limit]),
@@ -466,20 +340,16 @@ func TestListChannels(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:     "list channels with limit greater than max",
-			token:    validToken,
-			domainID: domainID,
-			offset:   offset,
-			limit:    110,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-			},
-			svcRes:   channels.ChannelsPage{},
-			svcErr:   nil,
-			response: sdk.ChannelsPage{},
-			err:      errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrLimitSize), http.StatusBadRequest),
+			desc:             "list channels with limit greater than max",
+			token:            validToken,
+			domainID:         domainID,
+			offset:           offset,
+			limit:            110,
+			channelsPageMeta: channels.PageMetadata{},
+			svcRes:           channels.Page{},
+			svcErr:           nil,
+			response:         sdk.ChannelsPage{},
+			err:              errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrLimitSize), http.StatusBadRequest),
 		},
 		{
 			desc:     "list channels with level",
@@ -488,15 +358,13 @@ func TestListChannels(t *testing.T) {
 			offset:   0,
 			limit:    1,
 			level:    1,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-				Offset:  offset,
-				Limit:   1,
+			channelsPageMeta: channels.PageMetadata{
+				Offset:     offset,
+				Limit:      1,
+				Permission: defPermission,
 			},
-			svcRes: channels.ChannelsPage{
-				Page: channels.Page{
+			svcRes: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: convertChannels(chs[0:1]),
@@ -517,16 +385,14 @@ func TestListChannels(t *testing.T) {
 			offset:   0,
 			limit:    10,
 			metadata: sdk.Metadata{"name": "client_89"},
-			channelsPageMeta: channels.Page{
-				Actions:  []string{},
-				Order:    "updated_at",
-				Dir:      "asc",
-				Offset:   offset,
-				Limit:    10,
-				Metadata: channels.Metadata{"name": "client_89"},
+			channelsPageMeta: channels.PageMetadata{
+				Offset:     offset,
+				Limit:      10,
+				Permission: defPermission,
+				Metadata:   clients.Metadata{"name": "client_89"},
 			},
-			svcRes: channels.ChannelsPage{
-				Page: channels.Page{
+			svcRes: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: convertChannels([]sdk.Channel{chs[89]}),
@@ -549,15 +415,11 @@ func TestListChannels(t *testing.T) {
 			metadata: sdk.Metadata{
 				"test": make(chan int),
 			},
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-			},
-			svcRes:   channels.ChannelsPage{},
-			svcErr:   nil,
-			response: sdk.ChannelsPage{},
-			err:      errors.NewSDKError(errors.New("json: unsupported type: chan int")),
+			channelsPageMeta: channels.PageMetadata{},
+			svcRes:           channels.Page{},
+			svcErr:           nil,
+			response:         sdk.ChannelsPage{},
+			err:              errors.NewSDKError(errors.New("json: unsupported type: chan int")),
 		},
 		{
 			desc:     "list channels with service response that can't be unmarshalled",
@@ -565,20 +427,18 @@ func TestListChannels(t *testing.T) {
 			domainID: domainID,
 			offset:   0,
 			limit:    10,
-			channelsPageMeta: channels.Page{
-				Actions: []string{},
-				Order:   "updated_at",
-				Dir:     "asc",
-				Offset:  0,
-				Limit:   10,
+			channelsPageMeta: channels.PageMetadata{
+				Offset:     0,
+				Limit:      10,
+				Permission: defPermission,
 			},
-			svcRes: channels.ChannelsPage{
-				Page: channels.Page{
+			svcRes: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{{
 					ID: generateUUID(t),
-					Metadata: channels.Metadata{
+					Metadata: clients.Metadata{
 						"test": make(chan int),
 					},
 				}},
@@ -602,7 +462,7 @@ func TestListChannels(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("ListChannels", mock.Anything, tc.session, tc.channelsPageMeta).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.Channels(context.Background(), pm, tc.domainID, tc.token)
+			resp, err := mgsdk.Channels(pm, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
@@ -625,18 +485,11 @@ func TestViewChannel(t *testing.T) {
 	}
 	mgsdk := sdk.NewSDK(conf)
 
-	channelResRoles := sdk.Config{
-		ChannelsURL: ts.URL,
-		Roles:       true,
-	}
-	mgsdkRoles := sdk.NewSDK(channelResRoles)
-
 	cases := []struct {
 		desc            string
 		domainID        string
 		token           string
 		session         smqauthn.Session
-		withRoles       bool
 		channelID       string
 		svcRes          channels.Channel
 		svcErr          error
@@ -648,18 +501,6 @@ func TestViewChannel(t *testing.T) {
 			desc:      "view channel successfully",
 			domainID:  domainID,
 			token:     validToken,
-			withRoles: false,
-			channelID: channelRes.ID,
-			svcRes:    channelRes,
-			svcErr:    nil,
-			response:  channel,
-			err:       nil,
-		},
-		{
-			desc:      "view channel successfully with roles",
-			domainID:  domainID,
-			token:     validToken,
-			withRoles: true,
 			channelID: channelRes.ID,
 			svcRes:    channelRes,
 			svcErr:    nil,
@@ -670,7 +511,6 @@ func TestViewChannel(t *testing.T) {
 			desc:            "view channel with invalid token",
 			domainID:        domainID,
 			token:           invalidToken,
-			withRoles:       false,
 			channelID:       channelRes.ID,
 			svcRes:          channels.Channel{},
 			authenticateErr: svcerr.ErrAuthentication,
@@ -681,7 +521,6 @@ func TestViewChannel(t *testing.T) {
 			desc:      "view channel with empty token",
 			domainID:  domainID,
 			token:     "",
-			withRoles: false,
 			channelID: channelRes.ID,
 			svcRes:    channels.Channel{},
 			svcErr:    nil,
@@ -692,7 +531,6 @@ func TestViewChannel(t *testing.T) {
 			desc:      "view channel for wrong id",
 			domainID:  domainID,
 			token:     validToken,
-			withRoles: false,
 			channelID: wrongID,
 			svcRes:    channels.Channel{},
 			svcErr:    svcerr.ErrViewEntity,
@@ -703,7 +541,6 @@ func TestViewChannel(t *testing.T) {
 			desc:      "view channel with empty channel id",
 			domainID:  domainID,
 			token:     validToken,
-			withRoles: false,
 			channelID: "",
 			svcRes:    channels.Channel{},
 			svcErr:    nil,
@@ -714,11 +551,10 @@ func TestViewChannel(t *testing.T) {
 			desc:      "view channel with service response that can't be unmarshalled",
 			domainID:  domainID,
 			token:     validToken,
-			withRoles: false,
 			channelID: channelRes.ID,
 			svcRes: channels.Channel{
 				ID: generateUUID(t),
-				Metadata: channels.Metadata{
+				Metadata: clients.Metadata{
 					"test": make(chan int),
 				},
 			},
@@ -734,25 +570,12 @@ func TestViewChannel(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := gsvc.On("ViewChannel", mock.Anything, tc.session, tc.channelID, tc.withRoles).Return(tc.svcRes, tc.svcErr)
-
-			var resp sdk.Channel
-			var err error
-
-			switch tc.withRoles {
-			case true:
-				resp, err = mgsdkRoles.Channel(context.Background(), tc.channelID, tc.domainID, tc.token)
-			default:
-				resp, err = mgsdk.Channel(context.Background(), tc.channelID, tc.domainID, tc.token)
-			}
-
+			svcCall := gsvc.On("ViewChannel", mock.Anything, tc.session, tc.channelID).Return(tc.svcRes, tc.svcErr)
+			resp, err := mgsdk.Channel(tc.channelID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
-			if tc.withRoles {
-				assert.Equal(t, resp.Roles, validRoles, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, validRoles, resp.Roles))
-			}
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "ViewChannel", mock.Anything, tc.session, tc.channelID, tc.withRoles)
+				ok := svcCall.Parent.AssertCalled(t, "ViewChannel", mock.Anything, tc.session, tc.channelID)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -771,7 +594,7 @@ func TestUpdateChannel(t *testing.T) {
 	mgsdk := sdk.NewSDK(conf)
 
 	mChannel := convertChannel(channel)
-	mChannel.Metadata = channels.Metadata{
+	mChannel.Metadata = clients.Metadata{
 		"field": "value2",
 	}
 	msdkChannel := channel
@@ -786,7 +609,7 @@ func TestUpdateChannel(t *testing.T) {
 
 	aChannel := convertChannel(channel)
 	aChannel.Name = newName
-	aChannel.Metadata = channels.Metadata{"field": "value2"}
+	aChannel.Metadata = clients.Metadata{"field": "value2"}
 	asdkChannel := channel
 	asdkChannel.Name = newName
 	asdkChannel.Metadata = sdk.Metadata{"field": "value2"}
@@ -833,7 +656,7 @@ func TestUpdateChannel(t *testing.T) {
 			},
 			updateChannelReq: channels.Channel{
 				ID:       channel.ID,
-				Metadata: channels.Metadata{"field": "value2"},
+				Metadata: clients.Metadata{"field": "value2"},
 			},
 			svcRes:   mChannel,
 			svcErr:   nil,
@@ -853,7 +676,7 @@ func TestUpdateChannel(t *testing.T) {
 				ID:   channel.ID,
 				Name: newName,
 
-				Metadata: channels.Metadata{"field": "value2"},
+				Metadata: clients.Metadata{"field": "value2"},
 			},
 			svcRes:   aChannel,
 			svcErr:   nil,
@@ -904,7 +727,7 @@ func TestUpdateChannel(t *testing.T) {
 			},
 			updateChannelReq: channels.Channel{
 				ID:       wrongID,
-				Metadata: channels.Metadata{"field": "value2"},
+				Metadata: clients.Metadata{"field": "value2"},
 			},
 			svcRes:   channels.Channel{},
 			svcErr:   svcerr.ErrNotFound,
@@ -990,7 +813,7 @@ func TestUpdateChannel(t *testing.T) {
 			},
 			svcRes: channels.Channel{
 				ID: generateUUID(t),
-				Metadata: channels.Metadata{
+				Metadata: clients.Metadata{
 					"test": make(chan int),
 				},
 			},
@@ -1019,162 +842,11 @@ func TestUpdateChannel(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("UpdateChannel", mock.Anything, tc.session, tc.updateChannelReq).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.UpdateChannel(context.Background(), tc.channelReq, tc.domainID, tc.token)
+			resp, err := mgsdk.UpdateChannel(tc.channelReq, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "UpdateChannel", mock.Anything, tc.session, tc.updateChannelReq)
-				assert.True(t, ok)
-			}
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestUpdateChannelTags(t *testing.T) {
-	ts, tsvc, auth := setupChannels()
-	defer ts.Close()
-
-	sdkChannel := generateTestChannel(t)
-	updatedChannel := sdkChannel
-	updatedChannel.Tags = []string{"newTag1", "newTag2"}
-	updateChannelReq := sdk.Channel{
-		ID:   sdkChannel.ID,
-		Tags: updatedChannel.Tags,
-	}
-
-	conf := sdk.Config{
-		ChannelsURL: ts.URL,
-	}
-	mgsdk := sdk.NewSDK(conf)
-
-	cases := []struct {
-		desc             string
-		domainID         string
-		token            string
-		session          smqauthn.Session
-		updateChannelReq sdk.Channel
-		svcReq           channels.Channel
-		svcRes           channels.Channel
-		svcErr           error
-		authenticateErr  error
-		response         sdk.Channel
-		err              errors.SDKError
-	}{
-		{
-			desc:             "update channel tags successfully",
-			domainID:         domainID,
-			token:            validToken,
-			updateChannelReq: updateChannelReq,
-			svcReq:           convertChannel(updateChannelReq),
-			svcRes:           convertChannel(updatedChannel),
-			svcErr:           nil,
-			response:         updatedChannel,
-			err:              nil,
-		},
-		{
-			desc:             "update channel tags with an invalid token",
-			domainID:         domainID,
-			token:            invalidToken,
-			updateChannelReq: updateChannelReq,
-			svcReq:           convertChannel(updateChannelReq),
-			svcRes:           channels.Channel{},
-			authenticateErr:  svcerr.ErrAuthorization,
-			response:         sdk.Channel{},
-			err:              errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
-		},
-		{
-			desc:             "update channel tags with empty token",
-			domainID:         domainID,
-			token:            "",
-			updateChannelReq: updateChannelReq,
-			svcReq:           convertChannel(updateChannelReq),
-			svcRes:           channels.Channel{},
-			svcErr:           nil,
-			response:         sdk.Channel{},
-			err:              errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
-		},
-		{
-			desc:     "update channel tags with an invalid channel id",
-			domainID: domainID,
-			token:    validToken,
-			updateChannelReq: sdk.Channel{
-				ID:   wrongID,
-				Tags: updatedChannel.Tags,
-			},
-			svcReq: convertChannel(sdk.Channel{
-				ID:   wrongID,
-				Tags: updatedChannel.Tags,
-			}),
-			svcRes:   channels.Channel{},
-			svcErr:   svcerr.ErrUpdateEntity,
-			response: sdk.Channel{},
-			err:      errors.NewSDKErrorWithStatus(svcerr.ErrUpdateEntity, http.StatusUnprocessableEntity),
-		},
-		{
-			desc:     "update channel tags with empty channel id",
-			domainID: domainID,
-			token:    validToken,
-			updateChannelReq: sdk.Channel{
-				ID:   "",
-				Tags: updatedChannel.Tags,
-			},
-			svcReq: convertChannel(sdk.Channel{
-				ID:   "",
-				Tags: updatedChannel.Tags,
-			}),
-			svcRes:   channels.Channel{},
-			svcErr:   nil,
-			response: sdk.Channel{},
-			err:      errors.NewSDKError(apiutil.ErrMissingID),
-		},
-		{
-			desc:     "update channel tags with a request that can't be marshalled",
-			domainID: domainID,
-			token:    validToken,
-			updateChannelReq: sdk.Channel{
-				ID: "test",
-				Metadata: map[string]interface{}{
-					"test": make(chan int),
-				},
-			},
-			svcReq:   channels.Channel{},
-			svcRes:   channels.Channel{},
-			svcErr:   nil,
-			response: sdk.Channel{},
-			err:      errors.NewSDKError(errors.New("json: unsupported type: chan int")),
-		},
-		{
-			desc:             "update channel tags with a response that can't be unmarshalled",
-			domainID:         domainID,
-			token:            validToken,
-			updateChannelReq: updateChannelReq,
-			svcReq:           convertChannel(updateChannelReq),
-			svcRes: channels.Channel{
-				Name: updatedChannel.Name,
-				Tags: updatedChannel.Tags,
-				Metadata: channels.Metadata{
-					"test": make(chan int),
-				},
-			},
-			svcErr:   nil,
-			response: sdk.Channel{},
-			err:      errors.NewSDKError(errors.New("unexpected end of JSON input")),
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == validToken {
-				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
-			}
-			authCall := auth.On("Authenticate", mock.Anything, mock.Anything).Return(tc.session, tc.authenticateErr)
-			svcCall := tsvc.On("UpdateChannelTags", mock.Anything, tc.session, tc.svcReq).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.UpdateChannelTags(context.Background(), tc.updateChannelReq, tc.domainID, tc.token)
-			assert.Equal(t, tc.err, err)
-			assert.Equal(t, tc.response, resp)
-			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "UpdateChannelTags", mock.Anything, tc.session, tc.svcReq)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -1261,7 +933,7 @@ func TestEnableChannel(t *testing.T) {
 			channelID: channel.ID,
 			svcRes: channels.Channel{
 				ID: generateUUID(t),
-				Metadata: channels.Metadata{
+				Metadata: clients.Metadata{
 					"test": make(chan int),
 				},
 			},
@@ -1277,7 +949,7 @@ func TestEnableChannel(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("EnableChannel", mock.Anything, tc.session, tc.channelID).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.EnableChannel(context.Background(), tc.channelID, tc.domainID, tc.token)
+			resp, err := mgsdk.EnableChannel(tc.channelID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
@@ -1300,7 +972,7 @@ func TestDisableChannel(t *testing.T) {
 	mgsdk := sdk.NewSDK(conf)
 
 	dChannel := channel
-	dChannel.Status = channels.DisabledStatus.String()
+	dChannel.Status = clients.DisabledStatus.String()
 
 	cases := []struct {
 		desc            string
@@ -1371,7 +1043,7 @@ func TestDisableChannel(t *testing.T) {
 			channelID: channel.ID,
 			svcRes: channels.Channel{
 				ID: generateUUID(t),
-				Metadata: channels.Metadata{
+				Metadata: clients.Metadata{
 					"test": make(chan int),
 				},
 			},
@@ -1387,7 +1059,8 @@ func TestDisableChannel(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("DisableChannel", mock.Anything, tc.session, tc.channelID).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.DisableChannel(context.Background(), tc.channelID, tc.domainID, tc.token)
+			resp, err := mgsdk.DisableChannel(tc.channelID, tc.domainID, tc.token)
+			fmt.Println(resp)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
@@ -1467,7 +1140,7 @@ func TestDeleteChannel(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("RemoveChannel", mock.Anything, tc.session, tc.channelID).Return(tc.svcErr)
-			err := mgsdk.DeleteChannel(context.Background(), tc.channelID, tc.domainID, tc.token)
+			err := mgsdk.DeleteChannel(tc.channelID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "RemoveChannel", mock.Anything, tc.session, tc.channelID)
@@ -1586,7 +1259,8 @@ func TestConnect(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("Connect", mock.Anything, tc.session, tc.connection.ChannelIDs, tc.connection.ClientIDs, connTypes).Return(tc.svcErr)
-			err := mgsdk.Connect(context.Background(), tc.connection, tc.domainID, tc.token)
+			err := mgsdk.Connect(tc.connection, tc.domainID, tc.token)
+			fmt.Println(err)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "Connect", mock.Anything, tc.session, tc.connection.ChannelIDs, tc.connection.ClientIDs, connTypes)
@@ -1705,7 +1379,7 @@ func TestDisconnect(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("Disconnect", mock.Anything, tc.session, tc.disconnect.ChannelIDs, tc.disconnect.ClientIDs, connTypes).Return(tc.svcErr)
-			err := mgsdk.Disconnect(context.Background(), tc.disconnect, tc.domainID, tc.token)
+			err := mgsdk.Disconnect(tc.disconnect, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "Disconnect", mock.Anything, tc.session, tc.disconnect.ChannelIDs, tc.disconnect.ClientIDs, connTypes)
@@ -1717,7 +1391,7 @@ func TestDisconnect(t *testing.T) {
 	}
 }
 
-func TestConnectClients(t *testing.T) {
+func TestConnectClient(t *testing.T) {
 	ts, gsvc, auth := setupChannels()
 	defer ts.Close()
 
@@ -1810,7 +1484,7 @@ func TestConnectClients(t *testing.T) {
 			assert.Nil(t, err, fmt.Sprintf("error parsing connection type %s", tc.connType))
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("Connect", mock.Anything, tc.session, []string{tc.channelID}, []string{tc.clientID}, []connections.ConnType{connType}).Return(tc.svcErr)
-			err = mgsdk.ConnectClients(context.Background(), tc.channelID, []string{tc.clientID}, []string{tc.connType}, tc.domainID, tc.token)
+			err = mgsdk.ConnectClient(tc.clientID, tc.channelID, []string{tc.connType}, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "Connect", mock.Anything, tc.session, []string{tc.channelID}, []string{tc.clientID}, []connections.ConnType{connType})
@@ -1822,7 +1496,7 @@ func TestConnectClients(t *testing.T) {
 	}
 }
 
-func TestDisconnectClients(t *testing.T) {
+func TestDisconnectClient(t *testing.T) {
 	ts, gsvc, auth := setupChannels()
 	defer ts.Close()
 
@@ -1913,191 +1587,10 @@ func TestDisconnectClients(t *testing.T) {
 			assert.Nil(t, err, fmt.Sprintf("error parsing connection type %s", tc.connType))
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := gsvc.On("Disconnect", mock.Anything, tc.session, []string{tc.channelID}, []string{tc.clientID}, []connections.ConnType{connType}).Return(tc.svcErr)
-			err = mgsdk.DisconnectClients(context.Background(), tc.channelID, []string{tc.clientID}, []string{tc.connType}, tc.domainID, tc.token)
+			err = mgsdk.DisconnectClient(tc.clientID, tc.channelID, []string{tc.connType}, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "Disconnect", mock.Anything, tc.session, []string{tc.channelID}, []string{tc.clientID}, []connections.ConnType{connType})
-				assert.True(t, ok)
-			}
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestSetChannelParent(t *testing.T) {
-	ts, gsvc, auth := setupChannels()
-	defer ts.Close()
-
-	conf := sdk.Config{
-		ChannelsURL: ts.URL,
-	}
-	mgsdk := sdk.NewSDK(conf)
-	parentID := testsutil.GenerateUUID(t)
-
-	cases := []struct {
-		desc            string
-		domainID        string
-		token           string
-		session         smqauthn.Session
-		channelID       string
-		parentID        string
-		svcErr          error
-		authenticateErr error
-		err             errors.SDKError
-	}{
-		{
-			desc:      "set channel parent successfully",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: channel.ID,
-			parentID:  parentID,
-			svcErr:    nil,
-			err:       nil,
-		},
-		{
-			desc:            "set channel parent with invalid token",
-			domainID:        domainID,
-			token:           invalidToken,
-			channelID:       channel.ID,
-			parentID:        parentID,
-			authenticateErr: svcerr.ErrAuthentication,
-			err:             errors.NewSDKErrorWithStatus(svcerr.ErrAuthentication, http.StatusUnauthorized),
-		},
-		{
-			desc:      "set channel parent with empty token",
-			domainID:  domainID,
-			token:     "",
-			channelID: channel.ID,
-			parentID:  parentID,
-			err:       errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
-		},
-		{
-			desc:      "set channel parent with invalid channel id",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: wrongID,
-			parentID:  parentID,
-			svcErr:    svcerr.ErrAuthorization,
-			err:       errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
-		},
-		{
-			desc:      "set channel parent with empty channel id",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: "",
-			parentID:  parentID,
-			svcErr:    nil,
-			err:       errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrMissingID), http.StatusBadRequest),
-		},
-		{
-			desc:      "set channel parent with empty parent id",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: channel.ID,
-			parentID:  "",
-			svcErr:    nil,
-			err:       errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrMissingParentGroupID), http.StatusBadRequest),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == validToken {
-				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
-			}
-			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := gsvc.On("SetParentGroup", mock.Anything, tc.session, tc.parentID, tc.channelID).Return(tc.svcErr)
-			err := mgsdk.SetChannelParent(context.Background(), tc.channelID, tc.domainID, tc.parentID, tc.token)
-			assert.Equal(t, tc.err, err)
-			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "SetParentGroup", mock.Anything, tc.session, tc.parentID, tc.channelID)
-				assert.True(t, ok)
-			}
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestRemoveChannelParent(t *testing.T) {
-	ts, gsvc, auth := setupChannels()
-	defer ts.Close()
-
-	conf := sdk.Config{
-		ChannelsURL: ts.URL,
-	}
-	mgsdk := sdk.NewSDK(conf)
-	parentID := testsutil.GenerateUUID(t)
-
-	cases := []struct {
-		desc            string
-		domainID        string
-		token           string
-		session         smqauthn.Session
-		channelID       string
-		parentID        string
-		svcErr          error
-		authenticateErr error
-		err             errors.SDKError
-	}{
-		{
-			desc:      "remove channel parent successfully",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: channel.ID,
-			parentID:  parentID,
-			svcErr:    nil,
-			err:       nil,
-		},
-		{
-			desc:            "remove channel parent with invalid token",
-			domainID:        domainID,
-			token:           invalidToken,
-			channelID:       channel.ID,
-			parentID:        parentID,
-			authenticateErr: svcerr.ErrAuthentication,
-			err:             errors.NewSDKErrorWithStatus(svcerr.ErrAuthentication, http.StatusUnauthorized),
-		},
-		{
-			desc:      "remove channel parent with empty token",
-			domainID:  domainID,
-			token:     "",
-			channelID: channel.ID,
-			parentID:  parentID,
-			err:       errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
-		},
-		{
-			desc:      "remove channel parent with invalid channel id",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: wrongID,
-			parentID:  parentID,
-			svcErr:    svcerr.ErrAuthorization,
-			err:       errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusForbidden),
-		},
-		{
-			desc:      "remove channel parent with empty channel id",
-			domainID:  domainID,
-			token:     validToken,
-			channelID: "",
-			parentID:  parentID,
-			svcErr:    nil,
-			err:       errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrMissingID), http.StatusBadRequest),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			if tc.token == validToken {
-				tc.session = smqauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID}
-			}
-			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := gsvc.On("RemoveParentGroup", mock.Anything, tc.session, tc.channelID).Return(tc.svcErr)
-			err := mgsdk.RemoveChannelParent(context.Background(), tc.channelID, tc.domainID, tc.parentID, tc.token)
-			assert.Equal(t, tc.err, err)
-			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "RemoveParentGroup", mock.Anything, tc.session, tc.channelID)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -2117,8 +1610,6 @@ func generateTestChannel(t *testing.T) sdk.Channel {
 		Metadata:  sdk.Metadata{"role": "client"},
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
-		Status:    channels.EnabledStatus.String(),
-		Roles:     validRoles,
 	}
 	return ch
 }

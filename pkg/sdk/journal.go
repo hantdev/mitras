@@ -1,13 +1,12 @@
 package sdk
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 )
 
@@ -28,7 +27,7 @@ type JournalsPage struct {
 	Journals []Journal `json:"journals"`
 }
 
-func (sdk mgSDK) Journal(ctx context.Context, entityType, entityID, domainID string, pm PageMetadata, token string) (journals JournalsPage, err error) {
+func (sdk mgSDK) Journal(entityType, entityID, domainID string, pm PageMetadata, token string) (journals JournalsPage, err error) {
 	if entityID == "" {
 		return JournalsPage{}, errors.NewSDKError(apiutil.ErrMissingID)
 	}
@@ -46,7 +45,7 @@ func (sdk mgSDK) Journal(ctx context.Context, entityType, entityID, domainID str
 		return JournalsPage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return JournalsPage{}, sdkerr
 	}

@@ -1,13 +1,12 @@
 package sdk_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
-	grpcTokenV1 "github.com/hantdev/mitras/api/grpc/token/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	smqauth "github.com/hantdev/mitras/auth"
+	grpcTokenV1 "github.com/hantdev/mitras/internal/grpc/token/v1"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -39,8 +38,8 @@ func TestIssueToken(t *testing.T) {
 		{
 			desc: "issue token successfully",
 			login: sdk.Login{
-				Username: client.Credentials.Username,
-				Password: client.Credentials.Secret,
+				Identity: client.Credentials.Username,
+				Secret:   client.Credentials.Secret,
 			},
 			svcRes: &grpcTokenV1.Token{
 				AccessToken:  token.AccessToken,
@@ -54,8 +53,8 @@ func TestIssueToken(t *testing.T) {
 		{
 			desc: "issue token with invalid identity",
 			login: sdk.Login{
-				Username: invalidIdentity,
-				Password: client.Credentials.Secret,
+				Identity: invalidIdentity,
+				Secret:   client.Credentials.Secret,
 			},
 			svcRes:   &grpcTokenV1.Token{},
 			svcErr:   svcerr.ErrAuthentication,
@@ -65,8 +64,8 @@ func TestIssueToken(t *testing.T) {
 		{
 			desc: "issue token with invalid secret",
 			login: sdk.Login{
-				Username: client.Credentials.Username,
-				Password: "invalid",
+				Identity: client.Credentials.Username,
+				Secret:   "invalid",
 			},
 			svcRes:   &grpcTokenV1.Token{},
 			svcErr:   svcerr.ErrLogin,
@@ -76,8 +75,8 @@ func TestIssueToken(t *testing.T) {
 		{
 			desc: "issue token with empty identity",
 			login: sdk.Login{
-				Username: "",
-				Password: client.Credentials.Secret,
+				Identity: "",
+				Secret:   client.Credentials.Secret,
 			},
 			svcRes:   &grpcTokenV1.Token{},
 			svcErr:   nil,
@@ -87,8 +86,8 @@ func TestIssueToken(t *testing.T) {
 		{
 			desc: "issue token with empty secret",
 			login: sdk.Login{
-				Username: client.Credentials.Username,
-				Password: "",
+				Identity: client.Credentials.Username,
+				Secret:   "",
 			},
 			svcRes:   &grpcTokenV1.Token{},
 			svcErr:   nil,
@@ -98,12 +97,12 @@ func TestIssueToken(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			svcCall := svc.On("IssueToken", mock.Anything, tc.login.Username, tc.login.Password).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.CreateToken(context.Background(), tc.login)
+			svcCall := svc.On("IssueToken", mock.Anything, tc.login.Identity, tc.login.Secret).Return(tc.svcRes, tc.svcErr)
+			resp, err := mgsdk.CreateToken(tc.login)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {
-				ok := svcCall.Parent.AssertCalled(t, "IssueToken", mock.Anything, tc.login.Username, tc.login.Password)
+				ok := svcCall.Parent.AssertCalled(t, "IssueToken", mock.Anything, tc.login.Identity, tc.login.Secret)
 				assert.True(t, ok)
 			}
 			svcCall.Unset()
@@ -161,7 +160,7 @@ func TestRefreshToken(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			authCall := auth.On("Authenticate", mock.Anything, mock.Anything).Return(smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}, tc.identifyErr)
 			svcCall := svc.On("RefreshToken", mock.Anything, smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}, tc.token).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.RefreshToken(context.Background(), tc.token)
+			resp, err := mgsdk.RefreshToken(tc.token)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.response, resp)
 			if tc.err == nil {

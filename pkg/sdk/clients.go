@@ -1,15 +1,13 @@
 package sdk
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/hantdev/mitras/pkg/roles"
 )
 
 const (
@@ -18,25 +16,22 @@ const (
 	connectEndpoint     = "connect"
 	disconnectEndpoint  = "disconnect"
 	identifyEndpoint    = "identify"
-	rolesEndpoint       = "roles"
-	actionsEndpoint     = "actions"
+	shareEndpoint       = "share"
+	unshareEndpoint     = "unshare"
 )
 
 // Client represents mitras client.
 type Client struct {
-	ID          string                    `json:"id,omitempty"`
-	Name        string                    `json:"name,omitempty"`
-	Tags        []string                  `json:"tags,omitempty"`
-	DomainID    string                    `json:"domain_id,omitempty"`
-	ParentGroup string                    `json:"parent_group_id,omitempty"`
-	Credentials ClientCredentials         `json:"credentials"`
-	Metadata    map[string]interface{}    `json:"metadata,omitempty"`
-	CreatedAt   time.Time                 `json:"created_at,omitempty"`
-	UpdatedAt   time.Time                 `json:"updated_at,omitempty"`
-	UpdatedBy   string                    `json:"updated_by,omitempty"`
-	Status      string                    `json:"status,omitempty"`
-	Permissions []string                  `json:"permissions,omitempty"`
-	Roles       []roles.MemberRoleActions `json:"roles,omitempty"`
+	ID          string                 `json:"id,omitempty"`
+	Name        string                 `json:"name,omitempty"`
+	Credentials ClientCredentials      `json:"credentials"`
+	Tags        []string               `json:"tags,omitempty"`
+	DomainID    string                 `json:"domain_id,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt   time.Time              `json:"created_at,omitempty"`
+	UpdatedAt   time.Time              `json:"updated_at,omitempty"`
+	Status      string                 `json:"status,omitempty"`
+	Permissions []string               `json:"permissions,omitempty"`
 }
 
 type ClientCredentials struct {
@@ -44,7 +39,7 @@ type ClientCredentials struct {
 	Secret   string `json:"secret,omitempty"`
 }
 
-func (sdk mgSDK) CreateClient(ctx context.Context, client Client, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) CreateClient(client Client, domainID, token string) (Client, errors.SDKError) {
 	data, err := json.Marshal(client)
 	if err != nil {
 		return Client{}, errors.NewSDKError(err)
@@ -52,7 +47,7 @@ func (sdk mgSDK) CreateClient(ctx context.Context, client Client, domainID, toke
 
 	url := fmt.Sprintf("%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusCreated)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusCreated)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -65,7 +60,7 @@ func (sdk mgSDK) CreateClient(ctx context.Context, client Client, domainID, toke
 	return client, nil
 }
 
-func (sdk mgSDK) CreateClients(ctx context.Context, clients []Client, domainID, token string) ([]Client, errors.SDKError) {
+func (sdk mgSDK) CreateClients(clients []Client, domainID, token string) ([]Client, errors.SDKError) {
 	data, err := json.Marshal(clients)
 	if err != nil {
 		return []Client{}, errors.NewSDKError(err)
@@ -73,7 +68,7 @@ func (sdk mgSDK) CreateClients(ctx context.Context, clients []Client, domainID, 
 
 	url := fmt.Sprintf("%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, "bulk")
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return []Client{}, sdkerr
 	}
@@ -86,14 +81,14 @@ func (sdk mgSDK) CreateClients(ctx context.Context, clients []Client, domainID, 
 	return ctr.Clients, nil
 }
 
-func (sdk mgSDK) Clients(ctx context.Context, pm PageMetadata, domainID, token string) (ClientsPage, errors.SDKError) {
+func (sdk mgSDK) Clients(pm PageMetadata, domainID, token string) (ClientsPage, errors.SDKError) {
 	endpoint := fmt.Sprintf("%s/%s", domainID, clientsEndpoint)
 	url, err := sdk.withQueryParams(sdk.clientsURL, endpoint, pm)
 	if err != nil {
 		return ClientsPage{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return ClientsPage{}, sdkerr
 	}
@@ -106,13 +101,32 @@ func (sdk mgSDK) Clients(ctx context.Context, pm PageMetadata, domainID, token s
 	return cp, nil
 }
 
-func (sdk mgSDK) Client(ctx context.Context, id, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) ClientsByChannel(chanID string, pm PageMetadata, domainID, token string) (ClientsPage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.clientsURL, fmt.Sprintf("%s/channels/%s/%s", domainID, chanID, clientsEndpoint), pm)
+	if err != nil {
+		return ClientsPage{}, errors.NewSDKError(err)
+	}
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return ClientsPage{}, sdkerr
+	}
+
+	var tp ClientsPage
+	if err := json.Unmarshal(body, &tp); err != nil {
+		return ClientsPage{}, errors.NewSDKError(err)
+	}
+
+	return tp, nil
+}
+
+func (sdk mgSDK) Client(id, domainID, token string) (Client, errors.SDKError) {
 	if id == "" {
 		return Client{}, errors.NewSDKError(apiutil.ErrMissingID)
 	}
 	url := fmt.Sprintf("%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodGet, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -125,7 +139,23 @@ func (sdk mgSDK) Client(ctx context.Context, id, domainID, token string) (Client
 	return t, nil
 }
 
-func (sdk mgSDK) UpdateClient(ctx context.Context, t Client, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) ClientPermissions(id, domainID, token string) (Client, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id, permissionsEndpoint)
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return Client{}, sdkerr
+	}
+
+	var t Client
+	if err := json.Unmarshal(body, &t); err != nil {
+		return Client{}, errors.NewSDKError(err)
+	}
+
+	return t, nil
+}
+
+func (sdk mgSDK) UpdateClient(t Client, domainID, token string) (Client, errors.SDKError) {
 	if t.ID == "" {
 		return Client{}, errors.NewSDKError(apiutil.ErrMissingID)
 	}
@@ -136,7 +166,7 @@ func (sdk mgSDK) UpdateClient(ctx context.Context, t Client, domainID, token str
 		return Client{}, errors.NewSDKError(err)
 	}
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPatch, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -149,7 +179,7 @@ func (sdk mgSDK) UpdateClient(ctx context.Context, t Client, domainID, token str
 	return t, nil
 }
 
-func (sdk mgSDK) UpdateClientTags(ctx context.Context, t Client, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) UpdateClientTags(t Client, domainID, token string) (Client, errors.SDKError) {
 	data, err := json.Marshal(t)
 	if err != nil {
 		return Client{}, errors.NewSDKError(err)
@@ -157,7 +187,7 @@ func (sdk mgSDK) UpdateClientTags(ctx context.Context, t Client, domainID, token
 
 	url := fmt.Sprintf("%s/%s/%s/%s/tags", sdk.clientsURL, domainID, clientsEndpoint, t.ID)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPatch, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -170,7 +200,7 @@ func (sdk mgSDK) UpdateClientTags(ctx context.Context, t Client, domainID, token
 	return t, nil
 }
 
-func (sdk mgSDK) UpdateClientSecret(ctx context.Context, id, secret, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) UpdateClientSecret(id, secret, domainID, token string) (Client, errors.SDKError) {
 	ucsr := updateClientSecretReq{Secret: secret}
 
 	data, err := json.Marshal(ucsr)
@@ -180,7 +210,7 @@ func (sdk mgSDK) UpdateClientSecret(ctx context.Context, id, secret, domainID, t
 
 	url := fmt.Sprintf("%s/%s/%s/%s/secret", sdk.clientsURL, domainID, clientsEndpoint, id)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPatch, url, token, data, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPatch, url, token, data, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -193,18 +223,18 @@ func (sdk mgSDK) UpdateClientSecret(ctx context.Context, id, secret, domainID, t
 	return t, nil
 }
 
-func (sdk mgSDK) EnableClient(ctx context.Context, id, domainID, token string) (Client, errors.SDKError) {
-	return sdk.changeClientStatus(ctx, id, enableEndpoint, domainID, token)
+func (sdk mgSDK) EnableClient(id, domainID, token string) (Client, errors.SDKError) {
+	return sdk.changeClientStatus(id, enableEndpoint, domainID, token)
 }
 
-func (sdk mgSDK) DisableClient(ctx context.Context, id, domainID, token string) (Client, errors.SDKError) {
-	return sdk.changeClientStatus(ctx, id, disableEndpoint, domainID, token)
+func (sdk mgSDK) DisableClient(id, domainID, token string) (Client, errors.SDKError) {
+	return sdk.changeClientStatus(id, disableEndpoint, domainID, token)
 }
 
-func (sdk mgSDK) changeClientStatus(ctx context.Context, id, status, domainID, token string) (Client, errors.SDKError) {
+func (sdk mgSDK) changeClientStatus(id, status, domainID, token string) (Client, errors.SDKError) {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id, status)
 
-	_, body, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, nil, nil, http.StatusOK)
+	_, body, sdkerr := sdk.processRequest(http.MethodPost, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {
 		return Client{}, sdkerr
 	}
@@ -217,97 +247,53 @@ func (sdk mgSDK) changeClientStatus(ctx context.Context, id, status, domainID, t
 	return t, nil
 }
 
-func (sdk mgSDK) SetClientParent(ctx context.Context, id, domainID, groupID, token string) errors.SDKError {
-	scpg := parentGroupReq{ParentGroupID: groupID}
-	data, err := json.Marshal(scpg)
+func (sdk mgSDK) ShareClient(clientID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
+	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id, parentEndpoint)
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodPost, url, token, data, nil, http.StatusOK)
+	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, clientID, shareEndpoint)
 
+	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusCreated)
 	return sdkerr
 }
 
-func (sdk mgSDK) RemoveClientParent(ctx context.Context, id, domainID, groupID, token string) errors.SDKError {
-	rcpg := parentGroupReq{ParentGroupID: groupID}
-	data, err := json.Marshal(rcpg)
+func (sdk mgSDK) UnshareClient(clientID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
+	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id, parentEndpoint)
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, data, nil, http.StatusNoContent)
+	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, clientID, unshareEndpoint)
 
+	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) DeleteClient(ctx context.Context, id, domainID, token string) errors.SDKError {
+func (sdk mgSDK) ListClientUsers(clientID string, pm PageMetadata, domainID, token string) (UsersPage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.usersURL, fmt.Sprintf("%s/%s/%s/%s", domainID, clientsEndpoint, clientID, usersEndpoint), pm)
+	if err != nil {
+		return UsersPage{}, errors.NewSDKError(err)
+	}
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return UsersPage{}, sdkerr
+	}
+	up := UsersPage{}
+	if err := json.Unmarshal(body, &up); err != nil {
+		return UsersPage{}, errors.NewSDKError(err)
+	}
+
+	return up, nil
+}
+
+func (sdk mgSDK) DeleteClient(id, domainID, token string) errors.SDKError {
 	if id == "" {
 		return errors.NewSDKError(apiutil.ErrMissingID)
 	}
 	url := fmt.Sprintf("%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, id)
-	_, _, sdkerr := sdk.processRequest(ctx, http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
+	_, _, sdkerr := sdk.processRequest(http.MethodDelete, url, token, nil, nil, http.StatusNoContent)
 	return sdkerr
-}
-
-func (sdk mgSDK) CreateClientRole(ctx context.Context, id, domainID string, rq RoleReq, token string) (Role, errors.SDKError) {
-	return sdk.createRole(ctx, sdk.clientsURL, clientsEndpoint, id, domainID, rq, token)
-}
-
-func (sdk mgSDK) ClientRoles(ctx context.Context, id, domainID string, pm PageMetadata, token string) (RolesPage, errors.SDKError) {
-	return sdk.listRoles(ctx, sdk.clientsURL, clientsEndpoint, id, domainID, pm, token)
-}
-
-func (sdk mgSDK) ClientRole(ctx context.Context, id, roleID, domainID, token string) (Role, errors.SDKError) {
-	return sdk.viewRole(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, token)
-}
-
-func (sdk mgSDK) UpdateClientRole(ctx context.Context, id, roleID, newName, domainID string, token string) (Role, errors.SDKError) {
-	return sdk.updateRole(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, newName, domainID, token)
-}
-
-func (sdk mgSDK) DeleteClientRole(ctx context.Context, id, roleID, domainID, token string) errors.SDKError {
-	return sdk.deleteRole(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, token)
-}
-
-func (sdk mgSDK) AddClientRoleActions(ctx context.Context, id, roleID, domainID string, actions []string, token string) ([]string, errors.SDKError) {
-	return sdk.addRoleActions(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, actions, token)
-}
-
-func (sdk mgSDK) ClientRoleActions(ctx context.Context, id, roleID, domainID string, token string) ([]string, errors.SDKError) {
-	return sdk.listRoleActions(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, token)
-}
-
-func (sdk mgSDK) RemoveClientRoleActions(ctx context.Context, id, roleID, domainID string, actions []string, token string) errors.SDKError {
-	return sdk.removeRoleActions(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, actions, token)
-}
-
-func (sdk mgSDK) RemoveAllClientRoleActions(ctx context.Context, id, roleID, domainID, token string) errors.SDKError {
-	return sdk.removeAllRoleActions(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, token)
-}
-
-func (sdk mgSDK) AddClientRoleMembers(ctx context.Context, id, roleID, domainID string, members []string, token string) ([]string, errors.SDKError) {
-	return sdk.addRoleMembers(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, members, token)
-}
-
-func (sdk mgSDK) ClientRoleMembers(ctx context.Context, id, roleID, domainID string, pm PageMetadata, token string) (RoleMembersPage, errors.SDKError) {
-	return sdk.listRoleMembers(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, pm, token)
-}
-
-func (sdk mgSDK) RemoveClientRoleMembers(ctx context.Context, id, roleID, domainID string, members []string, token string) errors.SDKError {
-	return sdk.removeRoleMembers(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, members, token)
-}
-
-func (sdk mgSDK) RemoveAllClientRoleMembers(ctx context.Context, id, roleID, domainID, token string) errors.SDKError {
-	return sdk.removeAllRoleMembers(ctx, sdk.clientsURL, clientsEndpoint, id, roleID, domainID, token)
-}
-
-func (sdk mgSDK) AvailableClientRoleActions(ctx context.Context, domainID, token string) ([]string, errors.SDKError) {
-	return sdk.listAvailableRoleActions(ctx, sdk.clientsURL, clientsEndpoint, domainID, token)
-}
-
-func (sdk mgSDK) ListClientMembers(ctx context.Context, clientID, domainID string, pm PageMetadata, token string) (EntityMembersPage, errors.SDKError) {
-	return sdk.listEntityMembers(ctx, sdk.clientsURL, domainID, clientsEndpoint, clientID, token, pm)
 }
