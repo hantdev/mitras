@@ -1,2 +1,2 @@
-// Package spicedb contains the policy definitions for SpiceDB.
+// Package server contains the HTTP, gRPC and CoAP server implementation.
 package spicedb
