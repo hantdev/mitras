@@ -3,10 +3,9 @@ info:
   title: Mitras Channels Service
   description: |
     This is the Channels Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform channels. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-    
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9005
@@ -34,7 +33,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       responses:
         "201":
           $ref: "#/components/responses/ChannelCreateRes"
@@ -68,7 +67,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Metadata"
@@ -102,7 +101,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       responses:
         "201":
           $ref: "#/components/responses/ChannelsCreateRes"
@@ -132,7 +131,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -162,7 +161,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -195,7 +194,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -224,7 +223,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -259,7 +258,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -290,7 +289,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       security:
         - bearerAuth: []
@@ -321,7 +320,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       requestBody:
         $ref: "#/components/requestBodies/ChannelParentGroupReq"
@@ -351,7 +350,7 @@ paths:
       tags:
         - Channels
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       requestBody:
         $ref: "#/components/requestBodies/ChannelParentGroupReq"
@@ -381,7 +380,7 @@ paths:
         Connect clients specified by IDs to channels specified by IDs.
         Channel and client are owned by user identified using the provided access token.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       tags:
         - Connections
       requestBody:
@@ -414,7 +413,7 @@ paths:
         Disconnect clients specified by IDs from channels specified by IDs.
         Channel and client are owned by user identified using the provided access token.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       tags:
         - Connections
       requestBody:
@@ -438,7 +437,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
- 
+
   /{domainID}/channels/{chanID}/connect:
     post:
       operationId: connectClientsToChannel
@@ -448,7 +447,7 @@ paths:
       tags:
         - Connections
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       requestBody:
         $ref: "#/components/requestBodies/ChannelConnReq"
@@ -477,7 +476,7 @@ paths:
       tags:
         - Connections
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/chanID"
       requestBody:
         $ref: "#/components/requestBodies/ChannelConnReq"
@@ -541,7 +540,7 @@ components:
     ParentGroupReqObj:
       type: object
       properties:
-         parent_group_id:
+        parent_group_id:
           type: string
           format: uuid
           example: bb7edb32-2eac-4aad-aebe-ed96fe073879
@@ -592,12 +591,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Datetime when the channel was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Datetime when the channel was created.
         status:
           type: string
@@ -651,7 +650,7 @@ components:
         - name
         - metadata
         - description
-    
+
     ChannelUpdateTags:
       type: object
       properties:
@@ -801,7 +800,7 @@ components:
         format: uuid
       required: false
       example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-      
+
     Metadata:
       name: metadata
       description: Metadata filter. Filtering is performed matching the parameter with metadata on top level. Parameter is json.
@@ -851,7 +850,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ChannelReqObj"
-    
+
     ChannelsCreateReq:
       description: JSON-formatted document describing the new channels to be registered
       required: true
@@ -869,7 +868,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ChannelUpdate"
-    
+
     ChannelUpdateTagsReq:
       description: JSON-formated document describing the tags of channel to be updated.
       required: true
@@ -877,7 +876,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ChannelUpdate"
-    
+
     ChannelParentGroupReq:
       description: JSON-formated document describing the parent group to be set to or removed from a channel.
       required: true
@@ -893,7 +892,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ConnectionReqSchema"
-    
+
     ChannelConnReq:
       description: JSON-formatted document describing the new connection.
       required: true
@@ -960,7 +959,7 @@ components:
           operationId: unassignGroupsFromChannel
           parameters:
             chanID: $response.body#/id
-    
+
     ChannelsCreateRes:
       description: Registered new channels.
       headers:

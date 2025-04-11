@@ -5,7 +5,7 @@ info:
     This is the Domains Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform domains. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9003
@@ -15,9 +15,7 @@ tags:
   - name: Domains
     description: CRUD operations for your domains
   - name: Roles
-    description: All operations involving roles for domains
-  - name: Invitations
-    description: All operations involving invitations for domains
+    description: All operations involving roles for clients
   - name: Health
     description: Service health check endpoint.
 
@@ -39,7 +37,7 @@ paths:
         "401":
           description: Missing or invalid access token provided.
         "409":
-          description: Failed due to using an existing route.
+          description: Failed due to using an existing alias.
         "415":
           description: Missing or invalid content type.
         "422":
@@ -103,9 +101,9 @@ paths:
           $ref: "#/components/responses/ServiceError"
 
     patch:
-      summary: Updates name, metadata and tags of the domain.
+      summary: Updates name, metadata, tags and alias of the domain.
       description: |
-        Updates name, metadata and tags of the domain.
+        Updates name, metadata, tags and alias of the domain.
       tags:
         - Domains
       parameters:
@@ -210,7 +208,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+  
   /domains/{domainID}/roles:
     post:
       operationId: createDomainRole
@@ -220,14 +218,15 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/CreateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/CreateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "201":
-          $ref: "./schemas/roles.yaml#/components/responses/CreateRoleRes"
+            $ref: "./schemas/roles.yml#/components/responses/CreateRoleRes"
         "400":
           description: Failed due to malformed domain's ID.
         "401":
@@ -240,7 +239,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+    
     get:
       operationId: listDomainRoles
       tags:
@@ -252,6 +251,7 @@ paths:
         dataset is consumed either by making subsequent requests, or by
         increasing the subset size of the initial request.
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
@@ -259,7 +259,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRolesRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRolesRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -274,7 +274,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /domains/{domainID}/roles/{roleID}:
+  /domains/{domainID}/roles/{roleName}:
     get:
       operationId: getDomainRole
       tags:
@@ -283,13 +283,14 @@ paths:
       description: |
         Retrieves a specific domain role that is identified by the role name.
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -303,7 +304,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+      
     put:
       operationId: updateDomainRole
       summary: Updates domain role.
@@ -312,15 +313,16 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/UpdateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/UpdateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -334,7 +336,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+      
     delete:
       operationId: deleteDomainRole
       summary: Deletes domain role.
@@ -343,8 +345,9 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -363,37 +366,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domain/{domainID}/roles/members:
-    get:
-      operationId: getDomainMembers
-      tags:
-        - Roles
-      summary: Retrieves domain members from all roles.
-      description: |
-        Retrieves members from role for the specific domain.
-      parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListEntityMembersRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: |
-            Missing or invalid access token provided.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/actions:
+  
+  /domains/{domainID}/roles/{roleName}/actions:
     post:
       operationId: addDomainRoleAction
       summary: Adds a role action for a domain role.
@@ -402,15 +376,16 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -424,22 +399,23 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+  
     get:
       operationId: listDomainRoleActions
       tags:
         - Roles
       summary: Lists domain role actions.
       description: |
-        Retrieves a list of domain role actions.
+        Retrieves a list of domain role actions. 
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -453,8 +429,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/actions/delete:
+  
+  /domains/{domainID}/roles/{roleName}/actions/delete:
     post:
       operationId: deleteDomainRoleAction
       summary: Deletes role actions for a domain role.
@@ -463,10 +439,11 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
@@ -485,8 +462,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/actions/delete-all:
+    
+  /domains/{domainID}/roles/{roleName}/actions/delete-all:
     post:
       operationId: deleteAllDomainRoleActions
       summary: Deletes all role actions for a domain role.
@@ -495,8 +472,9 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -515,8 +493,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/members:
+  
+  /domains/{domainID}/roles/{roleName}/members:
     post:
       operationId: addDomainRoleMember
       summary: Adds a member to a domain role.
@@ -525,15 +503,16 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -547,22 +526,23 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+    
     get:
       operationId: listDomainRoleMembers
       tags:
         - Roles
       summary: Lists domain role members.
       description: |
-        Retrieves a list of domain role members.
+        Retrieves a list of domain role members. 
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -576,8 +556,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/members/delete:
+    
+  /domains/{domainID}/roles/{roleName}/members/delete:
     post:
       operationId: deleteDomainRoleMembers
       summary: Deletes members from a domain role.
@@ -586,10 +566,11 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
@@ -608,8 +589,8 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/roles/{roleID}/members/delete-all:
+  
+  /domains/{domainID}/roles/{roleName}/members/delete-all:
     post:
       operationId: deleteAllDomainRoleMembers
       summary: Deletes all members from a domain role.
@@ -618,8 +599,9 @@ paths:
       tags:
         - Roles
       parameters:
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/DomainID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -638,7 +620,7 @@ paths:
           description: Database can't process request.
         "500":
           $ref: "#/components/responses/ServiceError"
-
+  
   /domains/roles/available-actions:
     get:
       operationId: listAvailableActions
@@ -646,14 +628,14 @@ paths:
         - Roles
       summary: Retrieves available actions.
       description: |
-        Retrieves a list of available actions.
+        Retrieves a list of available actions. 
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListAvailableActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListAvailableActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -665,216 +647,6 @@ paths:
           description: A non-existent entity request.
         "422":
           description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/invitations:
-    post:
-      operationId: sendInvitation
-      tags:
-        - Invitations
-      summary: Send invitation
-      description: |
-        Send invitation to user to join domain.
-      parameters:
-        - $ref: "#/components/parameters/DomainID"
-      requestBody:
-        $ref: "#/components/requestBodies/SendInvitationReq"
-      security:
-        - bearerAuth: []
-      responses:
-        "201":
-          description: Invitation sent.
-        "400":
-          description: Failed due to malformed JSON.
-        "401":
-          description: Missing or invalid access token provided.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "409":
-          description: Failed due to using an existing identity.
-        "415":
-          description: Missing or invalid content type.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-    get:
-      operationId: listDomainInvitations
-      tags:
-        - Invitations
-      summary: List domain invitations
-      description: |
-        Retrieves a list of invitations for a given domain. Due to performance concerns, data
-        is retrieved in subsets. The API must ensure that the entire
-        dataset is consumed either by making subsequent requests, or by
-        increasing the subset size of the initial request.
-      parameters:
-        - $ref: "#/components/parameters/DomainID"
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
-        - $ref: "#/components/parameters/user_id"
-        - $ref: "#/components/parameters/InvitedBy"
-        - $ref: "#/components/parameters/State"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "#/components/responses/InvitationPageRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: |
-            Missing or invalid access token provided.
-            This endpoint is available only for administrators.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /domains/{domainID}/invitations/{userID}:
-    get:
-      operationId: getInvitation
-      summary: Retrieves a specific invitation
-      description: |
-        Retrieves a specific invitation that is identifier by the user ID and domain ID.
-      tags:
-        - Invitations
-      parameters:
-        - $ref: "#/components/parameters/DomainID"
-        - $ref: "#/components/parameters/UserID"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "#/components/responses/InvitationRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: Missing or invalid access token provided.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-    delete:
-      operationId: deleteInvitation
-      summary: Deletes a specific invitation
-      description: |
-        Deletes a specific invitation that is identifier by the user ID and domain ID.
-      tags:
-        - Invitations
-      parameters:
-        - $ref: "#/components/parameters/DomainID"
-        - $ref: "#/components/parameters/UserID"
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: Invitation deleted.
-        "400":
-          description: Failed due to malformed JSON.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: Failed due to non existing user.
-        "401":
-          description: Missing or invalid access token provided.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /invitations:
-    get:
-      operationId: listUserInvitations
-      tags:
-        - Invitations
-      summary: List user invitations
-      description: |
-        Retrieves a list of invitations for the current user. Due to performance concerns, data
-        is retrieved in subsets. The API must ensure that the entire
-        dataset is consumed either by making subsequent requests, or by
-        increasing the subset size of the initial request.
-      parameters:
-        - $ref: "#/components/parameters/domain_id"
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
-        - $ref: "#/components/parameters/user_id"
-        - $ref: "#/components/parameters/InvitedBy"
-        - $ref: "#/components/parameters/State"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "#/components/responses/InvitationPageRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: |
-            Missing or invalid access token provided.
-            This endpoint is available only for administrators.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /invitations/accept:
-    post:
-      operationId: acceptInvitation
-      summary: Accept invitation
-      description: |
-        Current logged in user accepts invitation to join domain.
-      tags:
-        - Invitations
-      security:
-        - bearerAuth: []
-      requestBody:
-        $ref: "#/components/requestBodies/AcceptInvitationReq"
-      responses:
-        "204":
-          description: Invitation accepted.
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: Missing or invalid access token provided.
-        "404":
-          description: A non-existent entity request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /invitations/reject:
-    post:
-      operationId: rejectInvitation
-      summary: Reject invitation
-      description: |
-        Current logged in user rejects invitation to join domain.
-      tags:
-        - Invitations
-      security:
-        - bearerAuth: []
-      requestBody:
-        $ref: "#/components/requestBodies/AcceptInvitationReq"
-      responses:
-        "204":
-          description: Invitation rejected.
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: Missing or invalid access token provided.
-        "404":
-          description: A non-existent entity request.
         "500":
           $ref: "#/components/responses/ServiceError"
 
@@ -910,13 +682,13 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-        route:
+        alias:
           type: string
-          example: domain_route
-          description: Domain route.
+          example: domain alias
+          description: Domain alias.
       required:
         - name
-        - route
+        - alias
     Domain:
       type: object
       properties:
@@ -940,10 +712,10 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-        route:
+        alias:
           type: string
-          example: domain_route
-          description: Domain route.
+          example: domain alias
+          description: Domain alias.
         status:
           type: string
           description: Domain Status
@@ -1014,107 +786,10 @@ components:
           type: object
           example: { "domain": "example.com" }
           description: Arbitrary, object-encoded domain's data.
-
-    SendInvitationReqObj:
-      type: object
-      properties:
-        invitee_user_id:
+        alias:
           type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: User unique identifier.
-        role_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Identifier for the role to be assigned to the user.
-      required:
-        - invitee_user_id
-        - role_id
-
-    Invitation:
-      type: object
-      properties:
-        invited_by:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: User unique identifier.
-        invitee_user_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Invitee user unique identifier.
-        domain_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Domain unique identifier.
-        role_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Role unique identifier.
-        role_name:
-          type: string
-          example: editor
-          description: Role name.
-        actions:
-          type: array
-          items:
-            type: string
-          example: ["read", "write"]
-          description: Actions allowed for the role.
-        created_at:
-          type: string
-          format: date-time
-          example: "2019-11-26 13:31:52"
-          description: Time when the group was created.
-        updated_at:
-          type: string
-          format: date-time
-          example: "2019-11-26 13:31:52"
-          description: Time when the group was created.
-        confirmed_at:
-          type: string
-          format: date-time
-          example: "2019-11-26 13:31:52"
-          description: Time when the group was created.
-      xml:
-        name: invitation
-
-    InvitationPage:
-      type: object
-      properties:
-        invitations:
-          type: array
-          minItems: 0
-          uniqueItems: true
-          items:
-            $ref: "#/components/schemas/Invitation"
-        total:
-          type: integer
-          example: 1
-          description: Total number of items.
-        offset:
-          type: integer
-          description: Number of items to skip during retrieval.
-        limit:
-          type: integer
-          example: 10
-          description: Maximum number of items to return in one page.
-      required:
-        - invitations
-        - total
-        - offset
-
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-          description: Error message
-      example: { "error": "malformed entity specification" }
+          example: domain alias
+          description: Domain alias.
 
   parameters:
     DomainID:
@@ -1202,61 +877,6 @@ components:
       schema:
         type: string
       required: false
-    UserID:
-      name: userID
-      description: Unique user identifier.
-      in: path
-      schema:
-        type: string
-        format: uuid
-      required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-    user_id:
-      name: user_id
-      description: Unique user identifier.
-      in: query
-      schema:
-        type: string
-        format: uuid
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-    domain_id:
-      name: domain_id
-      description: Unique identifier for a domain.
-      in: query
-      schema:
-        type: string
-        format: uuid
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-    InvitedBy:
-      name: invited_by
-      description: Unique identifier for a user that invited the user.
-      in: query
-      schema:
-        type: string
-        format: uuid
-      required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-    State:
-      name: state
-      description: Invitation state.
-      in: query
-      schema:
-        type: string
-        enum:
-          - pending
-          - accepted
-          - all
-      required: false
-      example: accepted
-    RoleID:
-      name: roleID
-      description: Unique role identifier.
-      in: query
-      schema:
-        type: string
-        format: uuid
-      required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
   requestBodies:
     DomainCreateReq:
@@ -1267,34 +887,12 @@ components:
           schema:
             $ref: "#/components/schemas/DomainReqObj"
     DomainUpdateReq:
-      description: JSON-formated document describing the name, tags, and metadata of the domain to be updated
+      description: JSON-formated document describing the name, alias, tags, and metadata of the domain to be updated
       required: true
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/DomainUpdate"
-    SendInvitationReq:
-      description: JSON-formatted document describing request for sending invitation
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/SendInvitationReqObj"
-    AcceptInvitationReq:
-      description: JSON-formatted document describing request for accepting invitation
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              domain_id:
-                type: string
-                format: uuid
-                example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-                description: Domain unique identifier.
-            required:
-              - domain_id
 
   responses:
     ServiceError:
@@ -1325,31 +923,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/DomainsPage"
-    InvitationRes:
-      description: Data retrieved.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Invitation"
-      links:
-        delete:
-          operationId: deleteInvitation
-          parameters:
-            user_id: $response.body#/user_id
-            domain_id: $response.body#/domain_id
-
-    InvitationPageRes:
-      description: Data retrieved.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/InvitationPage"
     HealthRes:
       description: Service Health Check.
       content:
         application/health+json:
           schema:
-            $ref: "./schemas/health_info.yaml"
+            $ref: "./schemas/health_info.yml"
 
   securitySchemes:
     bearerAuth:

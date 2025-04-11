@@ -1,12 +1,11 @@
-openapi: 3.0.3
+openapi: 3.0.1
 info:
   title: Mitras http adapter
   description: |
     HTTP API for sending messages through communication channels.
-    
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:8008
@@ -17,7 +16,7 @@ tags:
     description: Everything about your Messages
 
 paths:
-  /c/{id}/m:
+  /channels/{id}/messages:
     post:
       summary: Sends message to the communication channel
       description: |
@@ -151,7 +150,7 @@ components:
       content:
         application/health+json:
           schema:
-            $ref: "./schemas/health_info.yaml"
+            $ref: "./schemas/health_info.yml"
 
   securitySchemes:
     bearerAuth:

@@ -5,7 +5,7 @@ info:
     This is the Journal Log Server based on the OpenAPI 3.0 specification.  It is the HTTP API for viewing journal log history. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9021
@@ -186,7 +186,7 @@ components:
 
     entity_type:
       name: entityType
-      description: Type of entity, e.g. group, client, channel.
+      description: Type of entity, e.g. user, group, client, etc.entityType
       in: path
       schema:
         type: string
@@ -209,7 +209,7 @@ components:
 
     id:
       name: id
-      description: Unique identifier for an entity, e.g. group, channel or client. Used together with entity_type.
+      description: Unique identifier for an entity, e.g. group, channel or thing.  Used together with entity_type.
       in: path
       schema:
         type: string
@@ -312,7 +312,7 @@ components:
       content:
         application/health+json:
           schema:
-            $ref: "./schemas/health_info.yaml"
+            $ref: "./schemas/health_info.yml"
 
     ServiceError:
       description: Unexpected server-side error occurred.

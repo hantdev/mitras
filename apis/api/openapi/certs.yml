@@ -1,12 +1,11 @@
-openapi: 3.0.3
+openapi: 3.0.1
 info:
   title: Mitras Certs service
   description: |
-    HTTP API for Certs service 
-    
+    HTTP API for Certs service
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9019
@@ -15,7 +14,7 @@ servers:
 tags:
   - name: certs
     description: Everything about your Certs
-    
+
 paths:
   /{domainID}/certs:
     post:
@@ -25,7 +24,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       requestBody:
         $ref: "#/components/requestBodies/CertReq"
       responses:
@@ -53,7 +52,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/CertID"
       responses:
         "200":
@@ -79,7 +78,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/CertID"
       responses:
         "200":
@@ -107,7 +106,7 @@ paths:
       tags:
         - certs
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/ClientID"
       responses:
         "200":
@@ -292,7 +291,7 @@ components:
       content:
         application/health+json:
           schema:
-            $ref: "./schemas/health_info.yaml"
+            $ref: "./schemas/health_info.yml"
 
   securitySchemes:
     bearerAuth:

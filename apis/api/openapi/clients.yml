@@ -3,10 +3,9 @@ info:
   title: Mitras Clients Service
   description: |
     This is the Clients Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform clients. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-    
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9006
@@ -31,7 +30,7 @@ paths:
         Adds new client to the list of clients owned by user identified using
         the provided access token.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       requestBody:
         $ref: "#/components/requestBodies/ClientCreateReq"
       responses:
@@ -65,7 +64,7 @@ paths:
         dataset is consumed either by making subsequent requests, or by
         increasing the subset size of the initial request.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Metadata"
@@ -99,7 +98,7 @@ paths:
         Adds a list of new clients to the list of clients owned by user identified using
         the provided access token.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       tags:
         - Clients
       requestBody:
@@ -131,7 +130,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       security:
         - bearerAuth: []
@@ -161,7 +160,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
         $ref: "#/components/requestBodies/ClientUpdateReq"
@@ -194,7 +193,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       security:
         - bearerAuth: []
@@ -222,7 +221,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
         $ref: "#/components/requestBodies/ClientUpdateTagsReq"
@@ -254,7 +253,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
         $ref: "#/components/requestBodies/ClientUpdateSecretReq"
@@ -289,7 +288,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       security:
         - bearerAuth: []
@@ -320,7 +319,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       security:
         - bearerAuth: []
@@ -351,7 +350,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
         $ref: "#/components/requestBodies/ClientParentGroupReq"
@@ -381,7 +380,7 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
         $ref: "#/components/requestBodies/ClientParentGroupReq"
@@ -412,8 +411,8 @@ paths:
       tags:
         - Clients
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
-        - $ref: "users.yaml#/components/parameters/UserID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
+        - $ref: "users.yml#/components/parameters/UserID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Metadata"
@@ -448,15 +447,15 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/CreateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/CreateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "201":
-            $ref: "./schemas/roles.yaml#/components/responses/CreateRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/CreateRoleRes"
         "400":
           description: Failed due to malformed client's ID.
         "401":
@@ -481,7 +480,7 @@ paths:
         dataset is consumed either by making subsequent requests, or by
         increasing the subset size of the initial request.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
@@ -489,7 +488,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRolesRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRolesRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -504,37 +503,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/members:
-    get:
-      operationId: getClientMembers
-      tags:
-        - Roles
-      summary: Retrieves client members from all roles.
-      description: |
-        Retrieves members from role for the specific client.
-      parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
-        - $ref: "#/components/parameters/clientID"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListEntityMembersRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: |
-            Missing or invalid access token provided.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /{domainID}/clients/{clientID}/roles/{roleID}:
+  /{domainID}/clients/{clientID}/roles/{roleName}:
     get:
       operationId: getClientRole
       tags:
@@ -543,14 +512,14 @@ paths:
       description: |
         Retrieves a specific client role that is identified by the role name.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -573,16 +542,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/UpdateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/UpdateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -605,9 +574,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -627,7 +596,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/actions:
+  /{domainID}/clients/{clientID}/roles/{roleName}/actions:
     post:
       operationId: addClientRoleAction
       summary: Adds a role action for a client role.
@@ -636,16 +605,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -668,14 +637,14 @@ paths:
       description: |
         Retrieves a list of client role actions.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -690,7 +659,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/actions/delete:
+  /{domainID}/clients/{clientID}/roles/{roleName}/actions/delete:
     post:
       operationId: deleteClientRoleAction
       summary: Deletes role actions for a client role.
@@ -699,11 +668,11 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
@@ -723,7 +692,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/actions/delete-all:
+  /{domainID}/clients/{clientID}/roles/{roleName}/actions/delete-all:
     post:
       operationId: deleteAllClientRoleActions
       summary: Deletes all role actions for a client role.
@@ -732,9 +701,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -754,7 +723,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/members:
+  /{domainID}/clients/{clientID}/roles/{roleName}/members:
     post:
       operationId: addClientRoleMember
       summary: Adds a member to a client role.
@@ -763,16 +732,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -795,14 +764,14 @@ paths:
       description: |
         Retrieves a list of client role members.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -817,7 +786,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/members/delete:
+  /{domainID}/clients/{clientID}/roles/{roleName}/members/delete:
     post:
       operationId: deleteClientRoleMembers
       summary: Deletes members from a client role.
@@ -826,11 +795,11 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
@@ -850,7 +819,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/clients/{clientID}/roles/{roleID}/members/delete-all:
+  /{domainID}/clients/{clientID}/roles/{roleName}/members/delete-all:
     post:
       operationId: deleteAllClientRoleMembers
       summary: Deletes all members from a client role.
@@ -859,9 +828,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/clientID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -890,12 +859,12 @@ paths:
       description: |
         Retrieves a list of available actions.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListAvailableActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListAvailableActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -966,7 +935,7 @@ components:
     ParentGroupReqObj:
       type: object
       properties:
-         parent_group_id:
+        parent_group_id:
           type: string
           format: uuid
           example: bb7edb32-2eac-4aad-aebe-ed96fe073879
@@ -1021,12 +990,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
       xml:
         name: client
@@ -1078,12 +1047,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the channel was created.
       xml:
         name: client

@@ -3,10 +3,9 @@ info:
   title: Mitras Groups Service
   description: |
     This is the Groups Server based on the OpenAPI 3.0 specification.  It is the HTTP API for managing platform groups. You can now help us improve the API whether it's by making changes to the definition itself or to the code.
-
     Some useful links:
     - [The Mitras repository](https://github.com/hantdev/mitras)
-  version: 0.0.1
+  version: 0.15.1
 
 servers:
   - url: http://localhost:9004
@@ -31,7 +30,7 @@ paths:
         Creates new group that can be used for grouping entities. New account will
         be uniquely identified by its identity.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       requestBody:
         $ref: "#/components/requestBodies/GroupCreateReq"
       security:
@@ -69,14 +68,14 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - $ref: "#/components/parameters/Level"
         - $ref: "#/components/parameters/Tree"
         - $ref: "#/components/parameters/Metadata"
         - $ref: "#/components/parameters/GroupName"
-        - $ref: "#/components/parameters/RootGroup"
+        - $ref: "#/components/parameters/ParentID"
       responses:
         "200":
           $ref: "#/components/responses/GroupPageRes"
@@ -102,7 +101,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -130,7 +129,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -163,7 +162,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -190,7 +189,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -223,7 +222,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -261,7 +260,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
         - $ref: "#/components/parameters/Level"
         - $ref: "#/components/parameters/Tree"
@@ -291,7 +290,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       requestBody:
         $ref: "#/components/requestBodies/GroupParentReq"
@@ -321,7 +320,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       requestBody:
         $ref: "#/components/requestBodies/GroupParentReq"
@@ -352,7 +351,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       requestBody:
         $ref: "#/components/requestBodies/GroupChildrenReq"
@@ -386,7 +385,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       requestBody:
         $ref: "#/components/requestBodies/GroupChildrenReq"
@@ -425,7 +424,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
@@ -459,7 +458,7 @@ paths:
       tags:
         - Groups
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       security:
         - bearerAuth: []
@@ -492,15 +491,15 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/CreateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/CreateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "201":
-          $ref: "./schemas/roles.yaml#/components/responses/CreateRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/CreateRoleRes"
         "400":
           description: Failed due to malformed group's ID.
         "401":
@@ -525,7 +524,7 @@ paths:
         dataset is consumed either by making subsequent requests, or by
         increasing the subset size of the initial request.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
@@ -533,7 +532,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRolesRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRolesRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -548,37 +547,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/members:
-    get:
-      operationId: getGroupMembers
-      tags:
-        - Roles
-      summary: Retrieves group members from all roles.
-      description: |
-        Retrieves members from role for the specific group.
-      parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
-        - $ref: "#/components/parameters/GroupID"
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListEntityMembersRes"
-        "400":
-          description: Failed due to malformed query parameters.
-        "401":
-          description: |
-            Missing or invalid access token provided.
-        "403":
-          description: Failed to perform authorization over the entity.
-        "404":
-          description: A non-existent entity request.
-        "422":
-          description: Database can't process request.
-        "500":
-          $ref: "#/components/responses/ServiceError"
-
-  /{domainID}/groups/{groupID}/roles/{roleID}:
+  /{domainID}/groups/{groupID}/roles/{roleName}:
     get:
       operationId: getGroupRole
       tags:
@@ -587,14 +556,14 @@ paths:
       description: |
         Retrieves a specific group role that is identified by the role name.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -617,16 +586,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/UpdateRoleReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/UpdateRoleReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/GetRoleRes"
+          $ref: "./schemas/roles.yml#/components/responses/GetRoleRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -649,9 +618,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -671,7 +640,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/actions:
+  /{domainID}/groups/{groupID}/roles/{roleName}/actions:
     post:
       operationId: addGroupRoleAction
       summary: Adds a role action for a group role.
@@ -680,16 +649,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -712,14 +681,14 @@ paths:
       description: |
         Retrieves a list of group role actions.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -734,7 +703,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/actions/delete:
+  /{domainID}/groups/{groupID}/roles/{roleName}/actions/delete:
     post:
       operationId: deleteGroupRoleAction
       summary: Deletes role actions for a group role.
@@ -743,11 +712,11 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleActionsReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleActionsReq"
       security:
         - bearerAuth: []
       responses:
@@ -767,7 +736,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/actions/delete-all:
+  /{domainID}/groups/{groupID}/roles/{roleName}/actions/delete-all:
     post:
       operationId: deleteAllGroupRoleActions
       summary: Deletes all role actions for a group role.
@@ -776,9 +745,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -798,7 +767,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/members:
+  /{domainID}/groups/{groupID}/roles/{roleName}/members:
     post:
       operationId: addGroupRoleMember
       summary: Adds a member to a group role.
@@ -807,16 +776,16 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/AddRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/AddRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -839,14 +808,14 @@ paths:
       description: |
         Retrieves a list of group role members.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListRoleMembersRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListRoleMembersRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -861,7 +830,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/members/delete:
+  /{domainID}/groups/{groupID}/roles/{roleName}/members/delete:
     post:
       operationId: deleteGroupRoleMembers
       summary: Deletes members from a group role.
@@ -870,11 +839,11 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       requestBody:
-        $ref: "./schemas/roles.yaml#/components/requestBodies/AddRoleMembersReq"
+        $ref: "./schemas/roles.yml#/components/requestBodies/AddRoleMembersReq"
       security:
         - bearerAuth: []
       responses:
@@ -894,7 +863,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServiceError"
 
-  /{domainID}/groups/{groupID}/roles/{roleID}/members/delete-all:
+  /{domainID}/groups/{groupID}/roles/{roleName}/members/delete-all:
     post:
       operationId: deleteAllGroupRoleMembers
       summary: Deletes all members from a group role.
@@ -903,9 +872,9 @@ paths:
       tags:
         - Roles
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
         - $ref: "#/components/parameters/GroupID"
-        - $ref: "./schemas/roles.yaml#/components/parameters/RoleID"
+        - $ref: "./schemas/roles.yml#/components/parameters/RoleName"
       security:
         - bearerAuth: []
       responses:
@@ -934,12 +903,12 @@ paths:
       description: |
         Retrieves a list of available actions.
       parameters:
-        - $ref: "auth.yaml#/components/parameters/DomainID"
+        - $ref: "auth.yml#/components/parameters/DomainID"
       security:
         - bearerAuth: []
       responses:
         "200":
-          $ref: "./schemas/roles.yaml#/components/responses/ListAvailableActionsRes"
+          $ref: "./schemas/roles.yml#/components/responses/ListAvailableActionsRes"
         "400":
           description: Failed due to malformed query parameters.
         "401":
@@ -1039,12 +1008,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Datetime when the group was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Datetime when the group was created.
         status:
           type: string
@@ -1105,12 +1074,12 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the group was created.
         updated_at:
           type: string
           format: date-time
-          example: "2025-03-20 13:31:52"
+          example: "2019-11-26 13:31:52"
           description: Time when the group was created.
       xml:
         name: members
@@ -1415,15 +1384,6 @@ components:
       schema:
         type: boolean
         default: false
-
-    RootGroup:
-      name: root_group
-      description: List groups without a parent group.
-      in: query
-      schema:
-        type: boolean
-        default: false
-      required: false
 
     Metadata:
       name: metadata
