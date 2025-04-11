@@ -1,8 +1,7 @@
 package auth
 
 import (
-	apiutil "github.com/hantdev/mitras/api/http/util"
-	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type authenticateReq struct {
@@ -45,24 +44,5 @@ func (req authReq) validate() error {
 		return apiutil.ErrMalformedPolicyPer
 	}
 
-	return nil
-}
-
-type authPATReq struct {
-	userID           string
-	patID            string
-	entityType       auth.EntityType
-	optionalDomainID string
-	operation        auth.Operation
-	entityID         string
-}
-
-func (req authPATReq) validate() error {
-	if req.userID == "" {
-		return apiutil.ErrMissingUserID
-	}
-	if req.patID == "" {
-		return apiutil.ErrMissingPATID
-	}
 	return nil
 }

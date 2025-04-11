@@ -24,22 +24,6 @@ func authenticateEndpoint(svc auth.Service) endpoint.Endpoint {
 	}
 }
 
-func authenticatePATEndpoint(svc auth.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(authenticateReq)
-		if err := req.validate(); err != nil {
-			return authenticateRes{}, err
-		}
-
-		pat, err := svc.IdentifyPAT(ctx, req.token)
-		if err != nil {
-			return authenticateRes{}, err
-		}
-
-		return authenticateRes{id: pat.ID, userID: pat.User}, nil
-	}
-}
-
 func authorizeEndpoint(svc auth.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(authReq)
@@ -57,21 +41,6 @@ func authorizeEndpoint(svc auth.Service) endpoint.Endpoint {
 			ObjectType:  req.ObjectType,
 			Object:      req.Object,
 		})
-		if err != nil {
-			return authorizeRes{authorized: false}, err
-		}
-		return authorizeRes{authorized: true}, nil
-	}
-}
-
-func authorizePATEndpoint(svc auth.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(authPATReq)
-
-		if err := req.validate(); err != nil {
-			return authorizeRes{}, err
-		}
-		err := svc.AuthorizePAT(ctx, req.userID, req.patID, req.entityType, req.optionalDomainID, req.operation, req.entityID)
 		if err != nil {
 			return authorizeRes{authorized: false}, err
 		}

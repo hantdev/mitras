@@ -1,8 +1,8 @@
 package token
 
 import (
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
 type issueReq struct {

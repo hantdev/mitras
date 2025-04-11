@@ -2,12 +2,9 @@ package auth
 
 import (
 	"context"
-	"encoding/base64"
-	"math/rand"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -15,11 +12,8 @@ import (
 )
 
 const (
-	recoveryDuration   = 5 * time.Minute
-	defLimit           = 100
-	randStr            = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&&*|+-="
-	patPrefix          = "pat"
-	patSecretSeparator = "_"
+	recoveryDuration = 5 * time.Minute
+	defLimit         = 100
 )
 
 var (
@@ -32,20 +26,12 @@ var (
 	errRetrieve  = errors.New("failed to retrieve key data")
 	errIdentify  = errors.New("failed to validate token")
 	errPlatform  = errors.New("invalid platform id")
-
-	errMalformedPAT        = errors.New("malformed personal access token")
-	errFailedToParseUUID   = errors.New("failed to parse string to UUID")
-	errInvalidLenFor2UUIDs = errors.New("invalid input length for 2 UUID, excepted 32 byte")
-	errRevokedPAT          = errors.New("revoked pat")
-	errCreatePAT           = errors.New("failed to create PAT")
-	errUpdatePAT           = errors.New("failed to update PAT")
-	errRetrievePAT         = errors.New("failed to retrieve PAT")
-	errDeletePAT           = errors.New("failed to delete PAT")
-	errInvalidScope        = errors.New("invalid scope")
 )
 
 // Authz represents a authorization service. It exposes
 // functionalities through `auth` to perform authorization.
+//
+//go:generate mockery --name Authz --output=./mocks --filename authz.go --quiet
 type Authz interface {
 	// Authorize checks authorization of the given `subject`. Basically,
 	// Authorize verifies that Is `subject` allowed to `relation` on
@@ -81,19 +67,17 @@ type Authn interface {
 // implementation, and all of its decorators (e.g. logging & metrics).
 // Token is a string value of the actual Key and is used to authenticate
 // an Auth service request.
+
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	Authn
 	Authz
-	PATS
 }
 
 var _ Service = (*service)(nil)
 
 type service struct {
 	keys               KeyRepository
-	pats               PATSRepository
-	cache              Cache
-	hasher             Hasher
 	idProvider         mitras.IDProvider
 	evaluator          policies.Evaluator
 	policysvc          policies.Service
@@ -101,24 +85,19 @@ type service struct {
 	loginDuration      time.Duration
 	refreshDuration    time.Duration
 	invitationDuration time.Duration
-	callback           CallBack
 }
 
 // New instantiates the auth service implementation.
-func New(keys KeyRepository, pats PATSRepository, cache Cache, hasher Hasher, idp mitras.IDProvider, tokenizer Tokenizer, policyEvaluator policies.Evaluator, policyService policies.Service, loginDuration, refreshDuration, invitationDuration time.Duration, callback CallBack) Service {
+func New(keys KeyRepository, idp mitras.IDProvider, tokenizer Tokenizer, policyEvaluator policies.Evaluator, policyService policies.Service, loginDuration, refreshDuration, invitationDuration time.Duration) Service {
 	return &service{
 		tokenizer:          tokenizer,
 		keys:               keys,
-		pats:               pats,
-		cache:              cache,
-		hasher:             hasher,
 		idProvider:         idp,
 		evaluator:          policyEvaluator,
 		policysvc:          policyService,
 		loginDuration:      loginDuration,
 		refreshDuration:    refreshDuration,
 		invitationDuration: invitationDuration,
-		callback:           callback,
 	}
 }
 
@@ -207,11 +186,6 @@ func (svc service) Authorize(ctx context.Context, pr policies.Policy) error {
 	if err := svc.checkPolicy(ctx, pr); err != nil {
 		return err
 	}
-
-	if err := svc.callback.Authorize(ctx, pr); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -456,301 +430,4 @@ func DecodeDomainUserID(domainUserID string) (string, string) {
 	default:
 		return "", ""
 	}
-}
-
-func (svc service) CreatePAT(ctx context.Context, token, name, description string, duration time.Duration) (PAT, error) {
-	key, err := svc.Identify(ctx, token)
-	if err != nil {
-		return PAT{}, err
-	}
-
-	id, err := svc.idProvider.ID()
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrCreateEntity, err)
-	}
-	secret, hash, err := svc.generateSecretAndHash(key.User, id)
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrCreateEntity, err)
-	}
-
-	now := time.Now()
-	pat := PAT{
-		ID:          id,
-		User:        key.User,
-		Name:        name,
-		Description: description,
-		Secret:      hash,
-		IssuedAt:    now,
-		ExpiresAt:   now.Add(duration),
-		Status:      ActiveStatus,
-		Revoked:     false,
-	}
-
-	if err := svc.pats.Save(ctx, pat); err != nil {
-		return PAT{}, errors.Wrap(errCreatePAT, err)
-	}
-	pat.Secret = secret
-
-	return pat, nil
-}
-
-func (svc service) UpdatePATName(ctx context.Context, token, patID, name string) (PAT, error) {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return PAT{}, err
-	}
-	pat, err := svc.pats.UpdateName(ctx, key.User, patID, name)
-	if err != nil {
-		return PAT{}, errors.Wrap(errUpdatePAT, err)
-	}
-	return pat, nil
-}
-
-func (svc service) UpdatePATDescription(ctx context.Context, token, patID, description string) (PAT, error) {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return PAT{}, err
-	}
-	pat, err := svc.pats.UpdateDescription(ctx, key.User, patID, description)
-	if err != nil {
-		return PAT{}, errors.Wrap(errUpdatePAT, err)
-	}
-	return pat, nil
-}
-
-func (svc service) RetrievePAT(ctx context.Context, token, patID string) (PAT, error) {
-	key, err := svc.Identify(ctx, token)
-	if err != nil {
-		return PAT{}, err
-	}
-	pat, err := svc.pats.Retrieve(ctx, key.User, patID)
-	if err != nil {
-		return PAT{}, errors.Wrap(errRetrievePAT, err)
-	}
-	return pat, nil
-}
-
-func (svc service) ListPATS(ctx context.Context, token string, pm PATSPageMeta) (PATSPage, error) {
-	key, err := svc.Identify(ctx, token)
-	if err != nil {
-		return PATSPage{}, err
-	}
-	patsPage, err := svc.pats.RetrieveAll(ctx, key.User, pm)
-	if err != nil {
-		return PATSPage{}, errors.Wrap(errRetrievePAT, err)
-	}
-	return patsPage, nil
-}
-
-func (svc service) DeletePAT(ctx context.Context, token, patID string) error {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return err
-	}
-	if err := svc.pats.Remove(ctx, key.User, patID); err != nil {
-		return errors.Wrap(errDeletePAT, err)
-	}
-	return nil
-}
-
-func (svc service) ResetPATSecret(ctx context.Context, token, patID string, duration time.Duration) (PAT, error) {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return PAT{}, err
-	}
-
-	// Generate new HashToken take place here
-	secret, hash, err := svc.generateSecretAndHash(key.User, patID)
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	pat, err := svc.pats.UpdateTokenHash(ctx, key.User, patID, hash, time.Now().Add(duration))
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-
-	if err := svc.pats.Reactivate(ctx, key.User, patID); err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-	pat.Secret = secret
-	pat.Status = ActiveStatus
-	pat.RevokedAt = time.Time{}
-	return pat, nil
-}
-
-func (svc service) RevokePATSecret(ctx context.Context, token, patID string) error {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return err
-	}
-
-	if err := svc.pats.Revoke(ctx, key.User, patID); err != nil {
-		return errors.Wrap(svcerr.ErrUpdateEntity, err)
-	}
-	return nil
-}
-
-func (svc service) RemoveAllPAT(ctx context.Context, token string) error {
-	key, err := svc.Identify(ctx, token)
-	if err != nil {
-		return err
-	}
-	if err := svc.pats.RemoveAllPAT(ctx, key.User); err != nil {
-		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-	return nil
-}
-
-func (svc service) AddScope(ctx context.Context, token, patID string, scopes []Scope) error {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return err
-	}
-
-	for i := range len(scopes) {
-		scopes[i].ID, err = svc.idProvider.ID()
-		if err != nil {
-			return errors.Wrap(svcerr.ErrCreateEntity, err)
-		}
-
-		scopes[i].PatID = patID
-	}
-
-	err = svc.pats.AddScope(ctx, key.User, scopes)
-	if err != nil {
-		return errors.Wrap(svcerr.ErrCreateEntity, err)
-	}
-	return nil
-}
-
-func (svc service) RemoveScope(ctx context.Context, token, patID string, scopesIDs ...string) error {
-	key, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return err
-	}
-
-	err = svc.pats.RemoveScope(ctx, key.User, scopesIDs...)
-	if err != nil {
-		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-	return nil
-}
-
-func (svc service) ListScopes(ctx context.Context, token string, pm ScopesPageMeta) (ScopesPage, error) {
-	_, err := svc.authnAuthzUserPAT(ctx, token, pm.PatID)
-	if err != nil {
-		return ScopesPage{}, err
-	}
-	patsPage, err := svc.pats.RetrieveScope(ctx, pm)
-	if err != nil {
-		return ScopesPage{}, errors.Wrap(errRetrievePAT, err)
-	}
-
-	return patsPage, nil
-}
-
-func (svc service) RemovePATAllScope(ctx context.Context, token, patID string) error {
-	_, err := svc.authnAuthzUserPAT(ctx, token, patID)
-	if err != nil {
-		return err
-	}
-	if err := svc.pats.RemoveAllScope(ctx, patID); err != nil {
-		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-	return nil
-}
-
-func (svc service) IdentifyPAT(ctx context.Context, secret string) (PAT, error) {
-	parts := strings.Split(secret, patSecretSeparator)
-	if len(parts) != 3 && parts[0] != patPrefix {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, errMalformedPAT)
-	}
-	userID, patID, err := decode(parts[1])
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, errMalformedPAT)
-	}
-	secretHash, revoked, expired, err := svc.pats.RetrieveSecretAndRevokeStatus(ctx, userID.String(), patID.String())
-	if err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, err)
-	}
-	if revoked {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, errRevokedPAT)
-	}
-	if expired {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, ErrExpiry)
-	}
-	if err := svc.hasher.Compare(secret, secretHash); err != nil {
-		return PAT{}, errors.Wrap(svcerr.ErrAuthentication, err)
-	}
-	return PAT{ID: patID.String(), User: userID.String()}, nil
-}
-
-func (svc service) AuthorizePAT(ctx context.Context, userID, patID string, entityType EntityType, optionalDomainID string, operation Operation, entityID string) error {
-	if err := svc.pats.CheckScope(ctx, userID, patID, entityType, optionalDomainID, operation, entityID); err != nil {
-		return errors.Wrap(svcerr.ErrAuthorization, err)
-	}
-
-	return nil
-}
-
-func (svc service) generateSecretAndHash(userID, patID string) (string, string, error) {
-	uID, err := uuid.Parse(userID)
-	if err != nil {
-		return "", "", errors.Wrap(errFailedToParseUUID, err)
-	}
-	pID, err := uuid.Parse(patID)
-	if err != nil {
-		return "", "", errors.Wrap(errFailedToParseUUID, err)
-	}
-
-	secret := patPrefix + patSecretSeparator + encode(uID, pID) + patSecretSeparator + generateRandomString(100)
-	secretHash, err := svc.hasher.Hash(secret)
-	return secret, secretHash, err
-}
-
-func encode(userID, patID uuid.UUID) string {
-	c := append(userID[:], patID[:]...)
-	return base64.StdEncoding.EncodeToString(c)
-}
-
-func decode(encoded string) (uuid.UUID, uuid.UUID, error) {
-	data, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return uuid.Nil, uuid.Nil, err
-	}
-
-	if len(data) != 32 {
-		return uuid.Nil, uuid.Nil, errInvalidLenFor2UUIDs
-	}
-
-	var userID, patID uuid.UUID
-	copy(userID[:], data[:16])
-	copy(patID[:], data[16:])
-
-	return userID, patID, nil
-}
-
-func generateRandomString(n int) string {
-	letterRunes := []rune(randStr)
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
-}
-
-func (svc service) authnAuthzUserPAT(ctx context.Context, token, patID string) (Key, error) {
-	key, err := svc.Identify(ctx, token)
-	if err != nil {
-		return Key{}, err
-	}
-
-	_, err = svc.pats.Retrieve(ctx, key.User, patID)
-	if err != nil {
-		return Key{}, errors.Wrap(svcerr.ErrAuthorization, err)
-	}
-
-	return key, nil
 }

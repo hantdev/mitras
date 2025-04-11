@@ -3,8 +3,8 @@ package grpc
 import (
 	"fmt"
 
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/auth"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"google.golang.org/grpc/codes"
@@ -22,9 +22,7 @@ func EncodeError(err error) error {
 		err == apiutil.ErrMissingMemberType,
 		err == apiutil.ErrMissingPolicySub,
 		err == apiutil.ErrMissingPolicyObj,
-		err == apiutil.ErrMalformedPolicyAct,
-		err == apiutil.ErrMissingUserID,
-		err == apiutil.ErrMissingPATID:
+		err == apiutil.ErrMalformedPolicyAct:
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Contains(err, svcerr.ErrAuthentication),
 		errors.Contains(err, auth.ErrKeyExpired),
