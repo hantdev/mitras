@@ -90,6 +90,14 @@ func setFlags(rootCmd *cobra.Command) *cobra.Command {
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
+		&cli.State,
+		"state",
+		"z",
+		"",
+		"Bootstrap state query parameter",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
 		&cli.Topic,
 		"topic",
 		"T",

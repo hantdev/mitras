@@ -7,22 +7,22 @@ import (
 
 var cmdInvitations = []cobra.Command{
 	{
-		Use:   "send <user_id> <domain_id> <role_id> <user_auth_token>",
+		Use:   "send <user_id> <domain_id> <relation> <user_auth_token>",
 		Short: "Send invitation",
 		Long: "Send invitation to user\n" +
 			"For example:\n" +
-			"\tmitras-cli invitations send 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a ba4c904c-e6d4-4978-9417-1694aac6793e $USER_AUTH_TOKEN\n",
+			"\tmitras-cli invitations send 39f97daf-d6b6-40f4-b229-2697be8006ef 4ef09eff-d500-4d56-b04f-d23a512d6f2a administrator $USER_AUTH_TOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 4 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 			inv := smqsdk.Invitation{
-				InviteeUserID: args[0],
-				DomainID:      args[1],
-				RoleID:        args[2],
+				UserID:   args[0],
+				DomainID: args[1],
+				Relation: args[2],
 			}
-			if err := sdk.SendInvitation(cmd.Context(), inv, args[3]); err != nil {
+			if err := sdk.SendInvitation(inv, args[3]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -50,7 +50,7 @@ var cmdInvitations = []cobra.Command{
 				Limit:    Limit,
 			}
 			if args[0] == all {
-				l, err := sdk.Invitations(cmd.Context(), pageMetadata, args[1])
+				l, err := sdk.Invitations(pageMetadata, args[1])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -58,7 +58,7 @@ var cmdInvitations = []cobra.Command{
 				logJSONCmd(*cmd, l)
 				return
 			}
-			u, err := sdk.Invitation(cmd.Context(), args[0], args[1], args[2])
+			u, err := sdk.Invitation(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -79,7 +79,7 @@ var cmdInvitations = []cobra.Command{
 				return
 			}
 
-			if err := sdk.AcceptInvitation(cmd.Context(), args[0], args[1]); err != nil {
+			if err := sdk.AcceptInvitation(args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -99,7 +99,7 @@ var cmdInvitations = []cobra.Command{
 				return
 			}
 
-			if err := sdk.RejectInvitation(cmd.Context(), args[0], args[1]); err != nil {
+			if err := sdk.RejectInvitation(args[0], args[1]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
@@ -119,7 +119,7 @@ var cmdInvitations = []cobra.Command{
 				return
 			}
 
-			if err := sdk.DeleteInvitation(cmd.Context(), args[0], args[1], args[2]); err != nil {
+			if err := sdk.DeleteInvitation(args[0], args[1], args[2]); err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}

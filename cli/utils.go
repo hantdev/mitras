@@ -74,6 +74,14 @@ func logOKCmd(cmd cobra.Command) {
 	fmt.Fprintf(cmd.OutOrStdout(), "\n%s\n\n", color.BlueString("ok"))
 }
 
+func logCreatedCmd(cmd cobra.Command, e string) {
+	if RawOutput {
+		fmt.Fprintln(cmd.OutOrStdout(), e)
+	} else {
+		fmt.Fprintf(cmd.OutOrStdout(), color.BlueString("\ncreated: %s\n\n"), e)
+	}
+}
+
 func logRevokedTimeCmd(cmd cobra.Command, t time.Time) {
 	if RawOutput {
 		fmt.Fprintln(cmd.OutOrStdout(), t)

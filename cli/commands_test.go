@@ -7,7 +7,6 @@ const (
 	getCmd     = "get"
 	enableCmd  = "enable"
 	disableCmd = "disable"
-	freezeCmd  = "freeze"
 	updCmd     = "update"
 	delCmd     = "delete"
 	rmCmd      = "remove"
@@ -34,6 +33,17 @@ const (
 	unshrCmd   = "unshare"
 )
 
+// Groups and channels commands
+const (
+	chansCmd    = "channels"
+	grpCmd      = "groups"
+	childCmd    = "children"
+	parentCmd   = "parents"
+	usrCmd      = "users"
+	assignCmd   = "assign"
+	unassignCmd = "unassign"
+)
+
 // Certs commands
 const (
 	revokeCmd = "revoke"
@@ -44,6 +54,12 @@ const (
 const (
 	sendCmd = "send"
 	readCmd = "read"
+)
+
+// Bootstrap commands
+const (
+	whitelistCmd = "whitelist"
+	bootStrapCmd = "bootstrap"
 )
 
 // Invitations commands
