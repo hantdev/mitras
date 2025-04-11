@@ -1,5 +1,5 @@
 // Package coap contains the domain concept definitions needed to support
-// Mitras CoAP adapter service functionality. All constant values are taken
+// mitras CoAP adapter service functionality. All constant values are taken
 // from RFC, and could be adjusted based on specific use case.
 package coap
 
@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -118,10 +118,9 @@ func (svc *adapterService) Subscribe(ctx context.Context, key, chanID, subtopic 
 
 	authzc := newAuthzClient(clientID, chanID, subtopic, svc.channels, c)
 	subCfg := messaging.SubscriberConfig{
-		ID:       c.Token(),
-		ClientID: clientID,
-		Topic:    subject,
-		Handler:  authzc,
+		ID:      c.Token(),
+		Topic:   subject,
+		Handler: authzc,
 	}
 	return svc.pubsub.Subscribe(ctx, subCfg)
 }
