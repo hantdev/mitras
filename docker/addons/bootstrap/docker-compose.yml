@@ -1,0 +1,82 @@
+# This docker-compose file contains optional bootstrap services. Since it's optional, this file is
+# dependent of docker-compose file from <project_root>/docker. In order to run this services, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/bootstrap/docker-compose.yml up
+# from project root.
+
+networks:
+  mitras-base-net:
+
+volumes:
+  mitras-bootstrap-db-volume:
+
+services:
+  bootstrap-db:
+    image: postgres:16.2-alpine
+    container_name: mitras-bootstrap-db
+    restart: on-failure
+    environment:
+      POSTGRES_USER: ${MITRAS_BOOTSTRAP_DB_USER}
+      POSTGRES_PASSWORD: ${MITRAS_BOOTSTRAP_DB_PASS}
+      POSTGRES_DB: ${MITRAS_BOOTSTRAP_DB_NAME}
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-bootstrap-db-volume:/var/lib/postgresql/data
+
+  bootstrap:
+    image: mitras/bootstrap:${MITRAS_RELEASE_TAG}
+    container_name: mitras-bootstrap
+    depends_on:
+      - bootstrap-db
+    restart: on-failure
+    ports:
+      - ${MITRAS_BOOTSTRAP_HTTP_PORT}:${MITRAS_BOOTSTRAP_HTTP_PORT}
+    environment:
+      MITRAS_BOOTSTRAP_LOG_LEVEL: ${MITRAS_BOOTSTRAP_LOG_LEVEL}
+      MITRAS_BOOTSTRAP_ENCRYPT_KEY: ${MITRAS_BOOTSTRAP_ENCRYPT_KEY}
+      MITRAS_BOOTSTRAP_EVENT_CONSUMER: ${MITRAS_BOOTSTRAP_EVENT_CONSUMER}
+      MITRAS_ES_URL: ${MITRAS_ES_URL}
+      MITRAS_BOOTSTRAP_HTTP_HOST: ${MITRAS_BOOTSTRAP_HTTP_HOST}
+      MITRAS_BOOTSTRAP_HTTP_PORT: ${MITRAS_BOOTSTRAP_HTTP_PORT}
+      MITRAS_BOOTSTRAP_HTTP_SERVER_CERT: ${MITRAS_BOOTSTRAP_HTTP_SERVER_CERT}
+      MITRAS_BOOTSTRAP_HTTP_SERVER_KEY: ${MITRAS_BOOTSTRAP_HTTP_SERVER_KEY}
+      MITRAS_BOOTSTRAP_DB_HOST: ${MITRAS_BOOTSTRAP_DB_HOST}
+      MITRAS_BOOTSTRAP_DB_PORT: ${MITRAS_BOOTSTRAP_DB_PORT}
+      MITRAS_BOOTSTRAP_DB_USER: ${MITRAS_BOOTSTRAP_DB_USER}
+      MITRAS_BOOTSTRAP_DB_PASS: ${MITRAS_BOOTSTRAP_DB_PASS}
+      MITRAS_BOOTSTRAP_DB_NAME: ${MITRAS_BOOTSTRAP_DB_NAME}
+      MITRAS_BOOTSTRAP_DB_SSL_MODE: ${MITRAS_BOOTSTRAP_DB_SSL_MODE}
+      MITRAS_BOOTSTRAP_DB_SSL_CERT: ${MITRAS_BOOTSTRAP_DB_SSL_CERT}
+      MITRAS_BOOTSTRAP_DB_SSL_KEY: ${MITRAS_BOOTSTRAP_DB_SSL_KEY}
+      MITRAS_BOOTSTRAP_DB_SSL_ROOT_CERT: ${MITRAS_BOOTSTRAP_DB_SSL_ROOT_CERT}
+      MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
+      MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
+      MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
+      MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
+      MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
+      MITRAS_CLIENTS_URL: ${MITRAS_CLIENTS_URL}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_BOOTSTRAP_INSTANCE_ID: ${MITRAS_BOOTSTRAP_INSTANCE_ID}
+      MITRAS_SPICEDB_PRE_SHARED_KEY: ${MITRAS_SPICEDB_PRE_SHARED_KEY}
+      MITRAS_SPICEDB_HOST: ${MITRAS_SPICEDB_HOST}
+      MITRAS_SPICEDB_PORT: ${MITRAS_SPICEDB_PORT}
+    networks:
+      - mitras-base-net
+    volumes:
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_CERT:-./ssl/certs/dummy/client_cert}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_KEY:-./ssl/certs/dummy/client_key}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:-./ssl/certs/dummy/server_ca}
+        target: /auth-grpc-server-ca${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true

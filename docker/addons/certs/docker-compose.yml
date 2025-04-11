@@ -1,6 +1,6 @@
 # This docker-compose file contains optional certs services. Since it's optional, this file is
 # dependent of docker-compose file from <project_root>/docker. In order to run this services, execute command:
-# docker compose -f docker/docker-compose.yaml -f docker/addons/certs/docker-compose.yaml up
+# docker compose -f docker/docker-compose.yml -f docker/addons/certs/docker-compose.yml up
 # from project root.
 
 networks:
@@ -93,7 +93,7 @@ services:
       - mitras-certs-db-volume:/var/lib/postgresql/data
 
   am-certs:
-    image: ghcr.io/hantdev/certs:${MITRAS_RELEASE_TAG}
+    image: ghcr.io/absmach/certs:${MITRAS_RELEASE_TAG}
     container_name: mitras-am-certs
     depends_on:
       - am-certs-db
@@ -115,7 +115,7 @@ services:
       AM_JAEGER_URL: ${MITRAS_JAEGER_URL}
       AM_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
     volumes:
-     - ./config.yaml:/config/config.yaml
+     - ./config.yml:/config/config.yml
     ports:
       - 9010:9010
       - 7012:7012

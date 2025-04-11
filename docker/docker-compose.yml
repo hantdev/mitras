@@ -14,11 +14,9 @@ volumes:
   mitras-mqtt-broker-volume:
   mitras-spicedb-db-volume:
   mitras-auth-db-volume:
-  mitras-pat-db-volume:
   mitras-domains-db-volume:
-  mitras-domains-redis-volume:
+  mitras-invitations-db-volume:
   mitras-ui-db-volume:
-  mitras-auth-redis-volume:
 
 services:
   spicedb:
@@ -82,17 +80,8 @@ services:
     volumes:
       - mitras-auth-db-volume:/var/lib/postgresql/data
 
-  auth-redis:
-    image: redis:7.2.4-alpine
-    container_name: mitras-auth-redis
-    restart: on-failure
-    networks:
-      - mitras-base-net
-    volumes:
-      - mitras-auth-redis-volume:/data
-
   auth:
-    image: hantdev1/auth:${MITRAS_RELEASE_TAG}
+    image: mitras/auth:${MITRAS_RELEASE_TAG}
     container_name: mitras-auth
     depends_on:
       - auth-db
@@ -137,16 +126,6 @@ services:
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
       MITRAS_AUTH_ADAPTER_INSTANCE_ID: ${MITRAS_AUTH_ADAPTER_INSTANCE_ID}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
-      MITRAS_AUTH_CACHE_URL: ${MITRAS_AUTH_CACHE_URL}
-      MITRAS_AUTH_CACHE_KEY_DURATION: ${MITRAS_AUTH_CACHE_KEY_DURATION}
-      MITRAS_AUTH_CALLOUT_URLS: ${MITRAS_AUTH_CALLOUT_URLS}
-      MITRAS_AUTH_CALLOUT_METHOD: ${MITRAS_AUTH_CALLOUT_METHOD}
-      MITRAS_AUTH_CALLOUT_TLS_VERIFICATION: ${MITRAS_AUTH_CALLOUT_TLS_VERIFICATION}
-      MITRAS_AUTH_CALLOUT_TIMEOUT: ${MITRAS_AUTH_CALLOUT_TIMEOUT}
-      MITRAS_AUTH_CALLOUT_CA_CERT: ${MITRAS_AUTH_CALLOUT_CA_CERT}
-      MITRAS_AUTH_CALLOUT_CERT: ${MITRAS_AUTH_CALLOUT_CERT}
-      MITRAS_AUTH_CALLOUT_KEY: ${MITRAS_AUTH_CALLOUT_KEY}
-      MITRAS_AUTH_CALLOUT_INVOKE_PERMISSIONS: ${MITRAS_AUTH_CALLOUT_INVOKE_PERMISSIONS}
     ports:
       - ${MITRAS_AUTH_HTTP_PORT}:${MITRAS_AUTH_HTTP_PORT}
       - ${MITRAS_AUTH_GRPC_PORT}:${MITRAS_AUTH_GRPC_PORT}
@@ -154,7 +133,6 @@ services:
       - mitras-base-net
     volumes:
       - ./spicedb/schema.zed:${MITRAS_SPICEDB_SCHEMA_FILE}
-      - mitras-pat-db-volume:/mitras-data
       # Auth gRPC mTLS server certificates
       - type: bind
         source: ${MITRAS_AUTH_GRPC_SERVER_CERT:-ssl/certs/dummy/server_cert}
@@ -176,22 +154,6 @@ services:
         target: /auth-grpc-client-ca${MITRAS_AUTH_GRPC_CLIENT_CA_CERTS:+.crt}
         bind:
           create_host_path: true
-      # Auth Callout Client Certificates
-      - type: bind
-        source: ${MITRAS_AUTH_CALLOUT_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /auth-callout-client${MITRAS_AUTH_CALLOUT_CLIENT_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_AUTH_CALLOUT_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /auth-callout-client${MITRAS_AUTH_CALLOUT_CLIENT_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_AUTH_CALLOUT_CLIENT_CA_CERTS:-ssl/certs/dummy/client_ca_certs}
-        target: /auth-callout-client-ca${MITRAS_AUTH_CALLOUT_CLIENT_CA_CERTS:+.crt}
-        bind:
-          create_host_path: true
 
   domains-db:
     image: postgres:16.2-alpine
@@ -208,17 +170,8 @@ services:
     volumes:
       - mitras-domains-db-volume:/var/lib/postgresql/data
 
-  domains-redis:
-    image: redis:7.2.4-alpine
-    container_name: mitras-domains-redis
-    restart: on-failure
-    networks:
-      - mitras-base-net
-    volumes:
-      - mitras-domains-redis-volume:/data
-
   domains:
-    image: hantdev1/domains:${MITRAS_RELEASE_TAG}
+    image: mitras/domains:${MITRAS_RELEASE_TAG}
     container_name: mitras-domains
     depends_on:
       - domains-db
@@ -256,8 +209,6 @@ services:
       MITRAS_DOMAINS_DB_SSL_ROOT_CERT: ${MITRAS_DOMAINS_DB_SSL_ROOT_CERT}
       MITRAS_DOMAINS_INSTANCE_ID: ${MITRAS_DOMAINS_INSTANCE_ID}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
-      MITRAS_DOMAINS_CACHE_URL: ${MITRAS_DOMAINS_CACHE_URL}
-      MITRAS_DOMAINS_CACHE_KEY_DURATION: ${MITRAS_DOMAINS_CACHE_KEY_DURATION}
       MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
       MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
       MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
@@ -274,11 +225,11 @@ services:
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
       MITRAS_CHANNELS_GRPC_CLIENT_KEY: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+/channels-grpc-client.key}
       MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+/channels-grpc-server-ca.crt}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_R_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
@@ -310,6 +261,63 @@ services:
         target: /auth-grpc-client-ca${MITRAS_DOMAINS_GRPC_CLIENT_CA_CERTS:+.crt}
         bind:
           create_host_path: true
+
+  invitations-db:
+    image: postgres:16.2-alpine
+    container_name: mitras-invitations-db
+    restart: on-failure
+    command: postgres -c "max_connections=${MITRAS_POSTGRES_MAX_CONNECTIONS}"
+    environment:
+      POSTGRES_USER: ${MITRAS_INVITATIONS_DB_USER}
+      POSTGRES_PASSWORD: ${MITRAS_INVITATIONS_DB_PASS}
+      POSTGRES_DB: ${MITRAS_INVITATIONS_DB_NAME}
+      MITRAS_POSTGRES_MAX_CONNECTIONS: ${MITRAS_POSTGRES_MAX_CONNECTIONS}
+    ports:
+      - 6021:5432
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-invitations-db-volume:/var/lib/postgresql/data
+
+  invitations:
+    image: mitras/invitations:${MITRAS_RELEASE_TAG}
+    container_name: mitras-invitations
+    restart: on-failure
+    depends_on:
+      - auth
+      - invitations-db
+    environment:
+      MITRAS_INVITATIONS_LOG_LEVEL: ${MITRAS_INVITATIONS_LOG_LEVEL}
+      MITRAS_USERS_URL: ${MITRAS_USERS_URL}
+      MITRAS_DOMAINS_URL: ${MITRAS_DOMAINS_URL}
+      MITRAS_INVITATIONS_HTTP_HOST: ${MITRAS_INVITATIONS_HTTP_HOST}
+      MITRAS_INVITATIONS_HTTP_PORT: ${MITRAS_INVITATIONS_HTTP_PORT}
+      MITRAS_INVITATIONS_HTTP_SERVER_CERT: ${MITRAS_INVITATIONS_HTTP_SERVER_CERT}
+      MITRAS_INVITATIONS_HTTP_SERVER_KEY: ${MITRAS_INVITATIONS_HTTP_SERVER_KEY}
+      MITRAS_INVITATIONS_DB_HOST: ${MITRAS_INVITATIONS_DB_HOST}
+      MITRAS_INVITATIONS_DB_USER: ${MITRAS_INVITATIONS_DB_USER}
+      MITRAS_INVITATIONS_DB_PASS: ${MITRAS_INVITATIONS_DB_PASS}
+      MITRAS_INVITATIONS_DB_PORT: ${MITRAS_INVITATIONS_DB_PORT}
+      MITRAS_INVITATIONS_DB_NAME: ${MITRAS_INVITATIONS_DB_NAME}
+      MITRAS_INVITATIONS_DB_SSL_MODE: ${MITRAS_INVITATIONS_DB_SSL_MODE}
+      MITRAS_INVITATIONS_DB_SSL_CERT: ${MITRAS_INVITATIONS_DB_SSL_CERT}
+      MITRAS_INVITATIONS_DB_SSL_KEY: ${MITRAS_INVITATIONS_DB_SSL_KEY}
+      MITRAS_INVITATIONS_DB_SSL_ROOT_CERT: ${MITRAS_INVITATIONS_DB_SSL_ROOT_CERT}
+      MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
+      MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
+      MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
+      MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
+      MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_INVITATIONS_INSTANCE_ID: ${MITRAS_INVITATIONS_INSTANCE_ID}
+    ports:
+      - ${MITRAS_INVITATIONS_HTTP_PORT}:${MITRAS_INVITATIONS_HTTP_PORT}
+    networks:
+      - mitras-base-net
+    volumes:
+      # Auth gRPC client certificates
       - type: bind
         source: ${MITRAS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
         target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_CERT:+.crt}
@@ -392,7 +400,7 @@ services:
       - mitras-clients-redis-volume:/data
 
   clients:
-    image: hantdev1/clients:${MITRAS_RELEASE_TAG}
+    image: mitras/clients:${MITRAS_RELEASE_TAG}
     container_name: mitras-clients
     depends_on:
       - clients-db
@@ -407,15 +415,15 @@ services:
       MITRAS_CLIENTS_CACHE_KEY_DURATION: ${MITRAS_CLIENTS_CACHE_KEY_DURATION}
       MITRAS_CLIENTS_HTTP_HOST: ${MITRAS_CLIENTS_HTTP_HOST}
       MITRAS_CLIENTS_HTTP_PORT: ${MITRAS_CLIENTS_HTTP_PORT}
-      MITRAS_CLIENTS_GRPC_HOST: ${MITRAS_CLIENTS_GRPC_HOST}
-      MITRAS_CLIENTS_GRPC_PORT: ${MITRAS_CLIENTS_GRPC_PORT}
+      MITRAS_CLIENTS_AUTH_GRPC_HOST: ${MITRAS_CLIENTS_AUTH_GRPC_HOST}
+      MITRAS_CLIENTS_AUTH_GRPC_PORT: ${MITRAS_CLIENTS_AUTH_GRPC_PORT}
       ## Compose supports parameter expansion in environment,
       ## Eg: ${VAR:+replacement} or ${VAR+replacement} -> replacement if VAR is set and non-empty, otherwise empty
       ## Eg :${VAR:-default} or ${VAR-default}  -> value of VAR if set and non-empty, otherwise default
-      MITRAS_CLIENTS_GRPC_SERVER_CERT: ${MITRAS_CLIENTS_GRPC_SERVER_CERT:+/clients-grpc-server.crt}
-      MITRAS_CLIENTS_GRPC_R_KEY: ${MITRAS_CLIENTS_GRPC_SERVER_KEY:+/clients-grpc-server.key}
-      MITRAS_CLIENTS_GRPC_R_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_CA_CERTS: ${MITRAS_CLIENTS_GRPC_CLIENT_CA_CERTS:+/clients-grpc-client-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CERT:+/clients-grpc-server.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_KEY:+/clients-grpc-server.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CA_CERTS:+/clients-grpc-client-ca.crt}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
       MITRAS_CLIENTS_CACHE_URL: ${MITRAS_CLIENTS_CACHE_URL}
       MITRAS_CLIENTS_DB_HOST: ${MITRAS_CLIENTS_DB_HOST}
@@ -444,44 +452,37 @@ services:
       MITRAS_GROUPS_GRPC_CLIENT_CERT: ${MITRAS_GROUPS_GRPC_CLIENT_CERT:+/groups-grpc-client.crt}
       MITRAS_GROUPS_GRPC_CLIENT_KEY: ${MITRAS_GROUPS_GRPC_CLIENT_KEY:+/groups-grpc-client.key}
       MITRAS_GROUPS_GRPC_SERVER_CA_CERTS: ${MITRAS_GROUPS_GRPC_SERVER_CA_CERTS:+/groups-grpc-server-ca.crt}
-      MITRAS_DOMAINS_GRPC_URL: ${MITRAS_DOMAINS_GRPC_URL}
-      MITRAS_DOMAINS_GRPC_TIMEOUT: ${MITRAS_DOMAINS_GRPC_TIMEOUT}
-      MITRAS_DOMAINS_GRPC_CLIENT_CERT: ${MITRAS_DOMAINS_GRPC_CLIENT_CERT:+/domains-grpc-client.crt}
-      MITRAS_DOMAINS_GRPC_CLIENT_KEY: ${MITRAS_DOMAINS_GRPC_CLIENT_KEY:+/domains-grpc-client.key}
-      MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS: ${MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS:+/domains-grpc-server-ca.crt}
       MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
       MITRAS_SPICEDB_PRE_SHARED_KEY: ${MITRAS_SPICEDB_PRE_SHARED_KEY}
       MITRAS_SPICEDB_HOST: ${MITRAS_SPICEDB_HOST}
       MITRAS_SPICEDB_PORT: ${MITRAS_SPICEDB_PORT}
-      MITRAS_SPICEDB_SCHEMA_FILE: ${MITRAS_SPICEDB_SCHEMA_FILE}
     ports:
       - ${MITRAS_CLIENTS_HTTP_PORT}:${MITRAS_CLIENTS_HTTP_PORT}
-      - ${MITRAS_CLIENTS_GRPC_PORT}:${MITRAS_CLIENTS_GRPC_PORT}
+      - ${MITRAS_CLIENTS_AUTH_GRPC_PORT}:${MITRAS_CLIENTS_AUTH_GRPC_PORT}
     networks:
       - mitras-base-net
     volumes:
-      - ./spicedb/schema.zed:${MITRAS_SPICEDB_SCHEMA_FILE}
       # Clients gRPC server certificates
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CERT:-ssl/certs/dummy/server_cert}
-        target: /clients-grpc-server${MITRAS_CLIENTS_GRPC_SERVER_CERT:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CERT:-ssl/certs/dummy/server_cert}
+        target: /clients-grpc-server${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_KEY:-ssl/certs/dummy/server_key}
-        target: /clients-grpc-server${MITRAS_CLIENTS_GRPC_SERVER_KEY:+.key}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_KEY:-ssl/certs/dummy/server_key}
+        target: /clients-grpc-server${MITRAS_CLIENTS_AUTH_GRPC_SERVER_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca_certs}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca_certs}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CA_CERTS:-ssl/certs/dummy/client_ca_certs}
-        target: /clients-grpc-client-ca${MITRAS_CLIENTS_GRPC_CLIENT_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CA_CERTS:-ssl/certs/dummy/client_ca_certs}
+        target: /clients-grpc-client-ca${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Auth gRPC client certificates
@@ -516,22 +517,6 @@ services:
         target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
-      # Group gRPC client certificates
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /groups-grpc-client${MITRAS_GROUPS_GRPC_CLIENT_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /groups-grpc-client${MITRAS_GROUPS_GRPC_CLIENT_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_SERVER_CERT:-ssl/certs/dummy/server_ca}
-        target: /groups-grpc-server-ca${MITRAS_GROUPS_GRPC_SERVER_CERT:+.crt}
-        bind:
-          create_host_path: true
 
   channels-db:
     image: postgres:16.2-alpine
@@ -551,7 +536,7 @@ services:
       - mitras-channels-db-volume:/var/lib/postgresql/data
 
   channels:
-    image: hantdev1/channels:${MITRAS_RELEASE_TAG}
+    image: mitras/channels:${MITRAS_RELEASE_TAG}
     container_name: mitras-channels
     depends_on:
       - channels-db
@@ -587,21 +572,16 @@ services:
       MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
       MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
       MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_GROUPS_GRPC_URL: ${MITRAS_GROUPS_GRPC_URL}
       MITRAS_GROUPS_GRPC_TIMEOUT: ${MITRAS_GROUPS_GRPC_TIMEOUT}
       MITRAS_GROUPS_GRPC_CLIENT_CERT: ${MITRAS_GROUPS_GRPC_CLIENT_CERT:+/groups-grpc-client.crt}
       MITRAS_GROUPS_GRPC_CLIENT_KEY: ${MITRAS_GROUPS_GRPC_CLIENT_KEY:+/groups-grpc-client.key}
       MITRAS_GROUPS_GRPC_SERVER_CA_CERTS: ${MITRAS_GROUPS_GRPC_SERVER_CA_CERTS:+/groups-grpc-server-ca.crt}
-      MITRAS_DOMAINS_GRPC_URL: ${MITRAS_DOMAINS_GRPC_URL}
-      MITRAS_DOMAINS_GRPC_TIMEOUT: ${MITRAS_DOMAINS_GRPC_TIMEOUT}
-      MITRAS_DOMAINS_GRPC_CLIENT_CERT: ${MITRAS_DOMAINS_GRPC_CLIENT_CERT:+/domains-grpc-client.crt}
-      MITRAS_DOMAINS_GRPC_CLIENT_KEY: ${MITRAS_DOMAINS_GRPC_CLIENT_KEY:+/domains-grpc-client.key}
-      MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS: ${MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS:+/domains-grpc-server-ca.crt}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
       MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
@@ -609,14 +589,12 @@ services:
       MITRAS_SPICEDB_PRE_SHARED_KEY: ${MITRAS_SPICEDB_PRE_SHARED_KEY}
       MITRAS_SPICEDB_HOST: ${MITRAS_SPICEDB_HOST}
       MITRAS_SPICEDB_PORT: ${MITRAS_SPICEDB_PORT}
-      MITRAS_SPICEDB_SCHEMA_FILE: ${MITRAS_SPICEDB_SCHEMA_FILE}
     ports:
       - ${MITRAS_CHANNELS_HTTP_PORT}:${MITRAS_CHANNELS_HTTP_PORT}
       - ${MITRAS_CHANNELS_GRPC_PORT}:${MITRAS_CHANNELS_GRPC_PORT}
     networks:
       - mitras-base-net
     volumes:
-      - ./spicedb/schema.zed:${MITRAS_SPICEDB_SCHEMA_FILE}
       # Auth gRPC client certificates
       - type: bind
         source: ${MITRAS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
@@ -631,66 +609,6 @@ services:
       - type: bind
         source: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
         target: /auth-grpc-server-ca${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CERT:-ssl/certs/dummy/server_ca}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /groups-grpc-client${MITRAS_GROUPS_GRPC_CLIENT_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /groups-grpc-client${MITRAS_GROUPS_GRPC_CLIENT_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_GROUPS_GRPC_SERVER_CERT:-ssl/certs/dummy/server_ca}
-        target: /groups-grpc-server-ca${MITRAS_GROUPS_GRPC_SERVER_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CERT:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server${MITRAS_CHANNELS_GRPC_SERVER_CERT:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_KEY:-ssl/certs/dummy/server_key}
-        target: /channels-grpc-server${MITRAS_CHANNELS_GRPC_SERVER_KEY:+.key}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CA_CERTS:-ssl/certs/dummy/client_ca}
-        target: /channels-grpc-client-ca${MITRAS_CHANNELS_GRPC_CLIENT_CA_CERTS:+.crt}
         bind:
           create_host_path: true
 
@@ -712,7 +630,7 @@ services:
       - mitras-users-db-volume:/var/lib/postgresql/data
 
   users:
-    image: hantdev1/users:${MITRAS_RELEASE_TAG}
+    image: mitras/users:${MITRAS_RELEASE_TAG}
     container_name: mitras-users
     depends_on:
       - users-db
@@ -800,6 +718,7 @@ services:
         bind:
           create_host_path: true
 
+
   groups-db:
     image: postgres:16.2-alpine
     container_name: mitras-groups-db
@@ -818,7 +737,7 @@ services:
       - mitras-groups-db-volume:/var/lib/postgresql/data
 
   groups:
-    image: hantdev1/groups:${MITRAS_RELEASE_TAG}
+    image: mitras/groups:${MITRAS_RELEASE_TAG}
     container_name: mitras-groups
     depends_on:
       - groups-db
@@ -855,16 +774,11 @@ services:
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
       MITRAS_CHANNELS_GRPC_CLIENT_KEY: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+/channels-grpc-client.key}
       MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+/channels-grpc-server-ca.crt}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
-      MITRAS_DOMAINS_GRPC_URL: ${MITRAS_DOMAINS_GRPC_URL}
-      MITRAS_DOMAINS_GRPC_TIMEOUT: ${MITRAS_DOMAINS_GRPC_TIMEOUT}
-      MITRAS_DOMAINS_GRPC_CLIENT_CERT: ${MITRAS_DOMAINS_GRPC_CLIENT_CERT:+/domains-grpc-client.crt}
-      MITRAS_DOMAINS_GRPC_CLIENT_KEY: ${MITRAS_DOMAINS_GRPC_CLIENT_KEY:+/domains-grpc-client.key}
-      MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS: ${MITRAS_DOMAINS_GRPC_SERVER_CA_CERTS:+/domains-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
       MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
@@ -902,8 +816,9 @@ services:
         bind:
           create_host_path: true
 
+
   jaeger:
-    image: jaegertracing/all-in-one:1.66.0
+    image: jaegertracing/all-in-one:1.60
     container_name: mitras-jaeger
     environment:
       COLLECTOR_OTLP_ENABLED: ${MITRAS_JAEGER_COLLECTOR_OTLP_ENABLED}
@@ -915,11 +830,11 @@ services:
       - mitras-base-net
 
   mqtt-adapter:
-    image: hantdev1/mqtt:${MITRAS_RELEASE_TAG}
+    image: mitras/mqtt:${MITRAS_RELEASE_TAG}
     container_name: mitras-mqtt
     depends_on:
       - clients
-      - rabbitmq
+      - vernemq
       - nats
     restart: on-failure
     environment:
@@ -927,8 +842,6 @@ services:
       MITRAS_MQTT_ADAPTER_MQTT_PORT: ${MITRAS_MQTT_ADAPTER_MQTT_PORT}
       MITRAS_MQTT_ADAPTER_MQTT_TARGET_HOST: ${MITRAS_MQTT_ADAPTER_MQTT_TARGET_HOST}
       MITRAS_MQTT_ADAPTER_MQTT_TARGET_PORT: ${MITRAS_MQTT_ADAPTER_MQTT_TARGET_PORT}
-      MITRAS_MQTT_ADAPTER_MQTT_TARGET_USERNAME: ${MITRAS_MQTT_ADAPTER_MQTT_TARGET_USERNAME}
-      MITRAS_MQTT_ADAPTER_MQTT_TARGET_PASSWORD: ${MITRAS_MQTT_ADAPTER_MQTT_TARGET_PASSWORD}
       MITRAS_MQTT_ADAPTER_FORWARDER_TIMEOUT: ${MITRAS_MQTT_ADAPTER_FORWARDER_TIMEOUT}
       MITRAS_MQTT_ADAPTER_MQTT_TARGET_HEALTH_CHECK: ${MITRAS_MQTT_ADAPTER_MQTT_TARGET_HEALTH_CHECK}
       MITRAS_MQTT_ADAPTER_MQTT_QOS: ${MITRAS_MQTT_ADAPTER_MQTT_QOS}
@@ -939,11 +852,11 @@ services:
       MITRAS_MQTT_ADAPTER_WS_TARGET_PATH: ${MITRAS_MQTT_ADAPTER_WS_TARGET_PATH}
       MITRAS_MQTT_ADAPTER_INSTANCE: ${MITRAS_MQTT_ADAPTER_INSTANCE}
       MITRAS_ES_URL: ${MITRAS_ES_URL}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_T_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_CHANNELS_GRPC_URL: ${MITRAS_CHANNELS_GRPC_URL}
       MITRAS_CHANNELS_GRPC_TIMEOUT: ${MITRAS_CHANNELS_GRPC_TIMEOUT}
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
@@ -958,39 +871,39 @@ services:
     volumes:
       # Clients gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Channels gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /channels-grpc-server-ca${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
 
   http-adapter:
-    image: hantdev1/http:${MITRAS_RELEASE_TAG}
+    image: mitras/http:${MITRAS_RELEASE_TAG}
     container_name: mitras-http
     depends_on:
       - clients
@@ -1002,11 +915,11 @@ services:
       MITRAS_HTTP_ADAPTER_PORT: ${MITRAS_HTTP_ADAPTER_PORT}
       MITRAS_HTTP_ADAPTER_SERVER_CERT: ${MITRAS_HTTP_ADAPTER_SERVER_CERT}
       MITRAS_HTTP_ADAPTER_SERVER_KEY: ${MITRAS_HTTP_ADAPTER_SERVER_KEY}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_T_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_CHANNELS_GRPC_URL: ${MITRAS_CHANNELS_GRPC_URL}
       MITRAS_CHANNELS_GRPC_TIMEOUT: ${MITRAS_CHANNELS_GRPC_TIMEOUT}
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
@@ -1022,7 +935,6 @@ services:
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
       MITRAS_HTTP_ADAPTER_INSTANCE_ID: ${MITRAS_HTTP_ADAPTER_INSTANCE_ID}
-      MITRAS_ES_URL: ${MITRAS_ES_URL}
     ports:
       - ${MITRAS_HTTP_ADAPTER_PORT}:${MITRAS_HTTP_ADAPTER_PORT}
     networks:
@@ -1030,34 +942,34 @@ services:
     volumes:
       # Clients gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Channels gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /channels-grpc-server-ca${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Auth gRPC mTLS client certificates
@@ -1078,7 +990,7 @@ services:
           create_host_path: true
 
   coap-adapter:
-    image: hantdev1/coap:${MITRAS_RELEASE_TAG}
+    image: mitras/coap:${MITRAS_RELEASE_TAG}
     container_name: mitras-coap
     depends_on:
       - clients
@@ -1094,11 +1006,11 @@ services:
       MITRAS_COAP_ADAPTER_HTTP_PORT: ${MITRAS_COAP_ADAPTER_HTTP_PORT}
       MITRAS_COAP_ADAPTER_HTTP_SERVER_CERT: ${MITRAS_COAP_ADAPTER_HTTP_SERVER_CERT}
       MITRAS_COAP_ADAPTER_HTTP_SERVER_KEY: ${MITRAS_COAP_ADAPTER_HTTP_SERVER_KEY}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_CHANNELS_GRPC_URL: ${MITRAS_CHANNELS_GRPC_URL}
       MITRAS_CHANNELS_GRPC_TIMEOUT: ${MITRAS_CHANNELS_GRPC_TIMEOUT}
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
@@ -1109,7 +1021,6 @@ services:
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
       MITRAS_COAP_ADAPTER_INSTANCE_ID: ${MITRAS_COAP_ADAPTER_INSTANCE_ID}
-      MITRAS_ES_URL: ${MITRAS_ES_URL}
     ports:
       - ${MITRAS_COAP_ADAPTER_PORT}:${MITRAS_COAP_ADAPTER_PORT}/udp
       - ${MITRAS_COAP_ADAPTER_HTTP_PORT}:${MITRAS_COAP_ADAPTER_HTTP_PORT}/tcp
@@ -1118,44 +1029,39 @@ services:
     volumes:
       # Clients gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Channels gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CA_CERTS:-ssl/certs/dummy/client_ca}
-        target: /channels-grpc-client-ca${MITRAS_CHANNELS_GRPC_CLIENT_CA_CERTS:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /channels-grpc-server-ca${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
 
   ws-adapter:
-    image: hantdev1/ws:${MITRAS_RELEASE_TAG}
+    image: mitras/ws:${MITRAS_RELEASE_TAG}
     container_name: mitras-ws
     depends_on:
       - clients
@@ -1167,11 +1073,11 @@ services:
       MITRAS_WS_ADAPTER_HTTP_PORT: ${MITRAS_WS_ADAPTER_HTTP_PORT}
       MITRAS_WS_ADAPTER_HTTP_SERVER_CERT: ${MITRAS_WS_ADAPTER_HTTP_SERVER_CERT}
       MITRAS_WS_ADAPTER_HTTP_SERVER_KEY: ${MITRAS_WS_ADAPTER_HTTP_SERVER_KEY}
-      MITRAS_CLIENTS_GRPC_URL: ${MITRAS_CLIENTS_GRPC_URL}
-      MITRAS_CLIENTS_GRPC_TIMEOUT: ${MITRAS_CLIENTS_GRPC_TIMEOUT}
-      MITRAS_CLIENTS_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
-      MITRAS_CLIENTS_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
-      MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
       MITRAS_CHANNELS_GRPC_URL: ${MITRAS_CHANNELS_GRPC_URL}
       MITRAS_CHANNELS_GRPC_TIMEOUT: ${MITRAS_CHANNELS_GRPC_TIMEOUT}
       MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
@@ -1187,7 +1093,6 @@ services:
       MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
       MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
       MITRAS_WS_ADAPTER_INSTANCE_ID: ${MITRAS_WS_ADAPTER_INSTANCE_ID}
-      MITRAS_ES_URL: ${MITRAS_ES_URL}
     ports:
       - ${MITRAS_WS_ADAPTER_HTTP_PORT}:${MITRAS_WS_ADAPTER_HTTP_PORT}
     networks:
@@ -1195,34 +1100,34 @@ services:
     volumes:
       # Clients gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /clients-grpc-client${MITRAS_CLIENTS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /clients-grpc-server-ca${MITRAS_CLIENTS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Channels gRPC mTLS client certificates
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:+.crt}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
-        target: /channels-grpc-client${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+.key}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:+.key}
         bind:
           create_host_path: true
       - type: bind
-        source: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
-        target: /channels-grpc-server-ca${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+.crt}
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /channels-grpc-server-ca${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
       # Auth gRPC mTLS client certificates
@@ -1242,29 +1147,20 @@ services:
         bind:
           create_host_path: true
 
-  rabbitmq:
-    image: rabbitmq:4.0.5-management-alpine
-    container_name: mitras-rabbitmq
+  vernemq:
+    image: mitras/vernemq:${MITRAS_RELEASE_TAG}
+    container_name: mitras-vernemq
     restart: on-failure
     environment:
-      RABBITMQ_ERLANG_COOKIE: ${MITRAS_RABBITMQ_COOKIE}
-      RABBITMQ_DEFAULT_USER: ${MITRAS_RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${MITRAS_RABBITMQ_PASS}
-      RABBITMQ_DEFAULT_VHOST: ${MITRAS_RABBITMQ_VHOST}
-      RABBITMQ_CONFIG_FILES: /etc/rabbitmq/conf.d/
-    ports:
-      - ${MITRAS_RABBITMQ_PORT}:${MITRAS_RABBITMQ_PORT}
-      - ${MITRAS_RABBITMQ_HTTP_PORT}:${MITRAS_RABBITMQ_HTTP_PORT}
-      - ${MITRAS_RABBITMQ_WS_PORT}:${MITRAS_RABBITMQ_WS_PORT}
-    volumes:
-      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
-      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
-      - mitras-mqtt-broker-volume:/var/lib/rabbitmq
+      DOCKER_VERNEMQ_ALLOW_ANONYMOUS: ${MITRAS_DOCKER_VERNEMQ_ALLOW_ANONYMOUS}
+      DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL: ${MITRAS_DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL}
     networks:
       - mitras-base-net
+    volumes:
+      - mitras-mqtt-broker-volume:/var/lib/vernemq
 
   nats:
-    image: nats:2.10.25-alpine
+    image: nats:2.10.9-alpine
     container_name: mitras-nats
     restart: on-failure
     command: "--config=/etc/nats/nats.conf"
@@ -1280,3 +1176,59 @@ services:
       - ./nats:/etc/nats
     networks:
       - mitras-base-net
+
+  ui:
+    image: magistrala/ui:${MITRAS_RELEASE_TAG}
+    container_name: mitras-ui
+    restart: on-failure
+    environment:
+      MITRAS_UI_LOG_LEVEL: ${MITRAS_UI_LOG_LEVEL}
+      MITRAS_UI_PORT: ${MITRAS_UI_PORT}
+      MITRAS_HTTP_ADAPTER_URL: ${MITRAS_HTTP_ADAPTER_URL}
+      MITRAS_READER_URL: ${MITRAS_READER_URL}
+      MITRAS_CLIENTS_URL: ${MITRAS_CLIENTS_URL}
+      MITRAS_USERS_URL: ${MITRAS_USERS_URL}
+      MITRAS_INVITATIONS_URL: ${MITRAS_INVITATIONS_URL}
+      MITRAS_DOMAINS_URL: ${MITRAS_DOMAINS_URL}
+      MITRAS_BOOTSTRAP_URL: ${MITRAS_BOOTSTRAP_URL}
+      MITRAS_UI_HOST_URL: ${MITRAS_UI_HOST_URL}
+      MITRAS_UI_VERIFICATION_TLS: ${MITRAS_UI_VERIFICATION_TLS}
+      MITRAS_UI_CONTENT_TYPE: ${MITRAS_UI_CONTENT_TYPE}
+      MITRAS_UI_INSTANCE_ID: ${MITRAS_UI_INSTANCE_ID}
+      MITRAS_UI_DB_HOST: ${MITRAS_UI_DB_HOST}
+      MITRAS_UI_DB_PORT: ${MITRAS_UI_DB_PORT}
+      MITRAS_UI_DB_USER: ${MITRAS_UI_DB_USER}
+      MITRAS_UI_DB_PASS: ${MITRAS_UI_DB_PASS}
+      MITRAS_UI_DB_NAME: ${MITRAS_UI_DB_NAME}
+      MITRAS_UI_DB_SSL_MODE: ${MITRAS_UI_DB_SSL_MODE}
+      MITRAS_UI_DB_SSL_CERT: ${MITRAS_UI_DB_SSL_CERT}
+      MITRAS_UI_DB_SSL_KEY: ${MITRAS_UI_DB_SSL_KEY}
+      MITRAS_UI_DB_SSL_ROOT_CERT: ${MITRAS_UI_DB_SSL_ROOT_CERT}
+      MITRAS_GOOGLE_CLIENT_ID: ${MITRAS_GOOGLE_CLIENT_ID}
+      MITRAS_GOOGLE_CLIENT_SECRET: ${MITRAS_GOOGLE_CLIENT_SECRET}
+      MITRAS_GOOGLE_REDIRECT_URL: ${MITRAS_GOOGLE_REDIRECT_URL}
+      MITRAS_GOOGLE_STATE: ${MITRAS_GOOGLE_STATE}
+      MITRAS_UI_HASH_KEY: ${MITRAS_UI_HASH_KEY}
+      MITRAS_UI_BLOCK_KEY: ${MITRAS_UI_BLOCK_KEY}
+      MITRAS_UI_PATH_PREFIX: ${MITRAS_UI_PATH_PREFIX}
+    ports:
+      - ${MITRAS_UI_PORT}:${MITRAS_UI_PORT}
+    networks:
+      - mitras-base-net
+
+  ui-db:
+    image: postgres:16.2-alpine
+    container_name: mitras-ui-db
+    restart: on-failure
+    command: postgres -c "max_connections=${MITRAS_POSTGRES_MAX_CONNECTIONS}"
+    environment:
+      POSTGRES_USER: ${MITRAS_UI_DB_USER}
+      POSTGRES_PASSWORD: ${MITRAS_UI_DB_PASS}
+      POSTGRES_DB: ${MITRAS_UI_DB_NAME}
+      MITRAS_POSTGRES_MAX_CONNECTIONS: ${MITRAS_POSTGRES_MAX_CONNECTIONS}
+    ports:
+      - 6007:5432
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-ui-db-volume:/var/lib/postgresql/data

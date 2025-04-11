@@ -1,0 +1,114 @@
+# This docker-compose file contains optional Timescale-reader service for mitras platform.
+# Since this service is optional, this file is dependent of docker-compose.yml file
+# from <project_root>/docker. In order to run this service, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/timescale-reader/docker-compose.yml up
+# from project root.
+
+networks:
+  mitras-base-net:
+
+services:
+  timescale-reader:
+    image: mitras/timescale-reader:${MITRAS_RELEASE_TAG}
+    container_name: mitras-timescale-reader
+    restart: on-failure
+    environment:
+      MITRAS_TIMESCALE_READER_LOG_LEVEL: ${MITRAS_TIMESCALE_READER_LOG_LEVEL}
+      MITRAS_TIMESCALE_READER_HTTP_HOST: ${MITRAS_TIMESCALE_READER_HTTP_HOST}
+      MITRAS_TIMESCALE_READER_HTTP_PORT: ${MITRAS_TIMESCALE_READER_HTTP_PORT}
+      MITRAS_TIMESCALE_READER_HTTP_SERVER_CERT: ${MITRAS_TIMESCALE_READER_HTTP_SERVER_CERT}
+      MITRAS_TIMESCALE_READER_HTTP_SERVER_KEY: ${MITRAS_TIMESCALE_READER_HTTP_SERVER_KEY}
+      MITRAS_TIMESCALE_HOST: ${MITRAS_TIMESCALE_HOST}
+      MITRAS_TIMESCALE_PORT: ${MITRAS_TIMESCALE_PORT}
+      MITRAS_TIMESCALE_USER: ${MITRAS_TIMESCALE_USER}
+      MITRAS_TIMESCALE_PASS: ${MITRAS_TIMESCALE_PASS}
+      MITRAS_TIMESCALE_NAME: ${MITRAS_TIMESCALE_NAME}
+      MITRAS_TIMESCALE_SSL_MODE: ${MITRAS_TIMESCALE_SSL_MODE}
+      MITRAS_TIMESCALE_SSL_CERT: ${MITRAS_TIMESCALE_SSL_CERT}
+      MITRAS_TIMESCALE_SSL_KEY: ${MITRAS_TIMESCALE_SSL_KEY}
+      MITRAS_TIMESCALE_SSL_ROOT_CERT: ${MITRAS_TIMESCALE_SSL_ROOT_CERT}
+      MITRAS_CLIENTS_AUTH_GRPC_URL: ${MITRAS_CLIENTS_AUTH_GRPC_URL}
+      MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT: ${MITRAS_CLIENTS_AUTH_GRPC_TIMEOUT}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+/clients-grpc-client.crt}
+      MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+/clients-grpc-client.key}
+      MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+/clients-grpc-server-ca.crt}
+      MITRAS_CHANNELS_GRPC_URL: ${MITRAS_CHANNELS_GRPC_URL}
+      MITRAS_CHANNELS_GRPC_TIMEOUT: ${MITRAS_CHANNELS_GRPC_TIMEOUT}
+      MITRAS_CHANNELS_GRPC_CLIENT_CERT: ${MITRAS_CHANNELS_GRPC_CLIENT_CERT:+/channels-grpc-client.crt}
+      MITRAS_CHANNELS_GRPC_CLIENT_KEY: ${MITRAS_CHANNELS_GRPC_CLIENT_KEY:+/channels-grpc-client.key}
+      MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS: ${MITRAS_CHANNELS_GRPC_SERVER_CA_CERTS:+/channels-grpc-server-ca.crt}
+      MITRAS_AUTH_GRPC_URL: ${MITRAS_AUTH_GRPC_URL}
+      MITRAS_AUTH_GRPC_TIMEOUT: ${MITRAS_AUTH_GRPC_TIMEOUT}
+      MITRAS_AUTH_GRPC_CLIENT_CERT: ${MITRAS_AUTH_GRPC_CLIENT_CERT:+/auth-grpc-client.crt}
+      MITRAS_AUTH_GRPC_CLIENT_KEY: ${MITRAS_AUTH_GRPC_CLIENT_KEY:+/auth-grpc-client.key}
+      MITRAS_AUTH_GRPC_SERVER_CA_CERTS: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+/auth-grpc-server-ca.crt}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_TIMESCALE_READER_INSTANCE_ID: ${MITRAS_TIMESCALE_READER_INSTANCE_ID}
+    ports:
+      - ${MITRAS_TIMESCALE_READER_HTTP_PORT}:${MITRAS_TIMESCALE_READER_HTTP_PORT}
+    networks:
+      - mitras-base-net
+    volumes:
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_CERT:-./ssl/certs/dummy/client_cert}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_CLIENT_KEY:-./ssl/certs/dummy/client_key}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:-./ssl/certs/dummy/server_ca}
+        target: /auth-grpc-server-ca${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true
+      # Clients gRPC mTLS client certificates
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /clients-grpc-client${MITRAS_CLIENTS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_ADDONS_CERTS_PATH_PREFIX}${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /clients-grpc-server-ca${MITRAS_CLIENTS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true
+      # Channels gRPC mTLS client certificates
+      - type: bind
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /channels-grpc-client${MITRAS_CHANNELS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /channels-grpc-server-ca${MITRAS_CHANNELS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true
+      # Auth gRPC mTLS client certificates
+      - type: bind
+        source: ${MITRAS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_CERT:+.crt}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_AUTH_GRPC_CLIENT_KEY:-ssl/certs/dummy/client_key}
+        target: /auth-grpc-client${MITRAS_AUTH_GRPC_CLIENT_KEY:+.key}
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:-ssl/certs/dummy/server_ca}
+        target: /auth-grpc-server-ca${MITRAS_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
+        bind:
+          create_host_path: true

@@ -1,0 +1,62 @@
+# This docker-compose file contains optional Timescale and Timescale-writer services
+# for mitras platform. Since these are optional, this file is dependent of docker-compose file
+# from <project_root>/docker. In order to run these services, execute command:
+# docker compose -f docker/docker-compose.yml -f docker/addons/timescale-writer/docker-compose.yml up
+# from project root. PostgreSQL default port (5432) is exposed, so you can use various tools for database
+# inspection and data visualization.
+
+networks:
+  mitras-base-net:
+
+volumes:
+  mitras-timescale-writer-volume:
+
+services:
+  timescale:
+    image: timescale/timescaledb:2.13.1-pg16
+    container_name: mitras-timescale
+    restart: on-failure
+    environment:
+      POSTGRES_PASSWORD: ${MITRAS_TIMESCALE_PASS}
+      POSTGRES_USER: ${MITRAS_TIMESCALE_USER}
+      POSTGRES_DB: ${MITRAS_TIMESCALE_NAME}
+    ports:
+      - 5433:5432
+    networks:
+      - mitras-base-net
+    volumes:
+      - mitras-timescale-writer-volume:/var/lib/timescalesql/data
+
+  timescale-writer:
+    image: mitras/timescale-writer:${MITRAS_RELEASE_TAG}
+    container_name: mitras-timescale-writer
+    depends_on:
+      - timescale
+    restart: on-failure
+    environment:
+      MITRAS_TIMESCALE_WRITER_LOG_LEVEL: ${MITRAS_TIMESCALE_WRITER_LOG_LEVEL}
+      MITRAS_TIMESCALE_WRITER_CONFIG_PATH: ${MITRAS_TIMESCALE_WRITER_CONFIG_PATH}
+      MITRAS_TIMESCALE_WRITER_HTTP_HOST: ${MITRAS_TIMESCALE_WRITER_HTTP_HOST}
+      MITRAS_TIMESCALE_WRITER_HTTP_PORT: ${MITRAS_TIMESCALE_WRITER_HTTP_PORT}
+      MITRAS_TIMESCALE_WRITER_HTTP_SERVER_CERT: ${MITRAS_TIMESCALE_WRITER_HTTP_SERVER_CERT}
+      MITRAS_TIMESCALE_WRITER_HTTP_SERVER_KEY: ${MITRAS_TIMESCALE_WRITER_HTTP_SERVER_KEY}
+      MITRAS_TIMESCALE_HOST: ${MITRAS_TIMESCALE_HOST}
+      MITRAS_TIMESCALE_PORT: ${MITRAS_TIMESCALE_PORT}
+      MITRAS_TIMESCALE_USER: ${MITRAS_TIMESCALE_USER}
+      MITRAS_TIMESCALE_PASS: ${MITRAS_TIMESCALE_PASS}
+      MITRAS_TIMESCALE_NAME: ${MITRAS_TIMESCALE_NAME}
+      MITRAS_TIMESCALE_SSL_MODE: ${MITRAS_TIMESCALE_SSL_MODE}
+      MITRAS_TIMESCALE_SSL_CERT: ${MITRAS_TIMESCALE_SSL_CERT}
+      MITRAS_TIMESCALE_SSL_KEY: ${MITRAS_TIMESCALE_SSL_KEY}
+      MITRAS_TIMESCALE_SSL_ROOT_CERT: ${MITRAS_TIMESCALE_SSL_ROOT_CERT}
+      MITRAS_MESSAGE_BROKER_URL: ${MITRAS_MESSAGE_BROKER_URL}
+      MITRAS_JAEGER_URL: ${MITRAS_JAEGER_URL}
+      MITRAS_JAEGER_TRACE_RATIO: ${MITRAS_JAEGER_TRACE_RATIO}
+      MITRAS_SEND_TELEMETRY: ${MITRAS_SEND_TELEMETRY}
+      MITRAS_TIMESCALE_WRITER_INSTANCE_ID: ${MITRAS_TIMESCALE_WRITER_INSTANCE_ID}
+    ports:
+      - ${MITRAS_TIMESCALE_WRITER_HTTP_PORT}:${MITRAS_TIMESCALE_WRITER_HTTP_PORT}
+    networks:
+      - mitras-base-net
+    volumes:
+      - ./config.toml:/config.toml
