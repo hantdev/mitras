@@ -58,7 +58,7 @@ type ConfigsPage struct {
 
 // ConfigRepository specifies a Config persistence API.
 //
-//go:generate mockery --name ConfigRepository --output=./mocks --filename configs.go --quiet --note "Copyright (c) Abstract Machines"
+//go:generate mockery --name ConfigRepository --output=./mocks --filename configs.go --quiet
 type ConfigRepository interface {
 	// Save persists the Config. Successful operation is indicated by non-nil
 	// error response.
