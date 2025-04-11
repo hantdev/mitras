@@ -4,7 +4,7 @@ import "github.com/hantdev/mitras/pkg/messaging"
 
 // Transformer specifies API form Message transformer.
 type Transformer interface {
-	// Transform Mitras message to any other format.
+	// Transform mitras message to any other format.
 	Transform(msg *messaging.Message) (interface{}, error)
 }
 

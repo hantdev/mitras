@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	mgsenml "github.com/hantdev/senml"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/hantdev/mitras/pkg/transformers/senml"
-	mitrassenml "github.com/hantdev/senml"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -136,7 +136,7 @@ func TestTransformCBOR(t *testing.T) {
 			desc: "test invalid payload",
 			msg:  tooManyMsg,
 			msgs: nil,
-			err:  mitrassenml.ErrTooManyValues,
+			err:  mgsenml.ErrTooManyValues,
 		},
 	}
 
