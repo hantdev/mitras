@@ -1,33 +1,38 @@
 package http
 
 import (
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/domains"
+	"github.com/hantdev/mitras/pkg/apiutil"
 )
 
-const maxLimitSize = 100
+type page struct {
+	offset   uint64
+	limit    uint64
+	order    string
+	dir      string
+	name     string
+	metadata map[string]interface{}
+	tag      string
+	roleID   string
+	roleName string
+	actions  []string
+	status   domains.Status
+}
 
 type createDomainReq struct {
-	ID       string                 `json:"id,omitempty"`
 	Name     string                 `json:"name"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	Tags     []string               `json:"tags,omitempty"`
-	Route    string                 `json:"route"`
+	Alias    string                 `json:"alias"`
 }
 
 func (req createDomainReq) validate() error {
-	if req.ID != "" {
-		return api.ValidateUUID(req.ID)
-	}
 	if req.Name == "" {
 		return apiutil.ErrMissingName
 	}
-	if req.Route == "" {
-		return apiutil.ErrMissingRoute
-	}
-	if err := validateRoute(req.Route); err != nil {
-		return err
+
+	if req.Alias == "" {
+		return apiutil.ErrMissingAlias
 	}
 
 	return nil
@@ -35,7 +40,6 @@ func (req createDomainReq) validate() error {
 
 type retrieveDomainRequest struct {
 	domainID string
-	roles    bool
 }
 
 func (req retrieveDomainRequest) validate() error {
@@ -51,6 +55,7 @@ type updateDomainReq struct {
 	Name     *string                 `json:"name,omitempty"`
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 	Tags     *[]string               `json:"tags,omitempty"`
+	Alias    *string                 `json:"alias,omitempty"`
 }
 
 func (req updateDomainReq) validate() error {
@@ -62,7 +67,7 @@ func (req updateDomainReq) validate() error {
 }
 
 type listDomainsReq struct {
-	domains.Page
+	page
 }
 
 func (req listDomainsReq) validate() error {
@@ -100,70 +105,6 @@ type freezeDomainReq struct {
 func (req freezeDomainReq) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
-	}
-
-	return nil
-}
-
-type sendInvitationReq struct {
-	InviteeUserID string `json:"invitee_user_id,omitempty"`
-	RoleID        string `json:"role_id,omitempty"`
-}
-
-func (req *sendInvitationReq) validate() error {
-	if req.InviteeUserID == "" || req.RoleID == "" {
-		return apiutil.ErrMissingID
-	}
-
-	return nil
-}
-
-type listInvitationsReq struct {
-	domains.InvitationPageMeta
-}
-
-func (req *listInvitationsReq) validate() error {
-	if req.InvitationPageMeta.Limit > maxLimitSize || req.InvitationPageMeta.Limit < 1 {
-		return apiutil.ErrLimitSize
-	}
-
-	return nil
-}
-
-type acceptInvitationReq struct {
-	DomainID string `json:"domain_id,omitempty"`
-}
-
-func (req *acceptInvitationReq) validate() error {
-	if req.DomainID == "" {
-		return apiutil.ErrMissingDomainID
-	}
-
-	return nil
-}
-
-type invitationReq struct {
-	userID   string
-	domainID string
-}
-
-func (req *invitationReq) validate() error {
-	if req.userID == "" {
-		return apiutil.ErrMissingID
-	}
-	if req.domainID == "" {
-		return apiutil.ErrMissingDomainID
-	}
-
-	return nil
-}
-
-func validateRoute(route string) error {
-	if err := api.ValidateUUID(route); err == nil {
-		return nil
-	}
-	if err := api.ValidateRoute(route); err != nil {
-		return err
 	}
 
 	return nil
