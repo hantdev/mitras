@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
+	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/ws"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

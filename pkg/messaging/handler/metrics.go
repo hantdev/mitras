@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/hantdev/hermina/pkg/session"
 	"github.com/go-kit/kit/metrics"
+	"github.com/hantdev/hermina/pkg/session"
 )
 
 var _ session.Handler = (*metricsMiddleware)(nil)

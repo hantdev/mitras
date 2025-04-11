@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
-	"github.com/go-chi/chi/v5"
 )
 
 const clientID = "clientID"

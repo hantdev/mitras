@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/0x6flab/namegenerator"
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras/clients"
 	httpapi "github.com/hantdev/mitras/clients/api/http"
 	"github.com/hantdev/mitras/clients/mocks"
@@ -21,7 +22,6 @@ import (
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

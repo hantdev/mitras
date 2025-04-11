@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
+	"github.com/hantdev/mitras"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

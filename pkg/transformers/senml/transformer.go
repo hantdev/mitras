@@ -1,10 +1,10 @@
 package senml
 
 import (
-	"github.com/hantdev/senml"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/hantdev/mitras/pkg/transformers"
+	"github.com/hantdev/senml"
 )
 
 const (

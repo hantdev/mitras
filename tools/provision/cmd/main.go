@@ -14,7 +14,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "provision",
 		Short: "provision is provisioning tool for Mitras",
-		Long: `Tool for provisioning series of Mitras channels and clients and connecting them together.`,
+		Long:  `Tool for provisioning series of Mitras channels and clients and connecting them together.`,
 		Run: func(_ *cobra.Command, _ []string) {
 			if err := provision.Provision(pconf); err != nil {
 				log.Fatal(err)

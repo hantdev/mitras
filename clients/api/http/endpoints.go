@@ -3,13 +3,13 @@ package http
 import (
 	"context"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/go-kit/kit/endpoint"
 )
 
 func createClientEndpoint(svc clients.Service) endpoint.Endpoint {

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	mgsenml "github.com/hantdev/senml"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/hantdev/mitras/pkg/messaging"
 	"github.com/hantdev/mitras/pkg/transformers/senml"
+	mgsenml "github.com/hantdev/senml"
 	"github.com/stretchr/testify/assert"
 )
 

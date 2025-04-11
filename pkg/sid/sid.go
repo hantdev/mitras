@@ -4,8 +4,8 @@ package sid
 import (
 	"encoding/binary"
 
-	"github.com/hantdev/mitras"
 	"github.com/gofrs/uuid/v5"
+	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/pkg/errors"
 	"github.com/sqids/sqids-go"
 )
