@@ -145,6 +145,7 @@ func (r ProvisionManageService) AddNewEntitiesRoles(ctx context.Context, domainI
 				return []RoleProvision{}, fmt.Errorf("default role %s not found in in-built roles", defaultRole)
 			}
 
+			// There an option to have id as entityID_roleName where in roleName all space are removed with _ and starts with letter and supports only alphanumeric, space and hyphen
 			sid, err := r.sidProvider.ID()
 			if err != nil {
 				return []RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
@@ -207,24 +208,23 @@ func (r ProvisionManageService) AddNewEntitiesRoles(ctx context.Context, domainI
 		}()
 	}
 
-	nprs, err := r.repo.AddRoles(ctx, newRolesProvision)
-	if err != nil {
+	if _, err := r.repo.AddRoles(ctx, newRolesProvision); err != nil {
 		return []RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
 
-	return nprs, nil
+	return newRolesProvision, nil
 }
 
-func (r ProvisionManageService) AddRole(ctx context.Context, session authn.Session, entityID string, roleName string, optionalActions []string, optionalMembers []string) (retRoleProvision RoleProvision, retErr error) {
+func (r ProvisionManageService) AddRole(ctx context.Context, session authn.Session, entityID string, roleName string, optionalActions []string, optionalMembers []string) (retRole Role, retErr error) {
 	sid, err := r.sidProvider.ID()
 	if err != nil {
-		return RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
+		return Role{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
 
 	id := r.entityType + "_" + sid
 
 	if err := r.validateActions(toRolesActions(optionalActions)); err != nil {
-		return RoleProvision{}, errors.Wrap(svcerr.ErrMalformedEntity, err)
+		return Role{}, errors.Wrap(svcerr.ErrMalformedEntity, err)
 	}
 
 	newRoleProvisions := []RoleProvision{
@@ -265,7 +265,7 @@ func (r ProvisionManageService) AddRole(ctx context.Context, session authn.Sessi
 
 	if len(prs) > 0 {
 		if err := r.policy.AddPolicies(ctx, prs); err != nil {
-			return RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
+			return Role{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 		}
 
 		defer func() {
@@ -277,20 +277,20 @@ func (r ProvisionManageService) AddRole(ctx context.Context, session authn.Sessi
 		}()
 	}
 
-	nrps, err := r.repo.AddRoles(ctx, newRoleProvisions)
+	newRoles, err := r.repo.AddRoles(ctx, newRoleProvisions)
 	if err != nil {
-		return RoleProvision{}, errors.Wrap(svcerr.ErrCreateEntity, err)
+		return Role{}, errors.Wrap(svcerr.ErrCreateEntity, err)
 	}
 
-	if len(nrps) == 0 {
-		return RoleProvision{}, svcerr.ErrCreateEntity
+	if len(newRoles) == 0 {
+		return Role{}, svcerr.ErrCreateEntity
 	}
 
-	return nrps[0], nil
+	return newRoles[0], nil
 }
 
-func (r ProvisionManageService) RemoveRole(ctx context.Context, session authn.Session, entityID, roleID string) error {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RemoveRole(ctx context.Context, session authn.Session, entityID, roleName string) error {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -308,8 +308,8 @@ func (r ProvisionManageService) RemoveRole(ctx context.Context, session authn.Se
 	return nil
 }
 
-func (r ProvisionManageService) UpdateRoleName(ctx context.Context, session authn.Session, entityID, roleID, newRoleName string) (Role, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) UpdateRoleName(ctx context.Context, session authn.Session, entityID, oldRoleName, newRoleName string) (Role, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, oldRoleName)
 	if err != nil {
 		return Role{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
@@ -326,8 +326,8 @@ func (r ProvisionManageService) UpdateRoleName(ctx context.Context, session auth
 	return ro, nil
 }
 
-func (r ProvisionManageService) RetrieveRole(ctx context.Context, session authn.Session, entityID, roleID string) (Role, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RetrieveRole(ctx context.Context, session authn.Session, entityID, roleName string) (Role, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return Role{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -350,8 +350,8 @@ func (r ProvisionManageService) ListAvailableActions(ctx context.Context, sessio
 	return acts, nil
 }
 
-func (r ProvisionManageService) RoleAddActions(ctx context.Context, session authn.Session, entityID, roleID string, actions []string) (retActs []string, retErr error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleAddActions(ctx context.Context, session authn.Session, entityID, roleName string, actions []string) (retActs []string, retErr error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return []string{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
@@ -398,8 +398,8 @@ func (r ProvisionManageService) RoleAddActions(ctx context.Context, session auth
 	return resActs, nil
 }
 
-func (r ProvisionManageService) RoleListActions(ctx context.Context, session authn.Session, entityID, roleID string) ([]string, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleListActions(ctx context.Context, session authn.Session, entityID, roleName string) ([]string, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return []string{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -411,8 +411,8 @@ func (r ProvisionManageService) RoleListActions(ctx context.Context, session aut
 	return acts, nil
 }
 
-func (r ProvisionManageService) RoleCheckActionsExists(ctx context.Context, session authn.Session, entityID, roleID string, actions []string) (bool, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleCheckActionsExists(ctx context.Context, session authn.Session, entityID, roleName string, actions []string) (bool, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return false, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -424,8 +424,8 @@ func (r ProvisionManageService) RoleCheckActionsExists(ctx context.Context, sess
 	return result, nil
 }
 
-func (r ProvisionManageService) RoleRemoveActions(ctx context.Context, session authn.Session, entityID, roleID string, actions []string) (err error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleRemoveActions(ctx context.Context, session authn.Session, entityID, roleName string, actions []string) (err error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -457,8 +457,8 @@ func (r ProvisionManageService) RoleRemoveActions(ctx context.Context, session a
 	return nil
 }
 
-func (r ProvisionManageService) RoleRemoveAllActions(ctx context.Context, session authn.Session, entityID, roleID string) error {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleRemoveAllActions(ctx context.Context, session authn.Session, entityID, roleName string) error {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -481,8 +481,8 @@ func (r ProvisionManageService) RoleRemoveAllActions(ctx context.Context, sessio
 	return nil
 }
 
-func (r ProvisionManageService) RoleAddMembers(ctx context.Context, session authn.Session, entityID, roleID string, members []string) (retMems []string, retErr error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleAddMembers(ctx context.Context, session authn.Session, entityID, roleName string, members []string) (retMems []string, retErr error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return []string{}, errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
@@ -524,8 +524,8 @@ func (r ProvisionManageService) RoleAddMembers(ctx context.Context, session auth
 	return mems, nil
 }
 
-func (r ProvisionManageService) RoleListMembers(ctx context.Context, session authn.Session, entityID, roleID string, limit, offset uint64) (MembersPage, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleListMembers(ctx context.Context, session authn.Session, entityID, roleName string, limit, offset uint64) (MembersPage, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return MembersPage{}, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -537,8 +537,8 @@ func (r ProvisionManageService) RoleListMembers(ctx context.Context, session aut
 	return mp, nil
 }
 
-func (r ProvisionManageService) RoleCheckMembersExists(ctx context.Context, session authn.Session, entityID, roleID string, members []string) (bool, error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleCheckMembersExists(ctx context.Context, session authn.Session, entityID, roleName string, members []string) (bool, error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return false, errors.Wrap(svcerr.ErrViewEntity, err)
 	}
@@ -550,8 +550,8 @@ func (r ProvisionManageService) RoleCheckMembersExists(ctx context.Context, sess
 	return result, nil
 }
 
-func (r ProvisionManageService) RoleRemoveMembers(ctx context.Context, session authn.Session, entityID, roleID string, members []string) (err error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleRemoveMembers(ctx context.Context, session authn.Session, entityID, roleName string, members []string) (err error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -576,15 +576,15 @@ func (r ProvisionManageService) RoleRemoveMembers(ctx context.Context, session a
 	}
 
 	ro.UpdatedAt = time.Now()
-	ro.UpdatedBy = session.UserID
+	// ro.UpdatedBy = userID
 	if err := r.repo.RoleRemoveMembers(ctx, ro, members); err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 	return nil
 }
 
-func (r ProvisionManageService) RoleRemoveAllMembers(ctx context.Context, session authn.Session, entityID, roleID string) (err error) {
-	ro, err := r.repo.RetrieveEntityRole(ctx, entityID, roleID)
+func (r ProvisionManageService) RoleRemoveAllMembers(ctx context.Context, session authn.Session, entityID, roleName string) (err error) {
+	ro, err := r.repo.RetrieveRoleByEntityIDAndName(ctx, entityID, roleName)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
@@ -604,21 +604,6 @@ func (r ProvisionManageService) RoleRemoveAllMembers(ctx context.Context, sessio
 
 	if err := r.repo.RoleRemoveAllMembers(ctx, ro); err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
-	}
-	return nil
-}
-
-func (r ProvisionManageService) ListEntityMembers(ctx context.Context, session authn.Session, entityID string, pageQuery MembersRolePageQuery) (MembersRolePage, error) {
-	mp, err := r.repo.ListEntityMembers(ctx, entityID, pageQuery)
-	if err != nil {
-		return MembersRolePage{}, err
-	}
-	return mp, nil
-}
-
-func (r ProvisionManageService) RemoveEntityMembers(ctx context.Context, session authn.Session, entityID string, members []string) error {
-	if err := r.repo.RemoveEntityMembers(ctx, entityID, members); err != nil {
-		return err
 	}
 	return nil
 }

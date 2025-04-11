@@ -25,7 +25,7 @@ var (
 )
 
 type createRoleRes struct {
-	roles.RoleProvision
+	roles.Role
 }
 
 func (res createRoleRes) Code() int {
@@ -54,36 +54,6 @@ func (res listRolesRes) Headers() map[string]string {
 
 func (res listRolesRes) Empty() bool {
 	return false
-}
-
-type listEntityMembersRes struct {
-	roles.MembersRolePage
-}
-
-func (res listEntityMembersRes) Code() int {
-	return http.StatusOK
-}
-
-func (res listEntityMembersRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res listEntityMembersRes) Empty() bool {
-	return false
-}
-
-type deleteEntityMembersRes struct{}
-
-func (res deleteEntityMembersRes) Code() int {
-	return http.StatusNoContent
-}
-
-func (res deleteEntityMembersRes) Headers() map[string]string {
-	return map[string]string{}
-}
-
-func (res deleteEntityMembersRes) Empty() bool {
-	return true
 }
 
 type viewRoleRes struct {

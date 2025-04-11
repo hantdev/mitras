@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/errors"
 )
 
@@ -52,96 +52,11 @@ func (d Decoder) DecodeListRoles(_ context.Context, r *http.Request) (interface{
 	return req, nil
 }
 
-func (d Decoder) DecodeListEntityMembers(_ context.Context, r *http.Request) (interface{}, error) {
-	o, err := apiutil.ReadNumQuery[uint64](r, api.OffsetKey, api.DefOffset)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	l, err := apiutil.ReadNumQuery[uint64](r, api.LimitKey, api.DefLimit)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	order, err := apiutil.ReadStringQuery(r, api.OrderKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	dir, err := apiutil.ReadStringQuery(r, api.LimitKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	accessProviderID, err := apiutil.ReadStringQuery(r, api.AccessProviderIDKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	accessType, err := apiutil.ReadStringQuery(r, api.AccessTypeKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	roleId, err := apiutil.ReadStringQuery(r, api.RoleIDKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	roleName, err := apiutil.ReadStringQuery(r, api.RoleNameKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	allActions, err := apiutil.ReadStringQuery(r, api.ActionsKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	actions := []string{}
-
-	allActions = strings.TrimSpace(allActions)
-	if allActions != "" {
-		actions = strings.Split(allActions, ",")
-	}
-
-	req := listEntityMembersReq{
-		token:            apiutil.ExtractBearerToken(r),
-		entityID:         chi.URLParam(r, d.entityIDTemplate),
-		limit:            l,
-		offset:           o,
-		order:            order,
-		dir:              dir,
-		accessProviderID: accessProviderID,
-		roleId:           roleId,
-		roleName:         roleName,
-		actions:          actions,
-		accessType:       accessType,
-	}
-	return req, nil
-}
-
-func (d Decoder) DecodeRemoveEntityMembers(_ context.Context, r *http.Request) (interface{}, error) {
-	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
-		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
-	}
-
-	req := removeEntityMembersReq{
-		token:    apiutil.ExtractBearerToken(r),
-		entityID: chi.URLParam(r, d.entityIDTemplate),
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
-	}
-	return req, nil
-}
-
 func (d Decoder) DecodeViewRole(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewRoleReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	return req, nil
 }
@@ -153,7 +68,7 @@ func (d Decoder) DecodeUpdateRole(_ context.Context, r *http.Request) (interface
 	req := updateRoleReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -165,7 +80,7 @@ func (d Decoder) DecodeDeleteRole(_ context.Context, r *http.Request) (interface
 	req := deleteRoleReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	return req, nil
 }
@@ -184,7 +99,7 @@ func (d Decoder) DecodeAddRoleActions(_ context.Context, r *http.Request) (inter
 	req := addRoleActionsReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -196,7 +111,7 @@ func (d Decoder) DecodeListRoleActions(_ context.Context, r *http.Request) (inte
 	req := listRoleActionsReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	return req, nil
 }
@@ -208,7 +123,7 @@ func (d Decoder) DecodeDeleteRoleActions(_ context.Context, r *http.Request) (in
 	req := deleteRoleActionsReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -220,7 +135,7 @@ func (d Decoder) DecodeDeleteAllRoleActions(_ context.Context, r *http.Request) 
 	req := deleteAllRoleActionsReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	return req, nil
 }
@@ -232,7 +147,7 @@ func (d Decoder) DecodeAddRoleMembers(_ context.Context, r *http.Request) (inter
 	req := addRoleMembersReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -252,7 +167,7 @@ func (d Decoder) DecodeListRoleMembers(_ context.Context, r *http.Request) (inte
 	req := listRoleMembersReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 		limit:    l,
 		offset:   o,
 	}
@@ -266,7 +181,7 @@ func (d Decoder) DecodeDeleteRoleMembers(_ context.Context, r *http.Request) (in
 	req := deleteRoleMembersReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -278,7 +193,7 @@ func (d Decoder) DecodeDeleteAllRoleMembers(_ context.Context, r *http.Request) 
 	req := deleteAllRoleMembersReq{
 		token:    apiutil.ExtractBearerToken(r),
 		entityID: chi.URLParam(r, d.entityIDTemplate),
-		roleID:   chi.URLParam(r, "roleID"),
+		roleName: chi.URLParam(r, "roleName"),
 	}
 	return req, nil
 }
