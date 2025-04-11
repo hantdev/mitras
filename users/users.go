@@ -53,7 +53,7 @@ type UserRepository struct {
 	DB postgres.Database
 }
 
-//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines"
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet
 type Repository interface {
 	// RetrieveByID retrieves user by their unique ID.
 	RetrieveByID(ctx context.Context, id string) (User, error)
@@ -133,7 +133,7 @@ type Page struct {
 // Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
 //
-//go:generate mockery --name Service --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
+//go:generate mockery --name Service --output=./mocks --filename service.go --quiet
 type Service interface {
 	// Register creates new user. In case of the failed registration, a
 	// non-nil error value is returned.

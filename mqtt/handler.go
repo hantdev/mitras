@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/hantdev/hermina/pkg/session"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	"github.com/hantdev/mitras/mqtt/events"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -48,13 +49,12 @@ var (
 	ErrFailedPublishDisconnectEvent = errors.New("failed to publish disconnect event")
 	ErrFailedParseSubtopic          = errors.New("failed to parse subtopic")
 	ErrFailedPublishConnectEvent    = errors.New("failed to publish connect event")
-	ErrFailedSubscribeEvent         = errors.New("failed to publish subscribe event")
 	ErrFailedPublishToMsgBroker     = errors.New("failed to publish to mitras message broker")
 )
 
 var (
 	errInvalidUserId = errors.New("invalid user id")
-	channelRegExp    = regexp.MustCompile(`^\/?c\/([\w\-]+)\/m(\/[^?]*)?(\?.*)?$`)
+	channelRegExp    = regexp.MustCompile(`^\/?channels\/([\w\-]+)\/messages(\/[^?]*)?(\?.*)?$`)
 )
 
 // Event implements events.Event interface.
@@ -63,11 +63,13 @@ type handler struct {
 	clients   grpcClientsV1.ClientsServiceClient
 	channels  grpcChannelsV1.ChannelsServiceClient
 	logger    *slog.Logger
+	es        events.EventStore
 }
 
 // NewHandler creates new Handler entity.
-func NewHandler(publisher messaging.Publisher, logger *slog.Logger, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) session.Handler {
+func NewHandler(publisher messaging.Publisher, es events.EventStore, logger *slog.Logger, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) session.Handler {
 	return &handler{
+		es:        es,
 		logger:    logger,
 		publisher: publisher,
 		clients:   clients,
@@ -99,6 +101,10 @@ func (h *handler) AuthConnect(ctx context.Context) error {
 
 	if s.Username != "" && res.GetId() != s.Username {
 		return errInvalidUserId
+	}
+
+	if err := h.es.Connect(ctx, pwd); err != nil {
+		h.logger.Error(errors.Wrap(ErrFailedPublishConnectEvent, err).Error())
 	}
 
 	return nil
@@ -156,7 +162,7 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 	}
 	h.logger.Info(fmt.Sprintf(LogInfoPublished, s.ID, *topic))
 	// Topics are in the format:
-	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
+	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 
 	channelParts := channelRegExp.FindStringSubmatch(*topic)
 	if len(channelParts) < 2 {
@@ -194,7 +200,6 @@ func (h *handler) Subscribe(ctx context.Context, topics *[]string) error {
 		return errors.Wrap(ErrFailedSubscribe, ErrClientNotInitialized)
 	}
 	h.logger.Info(fmt.Sprintf(LogInfoSubscribed, s.ID, strings.Join(*topics, ",")))
-
 	return nil
 }
 
@@ -205,7 +210,6 @@ func (h *handler) Unsubscribe(ctx context.Context, topics *[]string) error {
 		return errors.Wrap(ErrFailedUnsubscribe, ErrClientNotInitialized)
 	}
 	h.logger.Info(fmt.Sprintf(LogInfoUnsubscribed, s.ID, strings.Join(*topics, ",")))
-
 	return nil
 }
 
@@ -216,13 +220,15 @@ func (h *handler) Disconnect(ctx context.Context) error {
 		return errors.Wrap(ErrFailedDisconnect, ErrClientNotInitialized)
 	}
 	h.logger.Error(fmt.Sprintf(LogInfoDisconnected, s.ID, s.Password))
-
+	if err := h.es.Disconnect(ctx, string(s.Password)); err != nil {
+		return errors.Wrap(ErrFailedPublishDisconnectEvent, err)
+	}
 	return nil
 }
 
 func (h *handler) authAccess(ctx context.Context, clientID, topic string, msgType connections.ConnType) error {
 	// Topics are in the format:
-	// c/<channel_id>/m/<subtopic>/.../ct/<content_type>
+	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 	if !channelRegExp.MatchString(topic) {
 		return ErrMalformedTopic
 	}
