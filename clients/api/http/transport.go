@@ -4,10 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/clients"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
-	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

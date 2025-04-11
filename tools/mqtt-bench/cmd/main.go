@@ -17,7 +17,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "mqtt-bench",
 		Short: "mqtt-bench is MQTT benchmark tool for Mitras",
-		Long: `Tool for exctensive load and benchmarking of MQTT brokers used within the Mitras platform.`,
+		Long:  `Tool for exctensive load and benchmarking of MQTT brokers used within the Mitras platform.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if confFile != "" {
 				viper.SetConfigFile(confFile)

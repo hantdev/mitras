@@ -78,13 +78,13 @@ type EntityMemberRole struct {
 	RoleID   string `json:"role_id"`
 }
 
-//go:generate mockery --name Provisioner --output=./mocks --filename provisioner.go --quiet 
+//go:generate mockery --name Provisioner --output=./mocks --filename provisioner.go --quiet
 type Provisioner interface {
 	AddNewEntitiesRoles(ctx context.Context, domainID, userID string, entityIDs []string, optionalEntityPolicies []policies.Policy, newBuiltInRoleMembers map[BuiltInRoleName][]Member) ([]RoleProvision, error)
 	RemoveEntitiesRoles(ctx context.Context, domainID, userID string, entityIDs []string, optionalFilterDeletePolicies []policies.Policy, optionalDeletePolicies []policies.Policy) error
 }
 
-//go:generate mockery --name RoleManager --output=./mocks --filename rolemanager.go --quiet 
+//go:generate mockery --name RoleManager --output=./mocks --filename rolemanager.go --quiet
 type RoleManager interface {
 	// Add New role to entity
 	AddRole(ctx context.Context, session authn.Session, entityID, roleName string, optionalActions []string, optionalMembers []string) (Role, error)
@@ -124,7 +124,7 @@ type RoleManager interface {
 	RemoveMemberFromAllRoles(ctx context.Context, session authn.Session, memberID string) (err error)
 }
 
-//go:generate mockery --name Repository --output=./mocks --filename rolesRepo.go --quiet 
+//go:generate mockery --name Repository --output=./mocks --filename rolesRepo.go --quiet
 type Repository interface {
 	AddRoles(ctx context.Context, rps []RoleProvision) ([]Role, error)
 	RemoveRoles(ctx context.Context, roleIDs []string) error

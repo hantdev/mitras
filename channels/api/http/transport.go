@@ -3,9 +3,9 @@ package http
 import (
 	"log/slog"
 
-	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/hantdev/mitras"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/pkg/apiutil"

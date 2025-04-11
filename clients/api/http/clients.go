@@ -3,13 +3,13 @@ package http
 import (
 	"log/slog"
 
+	"github.com/go-chi/chi/v5"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	roleManagerHttp "github.com/hantdev/mitras/pkg/roles/rolemanager/api"
-	"github.com/go-chi/chi/v5"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
