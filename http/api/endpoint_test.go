@@ -11,16 +11,16 @@ import (
 	"github.com/hantdev/hermina"
 	proxy "github.com/hantdev/hermina/pkg/http"
 	"github.com/hantdev/hermina/pkg/session"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	climocks "github.com/hantdev/mitras/clients/mocks"
 	server "github.com/hantdev/mitras/http"
 	"github.com/hantdev/mitras/http/api"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
-	mitraslog "github.com/hantdev/mitras/logger"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnMocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
 	pubsub "github.com/hantdev/mitras/pkg/messaging/mocks"
@@ -36,13 +36,13 @@ const (
 
 var clientID = testsutil.GenerateUUID(&testing.T{})
 
-func newService(authn mitrasauthn.Authentication, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) (session.Handler, *pubsub.PubSub) {
+func newService(authn smqauthn.Authentication, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) (session.Handler, *pubsub.PubSub) {
 	pub := new(pubsub.PubSub)
-	return server.NewHandler(pub, authn, clients, channels, mitraslog.NewMock()), pub
+	return server.NewHandler(pub, authn, clients, channels, smqlog.NewMock()), pub
 }
 
 func newTargetHTTPServer() *httptest.Server {
-	mux := api.MakeHandler(mitraslog.NewMock(), instanceID)
+	mux := api.MakeHandler(smqlog.NewMock(), instanceID)
 	return httptest.NewServer(mux)
 }
 
@@ -51,7 +51,7 @@ func newProxyHTPPServer(svc session.Handler, targetServer *httptest.Server) (*ht
 		Address: "",
 		Target:  targetServer.URL,
 	}
-	mp, err := proxy.NewProxy(config, svc, mitraslog.NewMock())
+	mp, err := proxy.NewProxy(config, svc, smqlog.NewMock())
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func TestPublish(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/c/%s/m", ts.URL, tc.chanID),
+				url:         fmt.Sprintf("%s/channels/%s/messages", ts.URL, tc.chanID),
 				contentType: tc.contentType,
 				token:       tc.key,
 				body:        strings.NewReader(tc.msg),

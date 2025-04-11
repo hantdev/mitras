@@ -8,15 +8,15 @@ import (
 
 	mghttp "github.com/hantdev/hermina/pkg/http"
 	"github.com/hantdev/hermina/pkg/session"
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	chmocks "github.com/hantdev/mitras/channels/mocks"
 	clmocks "github.com/hantdev/mitras/clients/mocks"
 	mhttp "github.com/hantdev/mitras/http"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
-	mitraslog "github.com/hantdev/mitras/logger"
-	mitrasauthn "github.com/hantdev/mitras/pkg/authn"
+	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
+	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
@@ -32,12 +32,12 @@ const (
 	chanID                = "123e4567-e89b-12d3-a456-000000000001"
 	invalidID             = "invalidID"
 	invalidValue          = "invalidValue"
-	invalidChannelIDTopic = "c/**/m"
+	invalidChannelIDTopic = "channels/**/messages"
 )
 
 var (
-	topicMsg      = "c/%s/m"
-	subtopicMsg   = "c/%s/m/subtopic"
+	topicMsg      = "channels/%s/messages"
+	subtopicMsg   = "channels/%s/messages/subtopic"
 	topic         = fmt.Sprintf(topicMsg, chanID)
 	subtopic      = fmt.Sprintf(subtopicMsg, chanID)
 	invalidTopic  = invalidValue
@@ -65,7 +65,7 @@ var (
 )
 
 func newHandler() session.Handler {
-	logger := mitraslog.NewMock()
+	logger := smqlog.NewMock()
 	authn = new(authnmocks.Authentication)
 	clients = new(clmocks.ClientsServiceClient)
 	channels = new(chmocks.ChannelsServiceClient)
@@ -149,7 +149,7 @@ func TestPublish(t *testing.T) {
 		session    *session.Session
 		status     int
 		authNRes   *grpcClientsV1.AuthnRes
-		authNRes1  mitrasauthn.Session
+		authNRes1  smqauthn.Session
 		authNErr   error
 		authZRes   *grpcChannelsV1.AuthzRes
 		authZErr   error
@@ -176,7 +176,7 @@ func TestPublish(t *testing.T) {
 			password:  validToken,
 			session:   &tokenSession,
 			channelID: chanID,
-			authNRes1: mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID},
+			authNRes1: smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID},
 			authNErr:  nil,
 			authZRes:  &grpcChannelsV1.AuthzRes{Authorized: true},
 			authZErr:  nil,
@@ -245,7 +245,7 @@ func TestPublish(t *testing.T) {
 			err:       svcerr.ErrAuthentication,
 		},
 		{
-			desc:      "publish with client key and failed to authenticate",
+			desc:      "publish with thing key and failed to authenticate",
 			topic:     &topic,
 			payload:   &payload,
 			password:  clientKey,
@@ -257,7 +257,7 @@ func TestPublish(t *testing.T) {
 			err:       svcerr.ErrAuthentication,
 		},
 		{
-			desc:      "publish with client key and failed to authenticate with error",
+			desc:      "publish with thing key and failed to authenticate with error",
 			topic:     &topic,
 			payload:   &payload,
 			password:  clientKey,
@@ -276,7 +276,7 @@ func TestPublish(t *testing.T) {
 			session:   &tokenSession,
 			channelID: chanID,
 			status:    http.StatusUnauthorized,
-			authNRes1: mitrasauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID},
+			authNRes1: smqauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID},
 			authNErr:  svcerr.ErrAuthentication,
 			err:       svcerr.ErrAuthentication,
 		},
