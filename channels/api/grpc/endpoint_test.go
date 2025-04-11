@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	grpcChannelsV1 "github.com/hantdev/mitras/api/grpc/channels/v1"
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	"github.com/hantdev/mitras/channels"
 	ch "github.com/hantdev/mitras/channels"
 	grpcapi "github.com/hantdev/mitras/channels/api/grpc"
 	"github.com/hantdev/mitras/channels/private/mocks"
+	"github.com/hantdev/mitras/clients"
+	grpcChannelsV1 "github.com/hantdev/mitras/internal/grpc/channels/v1"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
@@ -32,7 +32,7 @@ var (
 	validChannel = ch.Channel{
 		ID:     validID,
 		Domain: testsutil.GenerateUUID(&testing.T{}),
-		Status: channels.EnabledStatus,
+		Status: clients.EnabledStatus,
 	}
 )
 

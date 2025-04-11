@@ -4,22 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/pkg/authn"
+	"github.com/hantdev/mitras/pkg/authz"
 	smqauthz "github.com/hantdev/mitras/pkg/authz"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
 	"github.com/hantdev/mitras/pkg/svcutil"
 )
 
 var (
 	errView                     = errors.New("not authorized to view channel")
-	errList                     = errors.New("not authorized to list user channels")
 	errUpdate                   = errors.New("not authorized to update channel")
 	errUpdateTags               = errors.New("not authorized to update channel tags")
 	errEnable                   = errors.New("not authorized to enable channel")
@@ -79,61 +77,36 @@ func AuthorizationMiddleware(svc channels.Service, repo channels.Repository, aut
 	}, nil
 }
 
-func (am *authorizationMiddleware) CreateChannels(ctx context.Context, session authn.Session, chs ...channels.Channel) ([]channels.Channel, []roles.RoleProvision, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.CreateOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return []channels.Channel{}, []roles.RoleProvision{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.extAuthorize(ctx, channels.DomainOpCreateChannel, smqauthz.PolicyReq{
+func (am *authorizationMiddleware) CreateChannels(ctx context.Context, session authn.Session, chs ...channels.Channel) ([]channels.Channel, error) {
+	// If domain is disabled , then this authorization will fail for all non-admin domain users
+	if err := am.extAuthorize(ctx, channels.DomainOpCreateChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
 		ObjectType:  policies.DomainType,
 		Object:      session.DomainID,
 	}); err != nil {
-		return []channels.Channel{}, []roles.RoleProvision{}, errors.Wrap(err, errDomainCreateChannels)
+		return []channels.Channel{}, errors.Wrap(err, errDomainCreateChannels)
 	}
 
 	for _, ch := range chs {
 		if ch.ParentGroup != "" {
-			if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, smqauthz.PolicyReq{
+			if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, authz.PolicyReq{
 				Domain:      session.DomainID,
 				SubjectType: policies.UserType,
 				Subject:     session.DomainUserID,
 				ObjectType:  policies.GroupType,
 				Object:      ch.ParentGroup,
 			}); err != nil {
-				return []channels.Channel{}, []roles.RoleProvision{}, errors.Wrap(err, errors.Wrap(errGroupSetChildChannels, fmt.Errorf("channel name %s parent group id %s", ch.Name, ch.ParentGroup)))
+				return []channels.Channel{}, errors.Wrap(err, errors.Wrap(errGroupSetChildChannels, fmt.Errorf("channel name %s parent group id %s", ch.Name, ch.ParentGroup)))
 			}
 		}
 	}
 	return am.svc.CreateChannels(ctx, session, chs...)
 }
 
-func (am *authorizationMiddleware) ViewChannel(ctx context.Context, session authn.Session, id string, withRoles bool) (channels.Channel, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ReadOp,
-			EntityID:         id,
-		}); err != nil {
-			return channels.Channel{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpViewChannel, smqauthz.PolicyReq{
+func (am *authorizationMiddleware) ViewChannel(ctx context.Context, session authn.Session, id string) (channels.Channel, error) {
+	if err := am.authorize(ctx, channels.OpViewChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -142,63 +115,22 @@ func (am *authorizationMiddleware) ViewChannel(ctx context.Context, session auth
 	}); err != nil {
 		return channels.Channel{}, errors.Wrap(err, errView)
 	}
-	return am.svc.ViewChannel(ctx, session, id, withRoles)
+	return am.svc.ViewChannel(ctx, session, id)
 }
 
-func (am *authorizationMiddleware) ListChannels(ctx context.Context, session authn.Session, pm channels.Page) (channels.ChannelsPage, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ListOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return channels.ChannelsPage{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.checkSuperAdmin(ctx, session.UserID); err == nil {
+func (am *authorizationMiddleware) ListChannels(ctx context.Context, session authn.Session, pm channels.PageMetadata) (channels.Page, error) {
+	if err := am.checkSuperAdmin(ctx, session.UserID); err != nil {
 		session.SuperAdmin = true
 	}
 	return am.svc.ListChannels(ctx, session, pm)
 }
 
-func (am *authorizationMiddleware) ListUserChannels(ctx context.Context, session authn.Session, userID string, pm channels.Page) (channels.ChannelsPage, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.ListOp,
-			EntityID:         auth.AnyIDs,
-		}); err != nil {
-			return channels.ChannelsPage{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-	if err := am.checkSuperAdmin(ctx, session.UserID); err != nil {
-		return channels.ChannelsPage{}, errors.Wrap(err, errList)
-	}
-	return am.svc.ListUserChannels(ctx, session, userID, pm)
+func (am *authorizationMiddleware) ListChannelsByClient(ctx context.Context, session authn.Session, clientID string, pm channels.PageMetadata) (channels.Page, error) {
+	return am.svc.ListChannelsByClient(ctx, session, clientID, pm)
 }
 
 func (am *authorizationMiddleware) UpdateChannel(ctx context.Context, session authn.Session, channel channels.Channel) (channels.Channel, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         channel.ID,
-		}); err != nil {
-			return channels.Channel{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpUpdateChannel, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpUpdateChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -211,20 +143,7 @@ func (am *authorizationMiddleware) UpdateChannel(ctx context.Context, session au
 }
 
 func (am *authorizationMiddleware) UpdateChannelTags(ctx context.Context, session authn.Session, channel channels.Channel) (channels.Channel, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         channel.ID,
-		}); err != nil {
-			return channels.Channel{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpUpdateChannelTags, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpUpdateChannelTags, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -237,20 +156,7 @@ func (am *authorizationMiddleware) UpdateChannelTags(ctx context.Context, sessio
 }
 
 func (am *authorizationMiddleware) EnableChannel(ctx context.Context, session authn.Session, id string) (channels.Channel, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return channels.Channel{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpEnableChannel, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpEnableChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -263,20 +169,7 @@ func (am *authorizationMiddleware) EnableChannel(ctx context.Context, session au
 }
 
 func (am *authorizationMiddleware) DisableChannel(ctx context.Context, session authn.Session, id string) (channels.Channel, error) {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return channels.Channel{}, errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpDisableChannel, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpDisableChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -289,20 +182,7 @@ func (am *authorizationMiddleware) DisableChannel(ctx context.Context, session a
 }
 
 func (am *authorizationMiddleware) RemoveChannel(ctx context.Context, session authn.Session, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.DeleteOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpDeleteChannel, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpDeleteChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -315,34 +195,8 @@ func (am *authorizationMiddleware) RemoveChannel(ctx context.Context, session au
 }
 
 func (am *authorizationMiddleware) Connect(ctx context.Context, session authn.Session, chIDs, thIDs []string, connTypes []connections.ConnType) error {
-	if session.Type == authn.PersonalAccessToken {
-		for _, chID := range chIDs {
-			if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-				UserID:           session.UserID,
-				PatID:            session.PatID,
-				EntityType:       auth.ChannelsType,
-				OptionalDomainID: session.DomainID,
-				Operation:        auth.CreateOp,
-				EntityID:         chID,
-			}); err != nil {
-				return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-			}
-		}
-		for _, thID := range thIDs {
-			if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-				UserID:           session.UserID,
-				PatID:            session.PatID,
-				EntityType:       auth.ClientsType,
-				OptionalDomainID: session.DomainID,
-				Operation:        auth.CreateOp,
-				EntityID:         thID,
-			}); err != nil {
-				return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-			}
-		}
-	}
 	for _, chID := range chIDs {
-		if err := am.authorize(ctx, channels.OpConnectClient, smqauthz.PolicyReq{
+		if err := am.authorize(ctx, channels.OpConnectClient, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
@@ -354,7 +208,7 @@ func (am *authorizationMiddleware) Connect(ctx context.Context, session authn.Se
 	}
 
 	for _, thID := range thIDs {
-		if err := am.extAuthorize(ctx, channels.ClientsOpConnectChannel, smqauthz.PolicyReq{
+		if err := am.extAuthorize(ctx, channels.ClientsOpConnectChannel, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
@@ -368,35 +222,8 @@ func (am *authorizationMiddleware) Connect(ctx context.Context, session authn.Se
 }
 
 func (am *authorizationMiddleware) Disconnect(ctx context.Context, session authn.Session, chIDs, thIDs []string, connTypes []connections.ConnType) error {
-	if session.Type == authn.PersonalAccessToken {
-		for _, chID := range chIDs {
-			if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-				UserID:           session.UserID,
-				PatID:            session.PatID,
-				EntityType:       auth.ChannelsType,
-				OptionalDomainID: session.DomainID,
-				Operation:        auth.DeleteOp,
-				EntityID:         chID,
-			}); err != nil {
-				return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-			}
-		}
-		for _, thID := range thIDs {
-			if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-				UserID:           session.UserID,
-				PatID:            session.PatID,
-				EntityType:       auth.ClientsType,
-				OptionalDomainID: session.DomainID,
-				Operation:        auth.DeleteOp,
-				EntityID:         thID,
-			}); err != nil {
-				return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-			}
-		}
-	}
-
 	for _, chID := range chIDs {
-		if err := am.authorize(ctx, channels.OpDisconnectClient, smqauthz.PolicyReq{
+		if err := am.authorize(ctx, channels.OpDisconnectClient, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
@@ -408,7 +235,7 @@ func (am *authorizationMiddleware) Disconnect(ctx context.Context, session authn
 	}
 
 	for _, thID := range thIDs {
-		if err := am.extAuthorize(ctx, channels.ClientsOpDisconnectChannel, smqauthz.PolicyReq{
+		if err := am.extAuthorize(ctx, channels.ClientsOpDisconnectChannel, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
@@ -422,20 +249,7 @@ func (am *authorizationMiddleware) Disconnect(ctx context.Context, session authn
 }
 
 func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session authn.Session, parentGroupID string, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.UpdateOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpSetParentGroup, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpSetParentGroup, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -445,7 +259,7 @@ func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session a
 		return errors.Wrap(err, errSetParentGroup)
 	}
 
-	if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, smqauthz.PolicyReq{
+	if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -458,20 +272,7 @@ func (am *authorizationMiddleware) SetParentGroup(ctx context.Context, session a
 }
 
 func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, session authn.Session, id string) error {
-	if session.Type == authn.PersonalAccessToken {
-		if err := am.authz.AuthorizePAT(ctx, smqauthz.PatReq{
-			UserID:           session.UserID,
-			PatID:            session.PatID,
-			EntityType:       auth.ChannelsType,
-			OptionalDomainID: session.DomainID,
-			Operation:        auth.DeleteOp,
-			EntityID:         id,
-		}); err != nil {
-			return errors.Wrap(svcerr.ErrUnauthorizedPAT, err)
-		}
-	}
-
-	if err := am.authorize(ctx, channels.OpSetParentGroup, smqauthz.PolicyReq{
+	if err := am.authorize(ctx, channels.OpSetParentGroup, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -486,7 +287,7 @@ func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, sessio
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 	if ch.ParentGroup != "" {
-		if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, smqauthz.PolicyReq{
+		if err := am.extAuthorize(ctx, channels.GroupOpSetChildChannel, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
@@ -500,7 +301,7 @@ func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, sessio
 	return nil
 }
 
-func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Operation, req smqauthz.PolicyReq) error {
+func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Operation, req authz.PolicyReq) error {
 	perm, err := am.opp.GetPermission(op)
 	if err != nil {
 		return err
@@ -515,7 +316,7 @@ func (am *authorizationMiddleware) authorize(ctx context.Context, op svcutil.Ope
 	return nil
 }
 
-func (am *authorizationMiddleware) extAuthorize(ctx context.Context, extOp svcutil.ExternalOperation, req smqauthz.PolicyReq) error {
+func (am *authorizationMiddleware) extAuthorize(ctx context.Context, extOp svcutil.ExternalOperation, req authz.PolicyReq) error {
 	perm, err := am.extOpp.GetPermission(extOp)
 	if err != nil {
 		return err

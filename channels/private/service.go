@@ -3,13 +3,13 @@ package private
 import (
 	"context"
 
-	"github.com/hantdev/mitras/auth"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
 	"github.com/hantdev/mitras/pkg/policies"
 )
 
+//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet
 type Service interface {
 	Authorize(ctx context.Context, req channels.AuthzReq) error
 	UnsetParentGroupFromChannels(ctx context.Context, parentGroupID string) error
@@ -32,15 +32,10 @@ func New(repo channels.Repository, evaluator policies.Evaluator, policy policies
 func (svc service) Authorize(ctx context.Context, req channels.AuthzReq) error {
 	switch req.ClientType {
 	case policies.UserType:
-		permission, err := req.Type.Permission()
-		if err != nil {
-			return err
-		}
 		pr := policies.Policy{
-			Subject:     auth.EncodeDomainUserID(req.DomainID, req.ClientID),
+			Subject:     req.ClientID,
 			SubjectType: policies.UserType,
 			Object:      req.ChannelID,
-			Permission:  permission,
 			ObjectType:  policies.ChannelType,
 		}
 		if err := svc.evaluator.CheckPolicy(ctx, pr); err != nil {

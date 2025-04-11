@@ -8,7 +8,6 @@ import (
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
-	"github.com/hantdev/mitras/pkg/roles"
 	rmMW "github.com/hantdev/mitras/pkg/roles/rolemanager/middleware"
 )
 
@@ -31,7 +30,7 @@ func MetricsMiddleware(svc channels.Service, counter metrics.Counter, latency me
 	}
 }
 
-func (ms *metricsMiddleware) CreateChannels(ctx context.Context, session authn.Session, chs ...channels.Channel) ([]channels.Channel, []roles.RoleProvision, error) {
+func (ms *metricsMiddleware) CreateChannels(ctx context.Context, session authn.Session, chs ...channels.Channel) ([]channels.Channel, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "register_channels").Add(1)
 		ms.latency.With("method", "register_channels").Observe(time.Since(begin).Seconds())
@@ -39,15 +38,15 @@ func (ms *metricsMiddleware) CreateChannels(ctx context.Context, session authn.S
 	return ms.svc.CreateChannels(ctx, session, chs...)
 }
 
-func (ms *metricsMiddleware) ViewChannel(ctx context.Context, session authn.Session, id string, withRoles bool) (channels.Channel, error) {
+func (ms *metricsMiddleware) ViewChannel(ctx context.Context, session authn.Session, id string) (channels.Channel, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "view_channel").Add(1)
 		ms.latency.With("method", "view_channel").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ViewChannel(ctx, session, id, withRoles)
+	return ms.svc.ViewChannel(ctx, session, id)
 }
 
-func (ms *metricsMiddleware) ListChannels(ctx context.Context, session authn.Session, pm channels.Page) (channels.ChannelsPage, error) {
+func (ms *metricsMiddleware) ListChannels(ctx context.Context, session authn.Session, pm channels.PageMetadata) (channels.Page, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_channels").Add(1)
 		ms.latency.With("method", "list_channels").Observe(time.Since(begin).Seconds())
@@ -55,12 +54,12 @@ func (ms *metricsMiddleware) ListChannels(ctx context.Context, session authn.Ses
 	return ms.svc.ListChannels(ctx, session, pm)
 }
 
-func (ms *metricsMiddleware) ListUserChannels(ctx context.Context, session authn.Session, userID string, pm channels.Page) (channels.ChannelsPage, error) {
+func (ms *metricsMiddleware) ListChannelsByClient(ctx context.Context, session authn.Session, clientID string, pm channels.PageMetadata) (channels.Page, error) {
 	defer func(begin time.Time) {
-		ms.counter.With("method", "list_user_channels").Add(1)
-		ms.latency.With("method", "list_user_channels").Observe(time.Since(begin).Seconds())
+		ms.counter.With("method", "list_channels_by_client").Add(1)
+		ms.latency.With("method", "list_channels_by_client").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ListUserChannels(ctx, session, userID, pm)
+	return ms.svc.ListChannelsByClient(ctx, session, clientID, pm)
 }
 
 func (ms *metricsMiddleware) UpdateChannel(ctx context.Context, session authn.Session, channel channels.Channel) (channels.Channel, error) {

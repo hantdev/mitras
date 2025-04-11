@@ -3,29 +3,24 @@ package http
 import (
 	"log/slog"
 
+	"github.com/hantdev/mitras"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/hantdev/mitras"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
+	"github.com/hantdev/mitras/internal/api"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
-	roleManagerHttp "github.com/hantdev/mitras/pkg/roles/rolemanager/api"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // MakeHandler returns a HTTP handler for Channels API endpoints.
-func MakeHandler(svc channels.Service, authn smqauthn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string, idp mitras.IDProvider) *chi.Mux {
+func MakeHandler(svc channels.Service, authn smqauthn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string) *chi.Mux {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
-
-	d := roleManagerHttp.NewDecoder("channelID")
-
 	mux.Route("/{domainID}/channels", func(r chi.Router) {
 		r.Use(api.AuthenticateMiddleware(authn, true))
-		r.Use(api.RequestIDMiddleware(idp))
 
 		r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
 			createChannelEndpoint(svc),
@@ -61,8 +56,6 @@ func MakeHandler(svc channels.Service, authn smqauthn.Authentication, mux *chi.M
 			api.EncodeResponse,
 			opts...,
 		), "disconnect").ServeHTTP)
-
-		r = roleManagerHttp.EntityAvailableActionsRouter(svc, d, r, opts)
 
 		r.Route("/{channelID}", func(r chi.Router) {
 			r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
@@ -134,8 +127,6 @@ func MakeHandler(svc channels.Service, authn smqauthn.Authentication, mux *chi.M
 				api.EncodeResponse,
 				opts...,
 			), "disconnect_channel_client").ServeHTTP)
-
-			roleManagerHttp.EntityRoleMangerRouter(svc, d, r, opts)
 		})
 	})
 

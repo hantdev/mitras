@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/0x6flab/namegenerator"
-	grpcClientsV1 "github.com/hantdev/mitras/api/grpc/clients/v1"
-	grpcCommonV1 "github.com/hantdev/mitras/api/grpc/common/v1"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/channels/mocks"
+	"github.com/hantdev/mitras/clients"
+	smqclients "github.com/hantdev/mitras/clients"
 	clmocks "github.com/hantdev/mitras/clients/mocks"
 	gpmocks "github.com/hantdev/mitras/groups/mocks"
+	grpcClientsV1 "github.com/hantdev/mitras/internal/grpc/clients/v1"
+	grpcCommonV1 "github.com/hantdev/mitras/internal/grpc/common/v1"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/authn"
-	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	repoerr "github.com/hantdev/mitras/pkg/errors/repository"
@@ -40,23 +41,7 @@ var (
 		},
 		Tags:   []string{"tag1", "tag2"},
 		Domain: testsutil.GenerateUUID(&testing.T{}),
-		Status: channels.EnabledStatus,
-	}
-	validChannelWithRoles = channels.Channel{
-		ID:   testsutil.GenerateUUID(&testing.T{}),
-		Name: namegen.Generate(),
-		Metadata: map[string]interface{}{
-			"key": "value",
-		},
-		Tags:   []string{"tag1", "tag2"},
-		Domain: testsutil.GenerateUUID(&testing.T{}),
-		Status: channels.EnabledStatus,
-		Roles: []roles.MemberRoleActions{
-			{
-				RoleID:   "test-id",
-				RoleName: "test-name",
-			},
-		},
+		Status: clients.EnabledStatus,
 	}
 	parentGroupID    = testsutil.GenerateUUID(&testing.T{})
 	validID          = testsutil.GenerateUUID(&testing.T{})
@@ -76,11 +61,7 @@ func newService(t *testing.T) channels.Service {
 	policies = new(policymocks.Service)
 	clientsSvc = new(clmocks.ClientsServiceClient)
 	groupsSvc = new(gpmocks.GroupsServiceClient)
-	availableActions := []roles.Action{}
-	builtInRoles := map[roles.BuiltInRoleName][]roles.Action{
-		channels.BuiltInRoleAdmin: availableActions,
-	}
-	svc, err := channels.New(repo, policies, idProvider, clientsSvc, groupsSvc, idProvider, availableActions, builtInRoles)
+	svc, err := channels.New(repo, policies, idProvider, clientsSvc, groupsSvc, idProvider)
 	assert.Nil(t, err, fmt.Sprintf(" Unexpected error  while creating service %v", err))
 	return svc
 }
@@ -113,7 +94,7 @@ func TestCreateChannel(t *testing.T) {
 			desc: "create channel with invalid status",
 			channel: channels.Channel{
 				Name:   namegen.Generate(),
-				Status: channels.Status(100),
+				Status: clients.Status(100),
 			},
 			err: svcerr.ErrInvalidStatus,
 		},
@@ -121,7 +102,7 @@ func TestCreateChannel(t *testing.T) {
 			desc: "create channel successfully with parent",
 			channel: channels.Channel{
 				Name:        namegen.Generate(),
-				Status:      channels.EnabledStatus,
+				Status:      clients.EnabledStatus,
 				ParentGroup: testsutil.GenerateUUID(t),
 			},
 			saveResp: []channels.Channel{
@@ -202,9 +183,9 @@ func TestCreateChannel(t *testing.T) {
 			repoCall := repo.On("Save", context.Background(), mock.Anything).Return(tc.saveResp, tc.saveErr)
 			policyCall := policies.On("AddPolicies", context.Background(), mock.Anything).Return(tc.addPoliciesErr)
 			policyCall1 := policies.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
-			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.RoleProvision{}, tc.addRoleErr)
+			repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.Role{}, tc.addRoleErr)
 			repoCall2 := repo.On("Remove", context.Background(), mock.Anything).Return(tc.deleteErr)
-			_, _, err := svc.CreateChannels(context.Background(), validSession, tc.channel)
+			_, err := svc.CreateChannels(context.Background(), validSession, tc.channel)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("expected error %v but got %v", tc.err, err))
 			if err == nil {
 				ok := repoCall.Parent.AssertCalled(t, "Save", context.Background(), mock.Anything)
@@ -223,55 +204,36 @@ func TestViewChannel(t *testing.T) {
 	svc := newService(t)
 
 	cases := []struct {
-		desc      string
-		id        string
-		withRoles bool
-		repoResp  channels.Channel
-		repoErr   error
-		err       error
+		desc     string
+		id       string
+		repoResp channels.Channel
+		repoErr  error
+		err      error
 	}{
 		{
-			desc:      "view channel successfully",
-			id:        validChannel.ID,
-			withRoles: false,
-			repoResp:  validChannel,
+			desc:     "view channel successfully",
+			id:       validChannel.ID,
+			repoResp: validChannel,
 		},
 		{
-			desc:      "view channel successfully with roles",
-			id:        validChannelWithRoles.ID,
-			withRoles: true,
-			repoResp:  validChannelWithRoles,
-		},
-		{
-			desc:      "view channel with failed to retrieve",
-			id:        testsutil.GenerateUUID(t),
-			withRoles: true,
-			repoErr:   repoerr.ErrNotFound,
-			err:       svcerr.ErrViewEntity,
+			desc:    "view channel with failed to retrieve",
+			id:      testsutil.GenerateUUID(t),
+			repoErr: repoerr.ErrNotFound,
+			err:     svcerr.ErrViewEntity,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall := repo.On("RetrieveByID", context.Background(), tc.id).Return(tc.repoResp, tc.repoErr)
-			repoCall1 := repo.On("RetrieveByIDWithRoles", context.Background(), tc.id, validSession.UserID).Return(tc.repoResp, tc.repoErr)
-			got, err := svc.ViewChannel(context.Background(), validSession, tc.id, tc.withRoles)
+			got, err := svc.ViewChannel(context.Background(), validSession, tc.id)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("expected error %v to contain %v", err, tc.err))
 			if err == nil {
-				switch tc.withRoles {
-				case true:
-					assert.Equal(t, tc.repoResp, got)
-					assert.NotEmpty(t, got.Roles)
-					ok := repo.AssertCalled(t, "RetrieveByIDWithRoles", context.Background(), tc.id, validSession.UserID)
-					assert.True(t, ok, fmt.Sprintf("RetrieveByIDWithRoles was not called on %s", tc.desc))
-				default:
-					assert.Equal(t, tc.repoResp, got)
-					ok := repo.AssertCalled(t, "RetrieveByID", context.Background(), tc.id)
-					assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
-				}
+				assert.Equal(t, tc.repoResp, got)
+				ok := repo.AssertCalled(t, "RetrieveByID", context.Background(), tc.id)
+				assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
 			}
 			repoCall.Unset()
-			repoCall1.Unset()
 		})
 	}
 }
@@ -383,7 +345,7 @@ func TestEnableChannel(t *testing.T) {
 			desc: "enable channel successfully",
 			id:   testsutil.GenerateUUID(t),
 			retrieveResp: channels.Channel{
-				Status: channels.DisabledStatus,
+				Status: clients.DisabledStatus,
 			},
 			changeResp: validChannel,
 		},
@@ -391,7 +353,7 @@ func TestEnableChannel(t *testing.T) {
 			desc: "enable channel with enabled channel",
 			id:   testsutil.GenerateUUID(t),
 			retrieveResp: channels.Channel{
-				Status: channels.EnabledStatus,
+				Status: clients.EnabledStatus,
 			},
 			err: errors.ErrStatusAlreadyAssigned,
 		},
@@ -406,7 +368,7 @@ func TestEnableChannel(t *testing.T) {
 			desc: "enable channel with change status error",
 			id:   testsutil.GenerateUUID(t),
 			retrieveResp: channels.Channel{
-				Status: channels.DisabledStatus,
+				Status: clients.DisabledStatus,
 			},
 			changeErr: repoerr.ErrNotFound,
 			err:       repoerr.ErrNotFound,
@@ -446,7 +408,7 @@ func TestDisableChannel(t *testing.T) {
 			desc: "disable channel successfully",
 			id:   testsutil.GenerateUUID(t),
 			retrieveResp: channels.Channel{
-				Status: channels.EnabledStatus,
+				Status: clients.EnabledStatus,
 			},
 			changeResp: validChannel,
 		},
@@ -454,7 +416,7 @@ func TestDisableChannel(t *testing.T) {
 			desc: "disable channel with disabled channel",
 			id:   testsutil.GenerateUUID(t),
 			retrieveResp: channels.Channel{
-				Status: channels.DisabledStatus,
+				Status: clients.DisabledStatus,
 			},
 			err: errors.ErrStatusAlreadyAssigned,
 		},
@@ -468,7 +430,7 @@ func TestDisableChannel(t *testing.T) {
 		{
 			desc:         "disable channel with change status error",
 			id:           testsutil.GenerateUUID(t),
-			retrieveResp: channels.Channel{Status: channels.EnabledStatus},
+			retrieveResp: channels.Channel{Status: clients.EnabledStatus},
 			changeErr:    repoerr.ErrNotFound,
 			err:          repoerr.ErrNotFound,
 		},
@@ -494,180 +456,220 @@ func TestDisableChannel(t *testing.T) {
 func TestListChannels(t *testing.T) {
 	svc := newService(t)
 
-	adminID := testsutil.GenerateUUID(t)
-	domainID := testsutil.GenerateUUID(t)
-	nonAdminID := testsutil.GenerateUUID(t)
+	channelWithPerms := validChannel
+	channelWithPerms.Permissions = []string{policysvc.AdminPermission, policysvc.EditPermission, policysvc.ViewPermission}
 
 	cases := []struct {
-		desc                string
-		userKind            string
-		session             smqauthn.Session
-		page                channels.Page
-		retrieveAllResponse channels.ChannelsPage
-		response            channels.ChannelsPage
-		id                  string
-		size                uint64
-		listObjectsErr      error
-		retrieveAllErr      error
-		listPermissionsErr  error
-		err                 error
+		desc               string
+		session            authn.Session
+		pageMeta           channels.PageMetadata
+		listAllObjectsRes  policysvc.PolicyPage
+		listAllObjectsErr  error
+		retrieveAllRes     channels.Page
+		retrieveAllErr     error
+		listPermissionsRes policysvc.Permissions
+		listPermissionsErr error
+		resp               channels.Page
+		err                error
 	}{
 		{
-			desc:     "list all channels successfully as non admin",
-			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
-			id:       nonAdminID,
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
+			desc:    "list channesls as admin successfully",
+			session: authn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			pageMeta: channels.PageMetadata{
+				Domain: validID,
 			},
-			retrieveAllResponse: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  2,
-					Offset: 0,
-					Limit:  100,
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
 				},
-				Channels: []channels.Channel{validChannel, validChannel},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  2,
-					Offset: 0,
-					Limit:  100,
+			resp: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
 				},
-				Channels: []channels.Channel{validChannel, validChannel},
 			},
 			err: nil,
 		},
 		{
-			desc:     "list all channels as non admin with failed to retrieve all",
-			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
-			id:       nonAdminID,
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
+			desc:    "list channels as admin with list perms successfully",
+			session: authn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			pageMeta: channels.PageMetadata{
+				Domain:    validID,
+				ListPerms: true,
 			},
-			retrieveAllResponse: channels.ChannelsPage{},
-			response:            channels.ChannelsPage{},
-			retrieveAllErr:      repoerr.ErrNotFound,
-			err:                 svcerr.ErrNotFound,
+			listPermissionsRes: policysvc.Permissions{
+				policysvc.AdminPermission, policysvc.EditPermission, policysvc.ViewPermission,
+			},
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			resp: channels.Page{
+				Channels: []channels.Channel{channelWithPerms},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			err: nil,
 		},
 		{
-			desc:     "list all channels as non admin with failed super admin",
-			userKind: "non-admin",
-			session:  smqauthn.Session{UserID: nonAdminID, DomainID: domainID, SuperAdmin: false},
-			id:       nonAdminID,
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
+			desc:    "list channels as admin with failed to retrieve all",
+			session: authn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			pageMeta: channels.PageMetadata{
+				Domain: validID,
 			},
-			response: channels.ChannelsPage{},
+			retrieveAllRes: channels.Page{},
+			retrieveAllErr: repoerr.ErrNotFound,
+			err:            repoerr.ErrNotFound,
+		},
+		{
+			desc:    "list channels as admin with failed to list permissions",
+			session: authn.Session{UserID: validID, DomainID: validID, DomainUserID: validID, SuperAdmin: true},
+			pageMeta: channels.PageMetadata{
+				Domain:    validID,
+				ListPerms: true,
+			},
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			listPermissionsRes: policysvc.Permissions{},
+			listPermissionsErr: svcerr.ErrAuthorization,
+			err:                svcerr.ErrAuthorization,
+		},
+		{
+			desc:     "list channels as admin with no domain id",
+			session:  authn.Session{UserID: validID, SuperAdmin: true},
+			pageMeta: channels.PageMetadata{},
 			err:      nil,
 		},
 		{
-			desc:     "list all channels as non admin with failed to list objects",
-			userKind: "non-admin",
-			id:       nonAdminID,
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
+			desc:    "list channels as user successfully",
+			session: validSession,
+			pageMeta: channels.PageMetadata{
+				Permission: policysvc.ViewPermission,
+				IDs:        []string{validChannel.ID},
 			},
+			listAllObjectsRes: policysvc.PolicyPage{
+				Policies: []string{validChannel.ID},
+			},
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			resp: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			err: nil,
+		},
+		{
+			desc:    "list channels as user with failed to list all objects",
+			session: validSession,
+			pageMeta: channels.PageMetadata{
+				Permission: policysvc.ViewPermission,
+				IDs:        []string{validChannel.ID},
+			},
+			listAllObjectsErr: svcerr.ErrAuthorization,
+			err:               svcerr.ErrAuthorization,
+		},
+		{
+			desc:    "list channels as user with list permissions successfully",
+			session: validSession,
+			pageMeta: channels.PageMetadata{
+				Permission: policysvc.ViewPermission,
+				IDs:        []string{validChannel.ID},
+				ListPerms:  true,
+			},
+			listAllObjectsRes: policysvc.PolicyPage{
+				Policies: []string{validChannel.ID},
+			},
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			listPermissionsRes: policysvc.Permissions{
+				policysvc.AdminPermission, policysvc.EditPermission, policysvc.ViewPermission,
+			},
+			resp: channels.Page{
+				Channels: []channels.Channel{channelWithPerms},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			err: nil,
+		},
+		{
+			desc:    "list channels as user with list permissions and failed to list permissions",
+			session: validSession,
+			pageMeta: channels.PageMetadata{
+				Permission: policysvc.ViewPermission,
+				IDs:        []string{validChannel.ID},
+				ListPerms:  true,
+			},
+			listAllObjectsRes: policysvc.PolicyPage{
+				Policies: []string{validChannel.ID},
+			},
+			retrieveAllRes: channels.Page{
+				Channels: []channels.Channel{validChannel},
+				PageMetadata: channels.PageMetadata{
+					Total: 1,
+				},
+			},
+			listPermissionsRes: policysvc.Permissions{},
+			listPermissionsErr: svcerr.ErrAuthorization,
+			err:                svcerr.ErrAuthorization,
+		},
+		{
+			desc:    "list channels as user with failed to retrieve all",
+			session: validSession,
+			pageMeta: channels.PageMetadata{
+				Permission: policysvc.ViewPermission,
+				IDs:        []string{validChannel.ID},
+			},
+			listAllObjectsRes: policysvc.PolicyPage{
+				Policies: []string{validChannel.ID},
+			},
+			retrieveAllRes: channels.Page{},
 			retrieveAllErr: repoerr.ErrNotFound,
-			response:       channels.ChannelsPage{},
-			listObjectsErr: svcerr.ErrNotFound,
-			err:            svcerr.ErrNotFound,
+			err:            repoerr.ErrNotFound,
 		},
 	}
 
 	for _, tc := range cases {
-		retrieveAllCall := repo.On("RetrieveAll", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-		retrieveUserClientsCall := repo.On("RetrieveUserChannels", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-		page, err := svc.ListChannels(context.Background(), tc.session, tc.page)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
-		retrieveAllCall.Unset()
-		retrieveUserClientsCall.Unset()
-	}
-
-	cases2 := []struct {
-		desc                string
-		userKind            string
-		session             smqauthn.Session
-		page                channels.Page
-		retrieveAllResponse channels.ChannelsPage
-		response            channels.ChannelsPage
-		id                  string
-		size                uint64
-		listObjectsErr      error
-		retrieveAllErr      error
-		listPermissionsErr  error
-		err                 error
-	}{
-		{
-			desc:     "list all clients as admin successfully",
-			userKind: "admin",
-			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
-			},
-			retrieveAllResponse: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  2,
-					Offset: 0,
-					Limit:  100,
-				},
-				Channels: []channels.Channel{validChannel, validChannel},
-			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  2,
-					Offset: 0,
-					Limit:  100,
-				},
-				Channels: []channels.Channel{validChannel, validChannel},
-			},
-			err: nil,
-		},
-		{
-			desc:     "list all clients as admin with failed to retrieve all",
-			userKind: "admin",
-			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
-			},
-			retrieveAllResponse: channels.ChannelsPage{},
-			retrieveAllErr:      repoerr.ErrNotFound,
-			err:                 svcerr.ErrNotFound,
-		},
-		{
-			desc:     "list all clients as admin with failed to list clients",
-			userKind: "admin",
-			id:       adminID,
-			session:  smqauthn.Session{UserID: adminID, DomainID: domainID, SuperAdmin: true},
-			page: channels.Page{
-				Offset: 0,
-				Limit:  100,
-				Domain: domainID,
-			},
-			retrieveAllResponse: channels.ChannelsPage{},
-			retrieveAllErr:      repoerr.ErrNotFound,
-			err:                 svcerr.ErrNotFound,
-		},
-	}
-
-	for _, tc := range cases2 {
-		retrieveAllCall := repo.On("RetrieveAll", mock.Anything, mock.Anything).Return(tc.retrieveAllResponse, tc.retrieveAllErr)
-		page, err := svc.ListChannels(context.Background(), tc.session, tc.page)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
-		retrieveAllCall.Unset()
+		t.Run(tc.desc, func(t *testing.T) {
+			policyCall := policies.On("ListAllObjects", context.Background(), policysvc.Policy{
+				SubjectType: policysvc.UserType,
+				Subject:     validID,
+				Permission:  policysvc.ViewPermission,
+				ObjectType:  policysvc.ChannelType,
+			}).Return(tc.listAllObjectsRes, tc.listAllObjectsErr)
+			repoCall := repo.On("RetrieveAll", context.Background(), tc.pageMeta).Return(tc.retrieveAllRes, tc.retrieveAllErr)
+			policyCall1 := policies.On("ListPermissions", mock.Anything, policysvc.Policy{
+				SubjectType: policysvc.UserType,
+				Subject:     validID,
+				Object:      validChannel.ID,
+				ObjectType:  policysvc.ChannelType,
+			}, []string{}).Return(tc.listPermissionsRes, tc.listPermissionsErr)
+			got, err := svc.ListChannels(context.Background(), tc.session, tc.pageMeta)
+			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("expected error %v to contain %v", err, tc.err))
+			assert.Equal(t, tc.resp, got)
+			policyCall.Unset()
+			repoCall.Unset()
+			policyCall1.Unset()
+		})
 	}
 }
 
@@ -675,7 +677,7 @@ func TestRemoveChannel(t *testing.T) {
 	svc := newService(t)
 
 	deletedChannel := validChannel
-	deletedChannel.Status = channels.DeletedStatus
+	deletedChannel.Status = clients.DeletedStatus
 
 	channelWithParent := deletedChannel
 	channelWithParent.ParentGroup = testsutil.GenerateUUID(t)
@@ -762,11 +764,11 @@ func TestRemoveChannel(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			repoCall := repo.On("DoesChannelHaveConnections", context.Background(), validChannel.ID).Return(tc.connectionsRes, tc.connectionsErr)
 			clientsCall := clientsSvc.On("RemoveChannelConnections", context.Background(), &grpcClientsV1.RemoveChannelConnectionsReq{ChannelId: tc.id}).Return(&grpcClientsV1.RemoveChannelConnectionsRes{}, tc.removeConnectionsErr)
-			repoCall1 := repo.On("ChangeStatus", context.Background(), channels.Channel{ID: tc.id, Status: channels.DeletedStatus}).Return(tc.changeStatusRes, tc.changeStatusErr)
+			repoCall1 := repo.On("ChangeStatus", context.Background(), channels.Channel{ID: tc.id, Status: smqclients.DeletedStatus}).Return(tc.changeStatusRes, tc.changeStatusErr)
 			repoCall2 := repo.On("RetrieveEntitiesRolesActionsMembers", context.Background(), []string{tc.id}).Return([]roles.EntityActionRole{}, []roles.EntityMemberRole{}, nil)
 			policyCall := policies.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
 			policyCall1 := policies.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePolicyFilterErr)
-			repoCall3 := repoCall.On("Remove", context.Background(), []string{tc.id}).Return(tc.removeErr)
+			repoCall3 := repoCall.On("Remove", context.Background(), tc.id).Return(tc.removeErr)
 			err := svc.RemoveChannel(context.Background(), validSession, tc.id)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("expected error %v to contain %v", err, tc.err))
 			repoCall.Unset()
@@ -787,7 +789,7 @@ func TestConnect(t *testing.T) {
 	validDomainChannel.Domain = validID
 
 	disabledChannel := validChannel
-	disabledChannel.Status = channels.DisabledStatus
+	disabledChannel.Status = clients.DisabledStatus
 
 	cases := []struct {
 		desc                     string
@@ -815,7 +817,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			checkConnErr: repoerr.ErrNotFound,
@@ -875,7 +877,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.DisabledStatus),
+					Status:   uint32(clients.DisabledStatus),
 				},
 			},
 			err: svcerr.ErrCreateEntity,
@@ -889,7 +891,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: testsutil.GenerateUUID(t),
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			err: svcerr.ErrCreateEntity,
@@ -904,7 +906,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -926,7 +928,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -948,7 +950,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -979,7 +981,7 @@ func TestConnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -1051,7 +1053,7 @@ func TestDisconnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -1103,7 +1105,7 @@ func TestDisconnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: testsutil.GenerateUUID(t),
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			err: svcerr.ErrRemoveEntity,
@@ -1118,7 +1120,7 @@ func TestDisconnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -1148,7 +1150,7 @@ func TestDisconnect(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       validID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			repoConn: channels.Connection{
@@ -1218,7 +1220,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			err: nil,
@@ -1249,7 +1251,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: testsutil.GenerateUUID(t),
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			err: svcerr.ErrUpdateEntity,
@@ -1263,7 +1265,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.DisabledStatus),
+					Status:   uint32(clients.DisabledStatus),
 				},
 			},
 			err: svcerr.ErrUpdateEntity,
@@ -1277,7 +1279,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			err: svcerr.ErrConflict,
@@ -1291,7 +1293,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			addPoliciesErr: svcerr.ErrAuthorization,
@@ -1306,7 +1308,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			setParentGroupErr: repoerr.ErrNotFound,
@@ -1321,7 +1323,7 @@ func TestSetParentGroup(t *testing.T) {
 				Entity: &grpcCommonV1.EntityBasic{
 					Id:       parentGroupID,
 					DomainId: validID,
-					Status:   uint32(channels.EnabledStatus),
+					Status:   uint32(clients.EnabledStatus),
 				},
 			},
 			setParentGroupErr: repoerr.ErrNotFound,

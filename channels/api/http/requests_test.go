@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
+	"github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/stretchr/testify/assert"
 )
@@ -145,30 +145,39 @@ func TestListChannelsReqValidation(t *testing.T) {
 		{
 			desc: "valid request",
 			req: listChannelsReq{
-				Page: channels.Page{Limit: 10},
+				limit: 10,
 			},
 			err: nil,
 		},
 		{
 			desc: "limit is 0",
 			req: listChannelsReq{
-				Page: channels.Page{Limit: 0},
+				limit: 0,
 			},
 			err: apiutil.ErrLimitSize,
 		},
 		{
 			desc: "limit is greater than max limit",
 			req: listChannelsReq{
-				Page: channels.Page{Limit: api.MaxLimitSize + 1},
+				limit: api.MaxLimitSize + 1,
 			},
 			err: apiutil.ErrLimitSize,
 		},
 		{
 			desc: "name is too long",
 			req: listChannelsReq{
-				Page: channels.Page{Limit: 10, Name: strings.Repeat("a", api.MaxNameSize+1)},
+				limit: 10,
+				name:  strings.Repeat("a", api.MaxNameSize+1),
 			},
 			err: apiutil.ErrNameSize,
+		},
+		{
+			desc: "invalid visibility",
+			req: listChannelsReq{
+				limit:      10,
+				visibility: "invalid",
+			},
+			err: apiutil.ErrInvalidVisibilityType,
 		},
 	}
 	for _, tc := range cases {

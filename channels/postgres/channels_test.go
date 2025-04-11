@@ -10,6 +10,7 @@ import (
 	"github.com/0x6flab/namegenerator"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/channels/postgres"
+	"github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/internal/testsutil"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
@@ -22,15 +23,14 @@ var (
 	namegen      = namegenerator.NewGenerator()
 	invalidID    = strings.Repeat("a", 37)
 	validChannel = channels.Channel{
-		ID:              testsutil.GenerateUUID(&testing.T{}),
-		Domain:          testsutil.GenerateUUID(&testing.T{}),
-		ParentGroup:     testsutil.GenerateUUID(&testing.T{}),
-		Name:            namegen.Generate(),
-		Tags:            []string{"tag1", "tag2"},
-		Metadata:        map[string]interface{}{"key": "value"},
-		CreatedAt:       time.Now().UTC().Truncate(time.Microsecond),
-		Status:          channels.EnabledStatus,
-		ConnectionTypes: []connections.ConnType{},
+		ID:          testsutil.GenerateUUID(&testing.T{}),
+		Domain:      testsutil.GenerateUUID(&testing.T{}),
+		ParentGroup: testsutil.GenerateUUID(&testing.T{}),
+		Name:        namegen.Generate(),
+		Tags:        []string{"tag1", "tag2"},
+		Metadata:    map[string]interface{}{"key": "value"},
+		CreatedAt:   time.Now().UTC().Truncate(time.Microsecond),
+		Status:      clients.EnabledStatus,
 	}
 	validConnection = channels.Connection{
 		ClientID:  testsutil.GenerateUUID(&testing.T{}),
@@ -75,7 +75,7 @@ func TestSave(t *testing.T) {
 				Name:      namegen.Generate(),
 				Metadata:  map[string]interface{}{"key": "value"},
 				CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
-				Status:    channels.EnabledStatus,
+				Status:    clients.EnabledStatus,
 			},
 			resp: []channels.Channel{},
 			err:  repoerr.ErrMalformedEntity,
@@ -88,7 +88,7 @@ func TestSave(t *testing.T) {
 				Name:      namegen.Generate(),
 				Metadata:  map[string]interface{}{"key": "value"},
 				CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
-				Status:    channels.EnabledStatus,
+				Status:    clients.EnabledStatus,
 			},
 			resp: []channels.Channel{},
 			err:  repoerr.ErrMalformedEntity,
@@ -101,7 +101,7 @@ func TestSave(t *testing.T) {
 				Name:      strings.Repeat("a", 1025),
 				Metadata:  map[string]interface{}{"key": "value"},
 				CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
-				Status:    channels.EnabledStatus,
+				Status:    clients.EnabledStatus,
 			},
 			resp: []channels.Channel{},
 			err:  repoerr.ErrMalformedEntity,
@@ -116,7 +116,7 @@ func TestSave(t *testing.T) {
 					"key": make(chan int),
 				},
 				CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
-				Status:    channels.EnabledStatus,
+				Status:    clients.EnabledStatus,
 			},
 			resp: []channels.Channel{},
 			err:  repoerr.ErrMalformedEntity,
@@ -302,7 +302,7 @@ func TestChangeStatus(t *testing.T) {
 	disabledChannel := validChannel
 	disabledChannel.ID = testsutil.GenerateUUID(t)
 	disabledChannel.Name = namegen.Generate()
-	disabledChannel.Status = channels.DisabledStatus
+	disabledChannel.Status = clients.DisabledStatus
 
 	_, err := repo.Save(context.Background(), validChannel, disabledChannel)
 	require.Nil(t, err, fmt.Sprintf("save channel unexpected error: %s", err))
@@ -316,7 +316,7 @@ func TestChangeStatus(t *testing.T) {
 			desc: "disable channel successfully",
 			channel: channels.Channel{
 				ID:        validChannel.ID,
-				Status:    channels.DisabledStatus,
+				Status:    clients.DisabledStatus,
 				UpdatedAt: validTimestamp,
 				UpdatedBy: testsutil.GenerateUUID(t),
 			},
@@ -326,7 +326,7 @@ func TestChangeStatus(t *testing.T) {
 			desc: "enable channel successfully",
 			channel: channels.Channel{
 				ID:        disabledChannel.ID,
-				Status:    channels.EnabledStatus,
+				Status:    clients.EnabledStatus,
 				UpdatedAt: validTimestamp,
 				UpdatedBy: testsutil.GenerateUUID(t),
 			},
@@ -336,7 +336,7 @@ func TestChangeStatus(t *testing.T) {
 			desc: "change status channel with invalid ID",
 			channel: channels.Channel{
 				ID:        testsutil.GenerateUUID(t),
-				Status:    channels.DisabledStatus,
+				Status:    clients.DisabledStatus,
 				UpdatedAt: validTimestamp,
 				UpdatedBy: testsutil.GenerateUUID(t),
 			},
@@ -345,7 +345,7 @@ func TestChangeStatus(t *testing.T) {
 		{
 			desc: "change status channel with empty ID",
 			channel: channels.Channel{
-				Status:    channels.DisabledStatus,
+				Status:    clients.DisabledStatus,
 				UpdatedAt: validTimestamp,
 				UpdatedBy: testsutil.GenerateUUID(t),
 			},
@@ -428,14 +428,13 @@ func TestRetrieveAll(t *testing.T) {
 	for i := 0; i < num; i++ {
 		name := namegen.Generate()
 		channel := channels.Channel{
-			ID:              testsutil.GenerateUUID(t),
-			Domain:          testsutil.GenerateUUID(t),
-			ParentGroup:     parentID,
-			Name:            name,
-			Metadata:        map[string]interface{}{"name": name},
-			CreatedAt:       time.Now().UTC().Truncate(time.Microsecond),
-			Status:          channels.EnabledStatus,
-			ConnectionTypes: []connections.ConnType{},
+			ID:          testsutil.GenerateUUID(t),
+			Domain:      testsutil.GenerateUUID(t),
+			ParentGroup: parentID,
+			Name:        name,
+			Metadata:    map[string]interface{}{"name": name},
+			CreatedAt:   time.Now().UTC().Truncate(time.Microsecond),
+			Status:      clients.EnabledStatus,
 		}
 		_, err := repo.Save(context.Background(), channel)
 		require.Nil(t, err, fmt.Sprintf("create channel unexpected error: %s", err))
@@ -447,20 +446,20 @@ func TestRetrieveAll(t *testing.T) {
 
 	cases := []struct {
 		desc     string
-		page     channels.ChannelsPage
-		response channels.ChannelsPage
+		page     channels.Page
+		response channels.Page
 		err      error
 	}{
 		{
 			desc: "retrieve channels successfully",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  10,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 0,
 					Limit:  10,
@@ -471,14 +470,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with offset",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 10,
 					Limit:  10,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 10,
 					Limit:  10,
@@ -489,14 +488,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with limit",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  50,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 0,
 					Limit:  50,
@@ -507,14 +506,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with offset and limit",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 50,
 					Limit:  50,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 50,
 					Limit:  50,
@@ -525,14 +524,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with offset out of range",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 1000,
 					Limit:  50,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 1000,
 					Limit:  50,
@@ -543,14 +542,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with offset and limit out of range",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 170,
 					Limit:  50,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 170,
 					Limit:  50,
@@ -561,14 +560,14 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with limit out of range",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  1000,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 0,
 					Limit:  1000,
@@ -579,9 +578,9 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with empty page",
-			page: channels.ChannelsPage{},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{},
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  uint64(num),
 					Offset: 0,
 					Limit:  0,
@@ -592,15 +591,15 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with name",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  10,
 					Name:   items[0].Name,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  1,
 					Offset: 0,
 					Limit:  10,
@@ -611,15 +610,15 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with domain",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  10,
 					Domain: items[0].Domain,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  1,
 					Offset: 0,
 					Limit:  10,
@@ -630,15 +629,15 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with metadata",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset:   0,
 					Limit:    10,
 					Metadata: items[0].Metadata,
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  1,
 					Offset: 0,
 					Limit:  10,
@@ -649,8 +648,8 @@ func TestRetrieveAll(t *testing.T) {
 		},
 		{
 			desc: "retrieve channels with invalid metadata",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
+			page: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Offset: 0,
 					Limit:  10,
 					Metadata: map[string]interface{}{
@@ -658,8 +657,8 @@ func TestRetrieveAll(t *testing.T) {
 					},
 				},
 			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
+			response: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total:  0,
 					Offset: 0,
 					Limit:  10,
@@ -668,49 +667,11 @@ func TestRetrieveAll(t *testing.T) {
 			},
 			err: errors.ErrMalformedEntity,
 		},
-		{
-			desc: "retrieve channels with id",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
-					Offset: 0,
-					Limit:  10,
-					ID:     items[0].ID,
-				},
-			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  1,
-					Offset: 0,
-					Limit:  10,
-				},
-				Channels: []channels.Channel{items[0]},
-			},
-			err: nil,
-		},
-		{
-			desc: "retrieve channels with wrong id",
-			page: channels.ChannelsPage{
-				Page: channels.Page{
-					Offset: 0,
-					Limit:  10,
-					ID:     "wrong",
-				},
-			},
-			response: channels.ChannelsPage{
-				Page: channels.Page{
-					Total:  0,
-					Offset: 0,
-					Limit:  10,
-				},
-				Channels: []channels.Channel(nil),
-			},
-			err: nil,
-		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			switch channels, err := repo.RetrieveAll(context.Background(), tc.page.Page); {
+			switch channels, err := repo.RetrieveAll(context.Background(), tc.page.PageMetadata); {
 			case err == nil:
 				assert.Nil(t, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 				assert.Equal(t, tc.response.Total, channels.Total, fmt.Sprintf("%s: expected %d got %d\n", tc.desc, tc.response.Total, channels.Total))
@@ -1366,14 +1327,13 @@ func TestRetrieveParentGroupChannels(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		name := namegen.Generate()
 		channel := channels.Channel{
-			ID:              testsutil.GenerateUUID(t),
-			Domain:          testsutil.GenerateUUID(t),
-			ParentGroup:     parentID,
-			Name:            name,
-			Metadata:        map[string]interface{}{"name": name},
-			CreatedAt:       time.Now().UTC().Truncate(time.Microsecond),
-			Status:          channels.EnabledStatus,
-			ConnectionTypes: []connections.ConnType{},
+			ID:          testsutil.GenerateUUID(t),
+			Domain:      testsutil.GenerateUUID(t),
+			ParentGroup: parentID,
+			Name:        name,
+			Metadata:    map[string]interface{}{"name": name},
+			CreatedAt:   time.Now().UTC().Truncate(time.Microsecond),
+			Status:      clients.EnabledStatus,
 		}
 		items = append(items, channel)
 	}
@@ -1440,7 +1400,7 @@ func TestUnsetParentGroupFromChannels(t *testing.T) {
 			Name:        name,
 			Metadata:    map[string]interface{}{"name": name},
 			CreatedAt:   time.Now().UTC().Truncate(time.Microsecond),
-			Status:      channels.EnabledStatus,
+			Status:      clients.EnabledStatus,
 		}
 		items = append(items, channel)
 	}

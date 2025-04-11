@@ -4,69 +4,50 @@ import (
 	"context"
 	"time"
 
+	clients "github.com/hantdev/mitras/clients"
 	"github.com/hantdev/mitras/pkg/authn"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/roles"
 )
 
-// Metadata represents arbitrary JSON.
-type Metadata map[string]interface{}
-
 // Channel represents a mitras "communication topic". This topic
 // contains the clients that can exchange messages between each other.
 type Channel struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name,omitempty"`
-	Tags        []string  `json:"tags,omitempty"`
-	ParentGroup string    `json:"parent_group_id,omitempty"`
-	Domain      string    `json:"domain_id,omitempty"`
-	Metadata    Metadata  `json:"metadata,omitempty"`
-	CreatedBy   string    `json:"created_by,omitempty"`
-	CreatedAt   time.Time `json:"created_at,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at,omitempty"`
-	UpdatedBy   string    `json:"updated_by,omitempty"`
-	Status      Status    `json:"status,omitempty"` // 1 for enabled, 0 for disabled
-	// Extended
-	ParentGroupPath           string                    `json:"parent_group_path,omitempty"`
-	RoleID                    string                    `json:"role_id,omitempty"`
-	RoleName                  string                    `json:"role_name,omitempty"`
-	Actions                   []string                  `json:"actions,omitempty"`
-	AccessType                string                    `json:"access_type,omitempty"`
-	AccessProviderId          string                    `json:"access_provider_id,omitempty"`
-	AccessProviderRoleId      string                    `json:"access_provider_role_id,omitempty"`
-	AccessProviderRoleName    string                    `json:"access_provider_role_name,omitempty"`
-	AccessProviderRoleActions []string                  `json:"access_provider_role_actions,omitempty"`
-	ConnectionTypes           []connections.ConnType    `json:"connection_types,omitempty"`
-	MemberId                  string                    `json:"member_id,omitempty"`
-	Roles                     []roles.MemberRoleActions `json:"roles,omitempty"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name,omitempty"`
+	Tags        []string         `json:"tags,omitempty"`
+	ParentGroup string           `json:"parent_group_id,omitempty"`
+	Domain      string           `json:"domain_id,omitempty"`
+	Metadata    clients.Metadata `json:"metadata,omitempty"`
+	CreatedAt   time.Time        `json:"created_at,omitempty"`
+	UpdatedAt   time.Time        `json:"updated_at,omitempty"`
+	UpdatedBy   string           `json:"updated_by,omitempty"`
+	Status      clients.Status   `json:"status,omitempty"`      // 1 for enabled, 0 for disabled
+	Permissions []string         `json:"permissions,omitempty"` // 1 for enabled, 0 for disabled
 }
 
-type Page struct {
-	Total          uint64   `json:"total"`
-	Offset         uint64   `json:"offset"`
-	Limit          uint64   `json:"limit"`
-	Order          string   `json:"order,omitempty"`
-	Dir            string   `json:"dir,omitempty"`
-	ID             string   `json:"id,omitempty"`
-	Name           string   `json:"name,omitempty"`
-	Metadata       Metadata `json:"metadata,omitempty"`
-	Domain         string   `json:"domain,omitempty"`
-	Tag            string   `json:"tag,omitempty"`
-	Status         Status   `json:"status,omitempty"`
-	Group          string   `json:"group,omitempty"`
-	Client         string   `json:"client,omitempty"`
-	ConnectionType string   `json:"connection_type,omitempty"`
-	RoleName       string   `json:"role_name,omitempty"`
-	RoleID         string   `json:"role_id,omitempty"`
-	Actions        []string `json:"actions,omitempty"`
-	AccessType     string   `json:"access_type,omitempty"`
-	IDs            []string `json:"-"`
+type PageMetadata struct {
+	Total      uint64           `json:"total"`
+	Offset     uint64           `json:"offset"`
+	Limit      uint64           `json:"limit"`
+	Name       string           `json:"name,omitempty"`
+	Id         string           `json:"id,omitempty"`
+	Order      string           `json:"order,omitempty"`
+	Dir        string           `json:"dir,omitempty"`
+	Metadata   clients.Metadata `json:"metadata,omitempty"`
+	Domain     string           `json:"domain,omitempty"`
+	Tag        string           `json:"tag,omitempty"`
+	Permission string           `json:"permission,omitempty"`
+	Status     clients.Status   `json:"status,omitempty"`
+	IDs        []string         `json:"ids,omitempty"`
+	ListPerms  bool             `json:"-"`
+	ClientID   string           `json:"-"`
 }
 
 // ChannelsPage contains page related metadata as well as list of channels that
 // belong to this page.
-type ChannelsPage struct {
-	Page
+type Page struct {
+	PageMetadata
 	Channels []Channel
 }
 
@@ -85,16 +66,17 @@ type AuthzReq struct {
 	Type       connections.ConnType
 }
 
+//go:generate mockery --name Service  --output=./mocks --filename service.go --quiet --note "Copyright (c) Abstract Machines"
 type Service interface {
-	// CreateChannels adds channels to the user.
-	CreateChannels(ctx context.Context, session authn.Session, channels ...Channel) ([]Channel, []roles.RoleProvision, error)
+	// CreateChannels adds channels to the user identified by the provided key.
+	CreateChannels(ctx context.Context, session authn.Session, channels ...Channel) ([]Channel, error)
 
 	// ViewChannel retrieves data about the channel identified by the provided
-	// ID, that belongs to the user.
-	ViewChannel(ctx context.Context, session authn.Session, id string, withRoles bool) (Channel, error)
+	// ID, that belongs to the user identified by the provided key.
+	ViewChannel(ctx context.Context, session authn.Session, id string) (Channel, error)
 
 	// UpdateChannel updates the channel identified by the provided ID, that
-	// belongs to the user.
+	// belongs to the user identified by the provided key.
 	UpdateChannel(ctx context.Context, session authn.Session, channel Channel) (Channel, error)
 
 	// UpdateChannelTags updates the channel's tags.
@@ -104,14 +86,17 @@ type Service interface {
 
 	DisableChannel(ctx context.Context, session authn.Session, id string) (Channel, error)
 
-	// ListChannels retrieves data about subset of channels that belongs to the user.
-	ListChannels(ctx context.Context, session authn.Session, pm Page) (ChannelsPage, error)
+	// ListChannels retrieves data about subset of channels that belongs to the
+	// user identified by the provided key.
+	ListChannels(ctx context.Context, session authn.Session, pm PageMetadata) (Page, error)
 
-	// ListUserChannels retrieves data about subset of channels that belong to the specified user.
-	ListUserChannels(ctx context.Context, session authn.Session, userID string, pm Page) (ChannelsPage, error)
+	// ListChannelsByClient retrieves data about subset of channels that have
+	// specified client connected or not connected to them and belong to the user identified by
+	// the provided key.
+	ListChannelsByClient(ctx context.Context, session authn.Session, id string, pm PageMetadata) (Page, error)
 
 	// RemoveChannel removes the client identified by the provided ID, that
-	// belongs to the user.
+	// belongs to the user identified by the provided key.
 	RemoveChannel(ctx context.Context, session authn.Session, id string) error
 
 	// Connect adds clients to the channels list of connected clients.
@@ -128,6 +113,8 @@ type Service interface {
 }
 
 // ChannelRepository specifies a channel persistence API.
+//
+//go:generate mockery --name Repository --output=./mocks --filename repository.go  --quiet --note "Copyright (c) Abstract Machines"
 type Repository interface {
 	// Save persists multiple channels. Channels are saved using a transaction. If one channel
 	// fails then none will be saved. Successful operation is indicated by non-nil
@@ -141,17 +128,11 @@ type Repository interface {
 
 	ChangeStatus(ctx context.Context, channel Channel) (Channel, error)
 
-	// RetrieveUserChannels retrieves the channel of given domainID and userID.
-	RetrieveUserChannels(ctx context.Context, domainID, userID string, pm Page) (ChannelsPage, error)
-
 	// RetrieveByID retrieves the channel having the provided identifier
 	RetrieveByID(ctx context.Context, id string) (Channel, error)
 
-	// RetrieveByIDWithRoles retrieves channel by its unique ID along with member roles.
-	RetrieveByIDWithRoles(ctx context.Context, id, memberID string) (Channel, error)
-
 	// RetrieveAll retrieves the subset of channels.
-	RetrieveAll(ctx context.Context, pm Page) (ChannelsPage, error)
+	RetrieveAll(ctx context.Context, pm PageMetadata) (Page, error)
 
 	// Remove removes the channel having the provided identifier
 	Remove(ctx context.Context, ids ...string) error

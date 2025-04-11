@@ -11,19 +11,18 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	api "github.com/hantdev/mitras/api/http"
-	apiutil "github.com/hantdev/mitras/api/http/util"
 	"github.com/hantdev/mitras/channels"
 	"github.com/hantdev/mitras/channels/mocks"
+	"github.com/hantdev/mitras/clients"
+	smqapi "github.com/hantdev/mitras/internal/api"
 	"github.com/hantdev/mitras/internal/testsutil"
 	smqlog "github.com/hantdev/mitras/logger"
+	"github.com/hantdev/mitras/pkg/apiutil"
 	smqauthn "github.com/hantdev/mitras/pkg/authn"
 	authnmocks "github.com/hantdev/mitras/pkg/authn/mocks"
 	"github.com/hantdev/mitras/pkg/connections"
 	"github.com/hantdev/mitras/pkg/errors"
 	svcerr "github.com/hantdev/mitras/pkg/errors/service"
-	"github.com/hantdev/mitras/pkg/roles"
-	"github.com/hantdev/mitras/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -35,13 +34,13 @@ var (
 		Name:        valid,
 		Domain:      testsutil.GenerateUUID(&testing.T{}),
 		ParentGroup: testsutil.GenerateUUID(&testing.T{}),
-		Metadata: channels.Metadata{
+		Metadata: clients.Metadata{
 			"name": "test",
 		},
 		CreatedAt: time.Now().Add(-1 * time.Second),
 		UpdatedAt: time.Now(),
 		UpdatedBy: testsutil.GenerateUUID(&testing.T{}),
-		Status:    channels.EnabledStatus,
+		Status:    clients.EnabledStatus,
 	}
 	validID      = testsutil.GenerateUUID(&testing.T{})
 	validToken   = "validToken"
@@ -53,9 +52,8 @@ func newChannelsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authenti
 	authn := new(authnmocks.Authentication)
 	svc := new(mocks.Service)
 	mux := chi.NewRouter()
-	idp := uuid.NewMock()
 	logger := smqlog.NewMock()
-	mux = MakeHandler(svc, authn, mux, logger, "", idp)
+	mux = MakeHandler(svc, authn, mux, logger, "")
 
 	return httptest.NewServer(mux), svc, authn
 }
@@ -175,7 +173,7 @@ func TestCreateChannelEndpoint(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
-			svcCall := svc.On("CreateChannels", mock.Anything, tc.session, []channels.Channel{tc.req}).Return(tc.svcResp, []roles.RoleProvision{}, tc.svcErr)
+			svcCall := svc.On("CreateChannels", mock.Anything, tc.session, tc.req).Return(tc.svcResp, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -311,7 +309,7 @@ func TestCreateChannelsEndpoint(t *testing.T) {
 				tc.session = smqauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
-			svcCall := svc.On("CreateChannels", mock.Anything, tc.session, tc.req).Return(tc.svcResp, []roles.RoleProvision{}, tc.svcErr)
+			svcCall := svc.On("CreateChannels", mock.Anything, tc.session, tc.req[0]).Return(tc.svcResp, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -333,84 +331,66 @@ func TestViewChannelEndpoint(t *testing.T) {
 	defer gs.Close()
 
 	cases := []struct {
-		desc      string
-		token     string
-		id        string
-		domainID  string
-		withRoles bool
-		session   smqauthn.Session
-		svcResp   channels.Channel
-		svcErr    error
-		resp      channels.Channel
-		status    int
-		authnErr  error
-		err       error
+		desc     string
+		token    string
+		id       string
+		domainID string
+		session  smqauthn.Session
+		svcResp  channels.Channel
+		svcErr   error
+		resp     channels.Channel
+		status   int
+		authnErr error
+		err      error
 	}{
 		{
-			desc:      "view channel successfully",
-			token:     validToken,
-			domainID:  validID,
-			id:        validID,
-			withRoles: false,
-			svcResp:   validChannelResp,
-			svcErr:    nil,
-			resp:      validChannelResp,
-			status:    http.StatusOK,
-			err:       nil,
+			desc:     "view channel successfully",
+			token:    validToken,
+			domainID: validID,
+			id:       validID,
+			svcResp:  validChannelResp,
+			svcErr:   nil,
+			resp:     validChannelResp,
+			status:   http.StatusOK,
+			err:      nil,
 		},
 		{
-			desc:      "view channel successfully with roles",
-			token:     validToken,
-			domainID:  validID,
-			id:        validID,
-			withRoles: true,
-			svcResp:   validChannelResp,
-			svcErr:    nil,
-			resp:      validChannelResp,
-			status:    http.StatusOK,
-			err:       nil,
+			desc:     "view channel with invalid token",
+			token:    invalidToken,
+			session:  smqauthn.Session{},
+			domainID: validID,
+			id:       validID,
+			svcResp:  validChannelResp,
+			svcErr:   nil,
+			authnErr: svcerr.ErrAuthentication,
+			status:   http.StatusUnauthorized,
+			err:      svcerr.ErrAuthentication,
 		},
 		{
-			desc:      "view channel with invalid token",
-			token:     invalidToken,
-			session:   smqauthn.Session{},
-			domainID:  validID,
-			id:        validID,
-			withRoles: false,
-			svcResp:   validChannelResp,
-			svcErr:    nil,
-			authnErr:  svcerr.ErrAuthentication,
-			status:    http.StatusUnauthorized,
-			err:       svcerr.ErrAuthentication,
+			desc:     "view channel with empty token",
+			token:    "",
+			session:  smqauthn.Session{},
+			domainID: validID,
+			id:       validID,
+			status:   http.StatusUnauthorized,
+			err:      apiutil.ErrBearerToken,
 		},
 		{
-			desc:      "view channel with empty token",
-			token:     "",
-			session:   smqauthn.Session{},
-			domainID:  validID,
-			id:        validID,
-			withRoles: false,
-			status:    http.StatusUnauthorized,
-			err:       apiutil.ErrBearerToken,
+			desc:   "view channel with empty domainID",
+			token:  validToken,
+			id:     validID,
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrMissingDomainID,
 		},
 		{
-			desc:      "view channel with empty domainID",
-			token:     validToken,
-			id:        validID,
-			withRoles: false,
-			status:    http.StatusBadRequest,
-			err:       apiutil.ErrMissingDomainID,
-		},
-		{
-			desc:      "view channel with service error",
-			token:     validToken,
-			id:        validID,
-			domainID:  validID,
-			withRoles: false,
-			svcResp:   validChannelResp,
-			svcErr:    svcerr.ErrAuthorization,
-			status:    http.StatusForbidden,
-			err:       svcerr.ErrAuthorization,
+			desc:     "view channel with service error",
+			token:    validToken,
+			id:       validID,
+			domainID: validID,
+			svcResp:  validChannelResp,
+			svcErr:   svcerr.ErrAuthorization,
+			status:   http.StatusForbidden,
+			err:      svcerr.ErrAuthorization,
 		},
 	}
 
@@ -419,14 +399,14 @@ func TestViewChannelEndpoint(t *testing.T) {
 			req := testRequest{
 				client: gs.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/channels/%s?roles=%v", gs.URL, tc.domainID, tc.id, tc.withRoles),
+				url:    fmt.Sprintf("%s/%s/channels/%s", gs.URL, tc.domainID, tc.id),
 				token:  tc.token,
 			}
 			if tc.token == validToken {
 				tc.session = smqauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
 			}
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
-			svcCall := svc.On("ViewChannel", mock.Anything, tc.session, tc.id, tc.withRoles).Return(tc.svcResp, tc.svcErr)
+			svcCall := svc.On("ViewChannel", mock.Anything, tc.session, tc.id).Return(tc.svcResp, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody
@@ -453,7 +433,7 @@ func TestListChannels(t *testing.T) {
 		domainID             string
 		token                string
 		session              smqauthn.Session
-		listChannelsResponse channels.ChannelsPage
+		listChannelsResponse channels.Page
 		status               int
 		authnErr             error
 		err                  error
@@ -463,8 +443,8 @@ func TestListChannels(t *testing.T) {
 			domainID: validID,
 			token:    validToken,
 			status:   http.StatusOK,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -490,8 +470,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with offset",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -512,8 +492,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with limit",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -534,7 +514,7 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with limit greater than max",
 			token:    validToken,
 			domainID: validID,
-			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
+			query:    fmt.Sprintf("limit=%d", smqapi.MaxLimitSize+1),
 			status:   http.StatusBadRequest,
 			err:      apiutil.ErrValidation,
 		},
@@ -542,8 +522,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with name",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -572,8 +552,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with status",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -602,8 +582,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with tags",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -632,8 +612,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with metadata",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -662,8 +642,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with permissions",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -692,8 +672,8 @@ func TestListChannels(t *testing.T) {
 			desc:     "list channels with list perms",
 			domainID: validID,
 			token:    validToken,
-			listChannelsResponse: channels.ChannelsPage{
-				Page: channels.Page{
+			listChannelsResponse: channels.Page{
+				PageMetadata: channels.PageMetadata{
 					Total: 1,
 				},
 				Channels: []channels.Channel{validChannelResp},
@@ -1058,7 +1038,7 @@ func TestSetChannelParentGroupEndpoint(t *testing.T) {
 			id:          validID,
 			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
 			contentType: contentType,
-			status:      http.StatusOK,
+			status:      http.StatusAccepted,
 			err:         nil,
 		},
 		{
@@ -2046,11 +2026,11 @@ func toJSON(data interface{}) string {
 }
 
 type respBody struct {
-	Err         string          `json:"error"`
-	Message     string          `json:"message"`
-	Total       int             `json:"total"`
-	Permissions []string        `json:"permissions"`
-	ID          string          `json:"id"`
-	Tags        []string        `json:"tags"`
-	Status      channels.Status `json:"status"`
+	Err         string         `json:"error"`
+	Message     string         `json:"message"`
+	Total       int            `json:"total"`
+	Permissions []string       `json:"permissions"`
+	ID          string         `json:"id"`
+	Tags        []string       `json:"tags"`
+	Status      clients.Status `json:"status"`
 }
