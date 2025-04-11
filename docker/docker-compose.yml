@@ -81,7 +81,7 @@ services:
       - mitras-auth-db-volume:/var/lib/postgresql/data
 
   auth:
-    image: mitras/auth:${MITRAS_RELEASE_TAG}
+    image: hantdev1/auth:${MITRAS_RELEASE_TAG}
     container_name: mitras-auth
     depends_on:
       - auth-db
@@ -171,7 +171,7 @@ services:
       - mitras-domains-db-volume:/var/lib/postgresql/data
 
   domains:
-    image: mitras/domains:${MITRAS_RELEASE_TAG}
+    image: hantdev1/domains:${MITRAS_RELEASE_TAG}
     container_name: mitras-domains
     depends_on:
       - domains-db
@@ -280,7 +280,7 @@ services:
       - mitras-invitations-db-volume:/var/lib/postgresql/data
 
   invitations:
-    image: mitras/invitations:${MITRAS_RELEASE_TAG}
+    image: hantdev1/invitations:${MITRAS_RELEASE_TAG}
     container_name: mitras-invitations
     restart: on-failure
     depends_on:
@@ -400,7 +400,7 @@ services:
       - mitras-clients-redis-volume:/data
 
   clients:
-    image: mitras/clients:${MITRAS_RELEASE_TAG}
+    image: hantdev1/clients:${MITRAS_RELEASE_TAG}
     container_name: mitras-clients
     depends_on:
       - clients-db
@@ -536,7 +536,7 @@ services:
       - mitras-channels-db-volume:/var/lib/postgresql/data
 
   channels:
-    image: mitras/channels:${MITRAS_RELEASE_TAG}
+    image: hantdev1/channels:${MITRAS_RELEASE_TAG}
     container_name: mitras-channels
     depends_on:
       - channels-db
@@ -630,7 +630,7 @@ services:
       - mitras-users-db-volume:/var/lib/postgresql/data
 
   users:
-    image: mitras/users:${MITRAS_RELEASE_TAG}
+    image: hantdev1/users:${MITRAS_RELEASE_TAG}
     container_name: mitras-users
     depends_on:
       - users-db
@@ -737,7 +737,7 @@ services:
       - mitras-groups-db-volume:/var/lib/postgresql/data
 
   groups:
-    image: mitras/groups:${MITRAS_RELEASE_TAG}
+    image: hantdev1/groups:${MITRAS_RELEASE_TAG}
     container_name: mitras-groups
     depends_on:
       - groups-db
@@ -830,7 +830,7 @@ services:
       - mitras-base-net
 
   mqtt-adapter:
-    image: mitras/mqtt:${MITRAS_RELEASE_TAG}
+    image: hantdev1/mqtt:${MITRAS_RELEASE_TAG}
     container_name: mitras-mqtt
     depends_on:
       - clients
@@ -903,7 +903,7 @@ services:
           create_host_path: true
 
   http-adapter:
-    image: mitras/http:${MITRAS_RELEASE_TAG}
+    image: hantdev1/http:${MITRAS_RELEASE_TAG}
     container_name: mitras-http
     depends_on:
       - clients
@@ -990,7 +990,7 @@ services:
           create_host_path: true
 
   coap-adapter:
-    image: mitras/coap:${MITRAS_RELEASE_TAG}
+    image: hantdev1/coap:${MITRAS_RELEASE_TAG}
     container_name: mitras-coap
     depends_on:
       - clients
@@ -1061,7 +1061,7 @@ services:
           create_host_path: true
 
   ws-adapter:
-    image: mitras/ws:${MITRAS_RELEASE_TAG}
+    image: hantdev1/ws:${MITRAS_RELEASE_TAG}
     container_name: mitras-ws
     depends_on:
       - clients
@@ -1148,7 +1148,7 @@ services:
           create_host_path: true
 
   vernemq:
-    image: mitras/vernemq:${MITRAS_RELEASE_TAG}
+    image: hantdev1/vernemq:${MITRAS_RELEASE_TAG}
     container_name: mitras-vernemq
     restart: on-failure
     environment:
