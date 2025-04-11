@@ -1,7 +1,7 @@
+issue-845-fix: True
 with-expecter: true
 filename: "{{.InterfaceName}}.go"
 outpkg: "mocks"
-boilerplate-file: "./tools/config/boilerplate.txt"
 packages:
   github.com/hantdev/mitras/internal/grpc/clients/v1:
     interfaces:
