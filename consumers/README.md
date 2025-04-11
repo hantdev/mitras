@@ -1,8 +1,8 @@
 # Consumers
 
-Consumers provide an abstraction of various `Mitras consumers`.
-Mitras consumer is a generic service that can handle received messages - consume them.
-The message is not necessarily a Mitras message - before consuming, Mitras message can
+Consumers provide an abstraction of various `mitras consumers`.
+mitras consumer is a generic service that can handle received messages - consume them.
+The message is not necessarily a mitras message - before consuming, mitras message can
 be transformed into any valid format that specific consumer can understand. For example,
 writers are consumers that can take a SenML or JSON message and store it.
 
