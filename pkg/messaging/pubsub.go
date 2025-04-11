@@ -33,12 +33,9 @@ type MessageHandler interface {
 
 type SubscriberConfig struct {
 	ID             string
-	ClientID       string
 	Topic          string
 	Handler        MessageHandler
 	DeliveryPolicy DeliveryPolicy
-	Ordered        bool
-	AckErr         bool
 }
 
 // Subscriber specifies message subscription API.
@@ -55,6 +52,8 @@ type Subscriber interface {
 }
 
 // PubSub  represents aggregation interface for publisher and subscriber.
+//
+//go:generate mockery --name PubSub --output=./mocks --filename pubsub.go --quiet
 type PubSub interface {
 	Publisher
 	Subscriber

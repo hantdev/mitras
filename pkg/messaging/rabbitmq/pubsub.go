@@ -181,7 +181,7 @@ func (ps *pubsub) handle(deliveries <-chan amqp.Delivery, h messaging.MessageHan
 			return
 		}
 		if err := h.Handle(&msg); err != nil {
-			ps.logger.Warn(fmt.Sprintf("Failed to handle Mitras message: %s", err))
+			ps.logger.Warn(fmt.Sprintf("Failed to handle mitras message: %s", err))
 			return
 		}
 	}
